@@ -1,11 +1,16 @@
+from scipy.optimize import fsolve
+import matplotlib.pyplot as plt
+from pint import UnitRegistry
+from scipy import integrate
+from scipy import linalg
 import numpy as np
 import scipy as sp
-from scipy import linalg
+
+
+
+
+
 rg = np.random.default_rng()
-import matplotlib.pyplot as plt
-from scipy import integrate
-from pint import UnitRegistry
-from scipy.optimize import fsolve
 
 ureg = UnitRegistry()
 ureg.default_system = 'US'
@@ -13,16 +18,57 @@ Q_ = ureg.Quantity
 
 class PROP:
     def __init__(self, gamma, mdot, rho):
+        """This is teh __init__ fn that will do a thing
+
+        Args:
+            gamma (float): Angle off axial direction with positive away from centerbody
+            mdot (float): mdot of prop
+            rho (float): density of prop
+        """        
         self.gamma = Q_(gamma, ureg.degrees)
         self.mdot = Q_(mdot, ureg.pound / ureg.second)
         self.rho = Q_(rho, ureg.pound / ureg.foot**3)
-    def Velocity(self,Cd , Pressure_Diff):
+
+
+    def Velocity(self,Cd , Pressure_Diff) -> float:
+        """Velocity Function using Dr. Whites Eq 16.5
+
+        Args:
+            Cd (float): Coefficient of Discharge
+            Pressure_Diff (float): Pressure difference through injector (Estimated metric) in psi
+
+        Returns:
+            float: Velocity Out of the injector parallel to flow
+        """
         Velocity = Cd * np.sqrt(2 * Pressure_Diff/ self.rho )
         return Velocity.to(ureg.feet / ureg.second)
-    def Area(self, Cd, Pressure_Diff):
+    
+    
+    def Area(self, Cd, Pressure_Diff) -> float:
+        """Calculates area from Dr. Whites Eq 16.2
+
+        Args:
+            Cd (float): Coefficient of Discharge
+            Pressure_Diff (float): Pressure difference through injector (Estimated metric) in psi
+
+        Returns:
+            float: Total Orifice Area needed for Propellant
+        """        
         Area = (self.mdot / (Cd * np.sqrt(2*self.rho* Pressure_Diff )))
         return Area.to(ureg.inch**2)
-    def Number(self, Hole_Diameter, Cd, Pressure_Diff):
+    
+    
+    def Number(self, Hole_Diameter, Cd, Pressure_Diff) -> float:
+        """_summary_
+
+        Args:
+            Hole_Diameter (float): Diameter necessary for hole (MUST MATCH A DRILL SIZE)
+            Cd (float): Coefficient of Discharge
+            Pressure_Diff (float): Pressure difference through injector (Estimated metric) in psi
+
+        Returns:
+            float: Number of holes needed rounded up to be conservative
+        """        
         Hole_Area = (np.pi * Hole_Diameter**2 /4).to(ureg.inch**2)
         Tot_Area = self.Area(Cd,Pressure_Diff)
         Number = np.round(Tot_Area/Hole_Area, decimals=0)
