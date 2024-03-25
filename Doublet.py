@@ -22,8 +22,9 @@ class PROP:
     def Area(self, Cd, Pressure_Diff):
         Area = (self.mdot / (Cd * np.sqrt(2*self.rho* Pressure_Diff *gc)))
         return Area.to(ureg.inch**2)
-    def Number(self, Hole_Diameter, Tot_Area):
-        Hole_Area = np.pi * Hole_Diameter**2 /4
+    def Number(self, Hole_Diameter, Cd, Pressure_Diff):
+        Hole_Area = (np.pi * Hole_Diameter**2 /4).to(ureg.inch**2)
+        Tot_Area = self.Area(Cd,Pressure_Diff)
         Number = np.round(Tot_Area/Hole_Area, decimals=0)
         return Number
     
@@ -40,8 +41,8 @@ Exit_Angle = 4 #degrees. Design Constraint
 Pressure_Drop_Fuel = 0.2
 Pressure_Drop_Lox = 0.2
 Pressure_Chamber = Q_(300, ureg.force_pound / ureg.inch**2)
-Doublet_Diameter_LOX = Q_(0.0625, ureg.inch)
-Doublet_Diameter_Fuel = Q_(0.0625, ureg.inch)
+Doublet_Diameter_LOX = Q_(0.125, ureg.inch)
+Doublet_Diameter_Fuel = Q_(0.0625, ureg.inch) #Guess
 
 #Equations and Setting classes
 OX_CORE = PROP(gamma=-15, mdot=mdots[0], rho=56.794)
@@ -58,8 +59,12 @@ print(f"Fuel Angle is {FUEL_CORE.gamma:.3f~}")
 OUT_FILM_C = PROP(gamma = 30, mdot = Film_Cooling[0]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
 IN_FILM_C = PROP(gamma = -30, mdot = Film_Cooling[1]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
 
-OX_CORE_Holes = OX_CORE.Number(Doublet_Diameter_LOX,OX_CORE.Area(CD_drill, Pressure_Chamber * (Pressure_Drop_Lox)) )
+OX_CORE_Holes = OX_CORE.Number(Doublet_Diameter_LOX,CD_drill, Pressure_Chamber * (Pressure_Drop_Lox))
 print(OX_CORE_Holes)
+FUEL_CORE_Diameter = np.sqrt((FUEL_CORE.Area(CD_drill, Pressure_Chamber * (Pressure_Drop_Fuel)) / OX_CORE_Holes) * 4 / np.pi)
+print(FUEL_CORE_Diameter) #Currently gives us roughly 0.082 inches. Closest Drill size is 2.08 mm diamter which is a Drill size of 45
+FUEL_CORE_Holes = FUEL_CORE.Number(Q_(2.08, ureg.mm),CD_drill, Pressure_Chamber * (Pressure_Drop_Fuel))
+print(FUEL_CORE_Holes)
 
 print(f"Total OX Doublets Velocity: {OX_CORE.Velocity(CD_drill, Pressure_Chamber * (Pressure_Drop_Lox)):.3f~}")
 print(f"Total OX Orifice Area Doublets: {OX_CORE.Area(CD_drill, Pressure_Chamber * (Pressure_Drop_Lox)):.3f~}")
