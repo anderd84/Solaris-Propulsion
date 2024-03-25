@@ -5,19 +5,22 @@ rg = np.random.default_rng()
 import matplotlib.pyplot as plt
 from scipy import integrate
 from pint import UnitRegistry
+from scipy.optimize import fsolve
+
 ureg = UnitRegistry()
 ureg.default_system = 'US'
 Q_ = ureg.Quantity
+
 class PROP:
     def __init__(self, gamma, mdot, rho):
         self.gamma = Q_(gamma, ureg.degrees)
         self.mdot = Q_(mdot, ureg.pound / ureg.second)
         self.rho = Q_(rho, ureg.pound / ureg.foot**3)
     def Velocity(self,Cd , Pressure_Diff):
-        Velocity = Cd * np.sqrt(2 * Pressure_Diff/ self.rho *gc)
+        Velocity = Cd * np.sqrt(2 * Pressure_Diff/ self.rho )
         return Velocity.to(ureg.feet / ureg.second)
     def Area(self, Cd, Pressure_Diff):
-        Area = (self.mdot / (Cd * np.sqrt(2*self.rho* Pressure_Diff*gc)))
+        Area = (self.mdot / (Cd * np.sqrt(2*self.rho* Pressure_Diff)))
         return Area.to(ureg.inch**2)
     
 #Constants
@@ -29,13 +32,24 @@ gc = Q_(32.174,  ureg.pound * ureg.ft / ( ureg.force_pound * ureg.second**2))
 #gamma defined as angle after faceplate off the axial direction. Positive defined as away from center of Aerospike
 mdots = np.array([5.29, 2.21]) #LOX_CORE, FUEL_CORE
 Film_Cooling = np.array([0.08, 0.08]) #Outer Film Cooling, Inner Film Cooling
+Exit_Angle = 4 #degrees. Design Constraint
 Pressure_Drop_Fuel = 0.2
 Pressure_Drop_Lox = 0.2
 Pressure_Chamber = Q_(300, ureg.force_pound / ureg.inch**2)
 OX_CORE = PROP(gamma=-15, mdot=mdots[0], rho=56.794)
-FUEL_CORE = PROP(gamma = 12, mdot = mdots[1], rho=51.15666)
+FUEL_CORE = PROP(gamma = 0, mdot = mdots[1], rho=51.15666)
+func = lambda gamma_FUEL: - np.tan(np.deg2rad(Exit_Angle)) + (
+    OX_CORE.mdot.magnitude * OX_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Lox).magnitude * np.sin(np.deg2rad(OX_CORE.gamma.magnitude)) +
+    FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Fuel).magnitude * np.sin(gamma_FUEL))/ (
+    OX_CORE.mdot.magnitude * OX_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Lox).magnitude * np.cos(np.deg2rad(OX_CORE.gamma.magnitude)) +
+    FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Fuel).magnitude * np.cos(gamma_FUEL))    
+gamma_FUEL = fsolve(func, np.deg2rad(15)) 
+FUEL_CORE.gamma = Q_(np.rad2deg(gamma_FUEL[0]), ureg.degrees) 
+
+print(FUEL_CORE.gamma)
 OUT_FILM_C = PROP(gamma = 30, mdot = Film_Cooling[0]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
 IN_FILM_C = PROP(gamma = -30, mdot = Film_Cooling[1]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
+
 
 
 print(f"Total OX Doublets Velocity: {OX_CORE.Velocity(CD_drill, Pressure_Chamber * (Pressure_Drop_Lox)):.3f~}")
