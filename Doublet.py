@@ -17,10 +17,10 @@ class PROP:
         self.mdot = Q_(mdot, ureg.pound / ureg.second)
         self.rho = Q_(rho, ureg.pound / ureg.foot**3)
     def Velocity(self,Cd , Pressure_Diff):
-        Velocity = Cd * np.sqrt(2 * Pressure_Diff/ self.rho * gc )
+        Velocity = Cd * np.sqrt(2 * Pressure_Diff/ self.rho )
         return Velocity.to(ureg.feet / ureg.second)
     def Area(self, Cd, Pressure_Diff):
-        Area = (self.mdot / (Cd * np.sqrt(2*self.rho* Pressure_Diff *gc)))
+        Area = (self.mdot / (Cd * np.sqrt(2*self.rho* Pressure_Diff )))
         return Area.to(ureg.inch**2)
     def Number(self, Hole_Diameter, Cd, Pressure_Diff):
         Hole_Area = (np.pi * Hole_Diameter**2 /4).to(ureg.inch**2)
