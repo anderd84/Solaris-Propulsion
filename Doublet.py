@@ -17,11 +17,15 @@ class PROP:
         self.mdot = Q_(mdot, ureg.pound / ureg.second)
         self.rho = Q_(rho, ureg.pound / ureg.foot**3)
     def Velocity(self,Cd , Pressure_Diff):
-        Velocity = Cd * np.sqrt(2 * Pressure_Diff/ self.rho )
+        Velocity = Cd * np.sqrt(2 * Pressure_Diff/ self.rho * gc )
         return Velocity.to(ureg.feet / ureg.second)
     def Area(self, Cd, Pressure_Diff):
-        Area = (self.mdot / (Cd * np.sqrt(2*self.rho* Pressure_Diff)))
+        Area = (self.mdot / (Cd * np.sqrt(2*self.rho* Pressure_Diff *gc)))
         return Area.to(ureg.inch**2)
+    def Number(self, Hole_Diameter, Tot_Area):
+        Hole_Area = np.pi * Hole_Diameter**2 /4
+        Number = np.round(Tot_Area/Hole_Area, decimals=0)
+        return Number
     
 #Constants
 CD_drill = 0.7 #Constant for Sharp Edged Orifices
@@ -36,21 +40,26 @@ Exit_Angle = 4 #degrees. Design Constraint
 Pressure_Drop_Fuel = 0.2
 Pressure_Drop_Lox = 0.2
 Pressure_Chamber = Q_(300, ureg.force_pound / ureg.inch**2)
+Doublet_Diameter_LOX = Q_(0.0625, ureg.inch)
+Doublet_Diameter_Fuel = Q_(0.0625, ureg.inch)
+
+#Equations and Setting classes
 OX_CORE = PROP(gamma=-15, mdot=mdots[0], rho=56.794)
 FUEL_CORE = PROP(gamma = 0, mdot = mdots[1], rho=51.15666)
-func = lambda gamma_FUEL: - np.tan(np.deg2rad(Exit_Angle)) + (
-    OX_CORE.mdot.magnitude * OX_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Lox).magnitude * np.sin(np.deg2rad(OX_CORE.gamma.magnitude)) +
-    FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Fuel).magnitude * np.sin(gamma_FUEL))/ (
-    OX_CORE.mdot.magnitude * OX_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Lox).magnitude * np.cos(np.deg2rad(OX_CORE.gamma.magnitude)) +
-    FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Fuel).magnitude * np.cos(gamma_FUEL))    
+func = lambda gamma_FUEL: - np.tan(np.deg2rad(Exit_Angle)) + \
+    (OX_CORE.mdot.magnitude * OX_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Lox).magnitude * np.sin(np.deg2rad(OX_CORE.gamma.magnitude)) \
+    + FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Fuel).magnitude * np.sin(gamma_FUEL))/ \
+    (OX_CORE.mdot.magnitude * OX_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Lox).magnitude * np.cos(np.deg2rad(OX_CORE.gamma.magnitude)) \
+    + FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Fuel).magnitude * np.cos(gamma_FUEL))    
 gamma_FUEL = fsolve(func, np.deg2rad(15)) 
 FUEL_CORE.gamma = Q_(np.rad2deg(gamma_FUEL[0]), ureg.degrees) 
 
-print(FUEL_CORE.gamma)
+print(f"Fuel Angle is {FUEL_CORE.gamma:.3f~}")
 OUT_FILM_C = PROP(gamma = 30, mdot = Film_Cooling[0]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
 IN_FILM_C = PROP(gamma = -30, mdot = Film_Cooling[1]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
 
-
+OX_CORE_Holes = OX_CORE.Number(Doublet_Diameter_LOX,OX_CORE.Area(CD_drill, Pressure_Chamber * (Pressure_Drop_Lox)) )
+print(OX_CORE_Holes)
 
 print(f"Total OX Doublets Velocity: {OX_CORE.Velocity(CD_drill, Pressure_Chamber * (Pressure_Drop_Lox)):.3f~}")
 print(f"Total OX Orifice Area Doublets: {OX_CORE.Area(CD_drill, Pressure_Chamber * (Pressure_Drop_Lox)):.3f~}")
