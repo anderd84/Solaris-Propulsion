@@ -105,8 +105,6 @@ print(f"For Total Fuel mdot in commie units: {FUEL_mdot_tot.to(ureg.kilogram / u
 
 # PLOTTING SHIT BELOW
 
-import numpy as np
-import matplotlib.pyplot as plt
 
 # Constants and parameters
 Points = 1000
@@ -118,6 +116,8 @@ gamma_lox = 15  # degrees
 gamma_fuel = -12  # degrees
 Chamber_Cowl_r = 0.5  # in
 Past_Peak = 1.15
+
+#These following constants are only used for the shitty Aerospike contour I made for proof of concept for my impingement formula
 r1 = 3.50
 r2 = 2.50
 angle1 = 41.81
