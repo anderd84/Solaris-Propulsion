@@ -9,6 +9,14 @@ from scipy import linalg
 import numpy as np
 import scipy as sp 
 
+"""
+Shit that needs to get done still in this code:
+    Utilize the Space prop notes to find time of vaporization and make sure our chamber length design fits for that. For instance the larger the diameter
+        the larger the time necessary to vaporize and the larger the L* we need
+    Add the film cooling angles onto the plot
+    Convert the class to a data class and move all caclculated shit to a seperate function (Requested by el David) -  Can be put onto the header file for functions
+    have A seperate figure for a 2D sketch of the hgoles to make visualization much much easier
+"""
 
 ureg = UnitRegistry()
 ureg.default_system = 'US'
@@ -79,7 +87,6 @@ Pressure_Drop_Fuel = 0.2 #Pressure drop Percentage (ROT: Always in terms of Cham
 Pressure_Drop_Lox = 0.2 #Pressure drop Percentage (ROT: Always in terms of Chamber Pressure)
 Pressure_Chamber = Q_(300, ureg.force_pound / ureg.inch**2) #Chamber Pressure Pretty Obvious
 Doublet_Diameter_LOX = Q_(0.125, ureg.inch)  #Design choise for DOublet Diameter size (Need to look more properly into it as 1/4 holes might make vaporization time too long)
-Doublet_Diameter_Fuel = Q_(0.0625, ureg.inch) #Guess, will find the exact number necessary later 
 OX_CORE = PROP(gamma=20., mdot=mdots[0], rho=56.794)
 FUEL_CORE = PROP(gamma = 0, mdot = mdots[1], rho=51.15666) #gamma zero for this one because it's the initialized guess just making the FUEL CORE class requires it ( should change when moving to data classes)
 OUT_FILM_C = PROP(gamma = 30, mdot = Film_Cooling[0]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
@@ -226,23 +233,16 @@ arc_delta = patches.Arc((x, y), 3*x, 3*x,
                        angle=0, theta1=0, theta2=delta.magnitude, color='y', label=f'Resultant_Angle: {delta} deg')
 plt.gca().add_patch(arc_delta)
 
-# -------------- Extra Calcs for Later Usage -------------- #
-difference = OX_CORE.gamma.magnitude - delta
-Lowest_Angle = np.arctan((yprime-Rgamma_lox)/xprime) *180 / np.pi
-print(f"tan(delta):  {tan_resultant}")
-print(f"Difference:  {difference}")
-print(f"Delta:  {delta}")
-print(f"Theoretically lowest gamma Possible:  {Lowest_Angle}")
 
 # -------------- Hole Size SHit -------------- #
 OX_CORE_Holes = OX_CORE.Number(Doublet_Diameter_LOX,CD_drill, Pressure_Chamber * (Pressure_Drop_Lox))
-print(OX_CORE_Holes)
+print(f'Number of Oxygen Doublet holes needed based on a {Doublet_Diameter_LOX} diameter is {OX_CORE_Holes.magnitude} holes')
 FUEL_CORE_Diameter = np.sqrt((FUEL_CORE.Area(CD_drill, Pressure_Chamber * (Pressure_Drop_Fuel)) / OX_CORE_Holes) * 4 / np.pi)
-print(FUEL_CORE_Diameter)
-closest_number, drill_size ,closest_index = drill_approximation(FUEL_CORE_Diameter.magnitude)
-print(f"Closest drill size to {FUEL_CORE_Diameter} is a diameter of {closest_number} with a drill size of {drill_size} .")
-FUEL_CORE_Holes = FUEL_CORE.Number(Q_(closest_number, ureg.inch),CD_drill, Pressure_Chamber * (Pressure_Drop_Fuel))
-print(FUEL_CORE_Holes)
+Doublet_Diameter_Fuel , drill_size ,closest_index = drill_approximation(FUEL_CORE_Diameter.magnitude)
+Doublet_Diameter_Fuel = Q_(Doublet_Diameter_Fuel, ureg.inch)
+print(f"Closest drill size to {FUEL_CORE_Diameter :.5f~} is a diameter of {Doublet_Diameter_Fuel} with a drill size of {drill_size} .")
+FUEL_CORE_Holes = FUEL_CORE.Number((Doublet_Diameter_Fuel),CD_drill, Pressure_Chamber * (Pressure_Drop_Fuel))
+print(f'Number of Fuel Doublet holes needed based on a {Doublet_Diameter_Fuel} diameter is {FUEL_CORE_Holes.magnitude} holes')
 
 
 # -------------- Extra Plotting Shit -------------- #
@@ -257,11 +257,19 @@ plt.grid(True)
 plt.show()
 
 
+
+# -------------- Extra Calcs for Later Usage (Don't know if we need it just was using as a reference and checking shit)-------------- #
+#difference = OX_CORE.gamma.magnitude - delta
+#Lowest_Angle = np.arctan((yprime-Rgamma_lox)/xprime) *180 / np.pi
+#print(f"tan(delta):  {tan_resultant}")
+#print(f"Difference:  {difference}")
+#print(f"Delta:  {delta}")
+#print(f"Theoretically lowest gamma Possible:  {Lowest_Angle}")
 # -------------- Extra Shit used to test Printed Shit -------------- #
-print(f"Total FUEL Doublets Velocity: {FUEL_CORE.Velocity(CD_drill, Pressure_Chamber * (Pressure_Drop_Fuel)):.3f~}")
-print(f"Total FUEL Orifice Area Doublets: {FUEL_CORE.Area(CD_drill, Pressure_Chamber * (Pressure_Drop_Fuel)):.3f~}")
-print(f"Total OX Doublets Velocity: {OX_CORE.Velocity(CD_drill, Pressure_Chamber * (Pressure_Drop_Lox)):.3f~}")
-print(f"Total OX Orifice Area Doublets: {OX_CORE.Area(CD_drill, Pressure_Chamber * (Pressure_Drop_Lox)):.3f~}")
-FUEL_mdot_tot = FUEL_CORE.mdot + OUT_FILM_C.mdot + IN_FILM_C.mdot
-print(f"For Total Fuel mdot in normal units: {FUEL_mdot_tot:.3f~}")
-print(f"For Total Fuel mdot in commie units: {FUEL_mdot_tot.to(ureg.kilogram / ureg.second):.3f~}")
+#print(f"Total FUEL Doublets Velocity: {FUEL_CORE.Velocity(CD_drill, Pressure_Chamber * (Pressure_Drop_Fuel)):.3f~}")
+#print(f"Total FUEL Orifice Area Doublets: {FUEL_CORE.Area(CD_drill, Pressure_Chamber * (Pressure_Drop_Fuel)):.3f~}")
+#print(f"Total OX Doublets Velocity: {OX_CORE.Velocity(CD_drill, Pressure_Chamber * (Pressure_Drop_Lox)):.3f~}")
+#print(f"Total OX Orifice Area Doublets: {OX_CORE.Area(CD_drill, Pressure_Chamber * (Pressure_Drop_Lox)):.3f~}")
+#FUEL_mdot_tot = FUEL_CORE.mdot + OUT_FILM_C.mdot + IN_FILM_C.mdot
+#print(f"For Total Fuel mdot in normal units: {FUEL_mdot_tot:.3f~}")
+#print(f"For Total Fuel mdot in commie units: {FUEL_mdot_tot.to(ureg.kilogram / ureg.second):.3f~}")
