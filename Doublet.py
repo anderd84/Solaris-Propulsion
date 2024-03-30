@@ -9,6 +9,7 @@ from scipy import linalg
 import numpy as np
 import scipy as sp 
 
+
 """
 Shit that needs to get done still in this code:
     Utilize the Space prop notes to find time of vaporization and make sure our chamber length design fits for that. For instance the larger the diameter
@@ -71,7 +72,8 @@ class PROP:
         Tot_Area = self.Area(Cd,Pressure_Diff)
         Number = np.round(Tot_Area/Hole_Area, decimals=0)
         return Number
-    
+
+
 # -------------- Design Inputs and Constants -------------- #    
 #Constants
 CD_drill = 0.7 #Constant for Sharp Edged Orifices
@@ -92,6 +94,7 @@ FUEL_CORE = PROP(gamma = 0, mdot = mdots[1], rho=51.15666) #gamma zero for this 
 OUT_FILM_C = PROP(gamma = 30, mdot = Film_Cooling[0]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
 IN_FILM_C = PROP(gamma = -30, mdot = Film_Cooling[1]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
 
+
 # -------------- Code to Make my Shitty version of the Spike COntour -------------- #
 #Constants for Spike contour
 Points = 1000 #also used in other plots if this section ends up getting deleted
@@ -104,7 +107,6 @@ startX, startY = 0, 1
 startX1, startY1 = 2, 1  # Adjusted based on given code
 BaseX = np.linspace(startX, startX1, Points)
 BaseY = np.linspace(startY, startY1, Points)
-
 # Calculating end points and start points for the arcs
 endX1 = startX1 + r1 * np.sin(np.radians(angle1))
 endY1 = startY1 + r1 * (1 - np.cos(np.radians(angle1)))
@@ -114,12 +116,10 @@ endY2 = startY2 + r2 * (np.sin(np.radians(90 - angle2 / 2)) - np.sin(np.radians(
 startX3, startY3 = endX2, endY2
 endX3 = startX3 + r1 * (np.cos(3*np.pi/2) - np.cos(np.radians(270 - angle1)))
 endY3 = startY3 + r1 * (np.sin(3*np.pi/2) - np.sin(np.radians(270 - angle1)))
-
 # Defining theta ranges for the arcs
 thetaRange1 = np.linspace(0, np.radians(angle1), Points)
 thetaRange2 = np.linspace(np.radians(90 + angle2 / 2), np.radians(90 - angle2 / 2), Points)
 thetaRange3 = np.linspace(np.radians(angle1), 0, Points)
-
 # Defining arcs
 arc1_x = startX1 + r1 * np.sin(thetaRange1)
 arc1_y = startY1 + r1 * (1 - np.cos(thetaRange1))
@@ -127,7 +127,6 @@ arc2_x = startX2 + r2 * (np.cos(np.radians(90 - angle2 / 2)) + np.cos(thetaRange
 arc2_y = startY2 + r2 * (-np.sin(np.radians(90 - angle2 / 2)) + np.sin(thetaRange2))
 arc3_x = endX3 + r1 * np.cos(3 * np.pi / 2 - thetaRange3)
 arc3_y = endY3 + r1 * (1 + np.sin(3 * np.pi / 2 - thetaRange3))
-
 # Combining all segments (for both plotting use and finding peaks)
 x_profile = np.concatenate([BaseX, arc1_x, arc2_x, arc3_x])
 y_profile = np.concatenate([BaseY, arc1_y, arc2_y, arc3_y])
@@ -164,11 +163,14 @@ print(f"Newly Adjusted Fuel Angle is {FUEL_CORE.gamma:.3f}")
 
 
 # PLOTTING SHIT BELOW
-# Constants and parameters
+
+
+# -------------- Constants and parameters -------------- #
 gamma_lox = OX_CORE.gamma.magnitude  # degrees and making the variables work below since i made the matlab version of this first and converted to python with ChatGPT
 gamma_fuel = FUEL_CORE.gamma.magnitude  # degrees
 Chamber_Cowl_r = 0.5  # in
 Past_Peak = 1.15 #some terrible constant for shitty chamber I made drawn
+
 
 # -------------- Plotting the aerospike nozzle contour -------------- #
 plt.figure()
