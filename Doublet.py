@@ -173,7 +173,9 @@ plt.axhline(Rgamma_lox + Spacing, linestyle="--")
 # Calculations for impingement point and chamber contour
 x = Spacing * np.sin(np.radians(90 + gamma_fuel)) / np.sin(np.radians(gamma_lox - gamma_fuel)) * np.sin(np.radians(90 - gamma_lox)) 
 y = Spacing * np.sin(np.radians(90 + gamma_fuel)) / np.sin(np.radians(gamma_lox - gamma_fuel)) * np.cos(np.radians(90 - gamma_lox)) + Rgamma_lox
+plt.axhline(y, linestyle="--")
 plt.plot(x, y, "o")
+
 
 x_graph = np.linspace(0, max(x_profile), Points)
 x_angled_lines = np.linspace(0, x, Points)  # Up to the impingement point for FUEL line
@@ -209,7 +211,10 @@ plt.gca().add_patch(arc_lox)
 arc_fuel = patches.Arc((0, Rgamma_lox + Spacing), x, x, 
                        angle=0, theta1=gamma_fuel, theta2=0, color='red', label=f'Gamma_FUEL: {gamma_fuel} deg')
 plt.gca().add_patch(arc_fuel)
-delta = (np.arctan(tan_resultant)) *180 / np.pi
+delta = Q_((np.arctan(tan_resultant)) *180 / np.pi, ureg.degrees)
+arc_delta = patches.Arc((x, y), 3*x, 3*x, 
+                       angle=0, theta1=0, theta2=delta.magnitude, color='y', label=f'Resultant_Angle: {delta} deg')
+plt.gca().add_patch(arc_delta)
 difference = OX_CORE.gamma.magnitude - delta
 Lowest_Angle = np.arctan((yprime-Rgamma_lox)/xprime) *180 / np.pi
 print(f"tan(delta):  {tan_resultant}")
@@ -217,9 +222,9 @@ print(f"Difference:  {difference}")
 print(f"Delta:  {delta}")
 print(f"Theoretically lowest gamma Possible:  {Lowest_Angle}")
 # Finishing touches
-plt.legend(['Spike Contour', 'Centerline', 'Gamma_(OX) Straight Line', 'Gamma_(FUEL) Straight Line', 'Impingement Point',
+plt.legend(['Spike Contour', 'Centerline', 'Gamma_(OX) Straight Line', 'Gamma_(FUEL) Straight Line','Resultant Straight Line', 'Impingement Point',
              f'Gamma_(OX) Angled Line {OX_CORE.gamma :.3f~}', 
-             f'Gamma_(FUEL) Angled Line {FUEL_CORE.gamma :.3f~}','Chamber Contour', 'Aim Point', 'Resultant Line'], loc="best")
+             f'Gamma_(FUEL) Angled Line {FUEL_CORE.gamma :.3f~}','Chamber Contour', 'Aim Point', f'Resultant Line {delta :.3f~}'], loc="best")
 plt.xlabel('Distance Along Engine Axis (inches)')
 plt.ylabel('Radius (inches)')
 plt.axis('equal')
