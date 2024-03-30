@@ -162,9 +162,18 @@ if FUEL_CORE.gamma >= 90 * ureg.degrees:    #This section is here for if law of 
 print(f"Newly Adjusted Fuel Angle is {FUEL_CORE.gamma:.3f}")
 
 
+# -------------- Hole Size SHit -------------- #
+OX_CORE_Holes = OX_CORE.Number(Doublet_Diameter_LOX,CD_drill, Pressure_Chamber * (Pressure_Drop_Lox))
+print(f'Number of Oxygen Doublet holes needed based on a {Doublet_Diameter_LOX} diameter is {OX_CORE_Holes.magnitude} holes')
+FUEL_CORE_Diameter = np.sqrt((FUEL_CORE.Area(CD_drill, Pressure_Chamber * (Pressure_Drop_Fuel)) / OX_CORE_Holes) * 4 / np.pi)
+Doublet_Diameter_Fuel , drill_size ,closest_index = drill_approximation(FUEL_CORE_Diameter.magnitude)
+Doublet_Diameter_Fuel = Q_(Doublet_Diameter_Fuel, ureg.inch)
+print(f"Closest drill size to {FUEL_CORE_Diameter :.5f~} is a diameter of {Doublet_Diameter_Fuel} with a drill size of {drill_size} .")
+FUEL_CORE_Holes = FUEL_CORE.Number((Doublet_Diameter_Fuel),CD_drill, Pressure_Chamber * (Pressure_Drop_Fuel))
+print(f'Number of Fuel Doublet holes needed based on a {Doublet_Diameter_Fuel} diameter is {FUEL_CORE_Holes.magnitude} holes')
+
+
 # PLOTTING SHIT BELOW
-
-
 # -------------- Constants and parameters -------------- #
 gamma_lox = OX_CORE.gamma.magnitude  # degrees and making the variables work below since i made the matlab version of this first and converted to python with ChatGPT
 gamma_fuel = FUEL_CORE.gamma.magnitude  # degrees
@@ -234,17 +243,6 @@ delta = Q_((np.arctan(tan_resultant)) *180 / np.pi, ureg.degrees)
 arc_delta = patches.Arc((x, y), 3*x, 3*x, 
                        angle=0, theta1=0, theta2=delta.magnitude, color='y', label=f'Resultant_Angle: {delta} deg')
 plt.gca().add_patch(arc_delta)
-
-
-# -------------- Hole Size SHit -------------- #
-OX_CORE_Holes = OX_CORE.Number(Doublet_Diameter_LOX,CD_drill, Pressure_Chamber * (Pressure_Drop_Lox))
-print(f'Number of Oxygen Doublet holes needed based on a {Doublet_Diameter_LOX} diameter is {OX_CORE_Holes.magnitude} holes')
-FUEL_CORE_Diameter = np.sqrt((FUEL_CORE.Area(CD_drill, Pressure_Chamber * (Pressure_Drop_Fuel)) / OX_CORE_Holes) * 4 / np.pi)
-Doublet_Diameter_Fuel , drill_size ,closest_index = drill_approximation(FUEL_CORE_Diameter.magnitude)
-Doublet_Diameter_Fuel = Q_(Doublet_Diameter_Fuel, ureg.inch)
-print(f"Closest drill size to {FUEL_CORE_Diameter :.5f~} is a diameter of {Doublet_Diameter_Fuel} with a drill size of {drill_size} .")
-FUEL_CORE_Holes = FUEL_CORE.Number((Doublet_Diameter_Fuel),CD_drill, Pressure_Chamber * (Pressure_Drop_Fuel))
-print(f'Number of Fuel Doublet holes needed based on a {Doublet_Diameter_Fuel} diameter is {FUEL_CORE_Holes.magnitude} holes')
 
 
 # -------------- Extra Plotting Shit -------------- #
