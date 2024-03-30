@@ -120,7 +120,7 @@ Pressure_Chamber = Q_(300, ureg.force_pound / ureg.inch**2)
 Doublet_Diameter_LOX = Q_(0.125, ureg.inch)
 Doublet_Diameter_Fuel = Q_(0.0625, ureg.inch) #Guess 
 #Equations and Setting classes
-OX_CORE = PROP(gamma=34, mdot=mdots[0], rho=56.794)
+OX_CORE = PROP(gamma=20., mdot=mdots[0], rho=56.794)
 FUEL_CORE = PROP(gamma = 0, mdot = mdots[1], rho=51.15666)
 def func(gamma_FUEL):
     return \
@@ -217,8 +217,9 @@ print(f"Difference:  {difference}")
 print(f"Delta:  {delta}")
 print(f"Theoretically lowest gamma Possible:  {Lowest_Angle}")
 # Finishing touches
-plt.legend(['Spike Contour', 'Centerline', 'Gamma_{OX} Straight Line', 'Gamma_{FUEL} Straight Line', 'Impingement Point', 'Gamma_{OX} Angled Line', 
-             'Gamma_{FUEL} Angled Line','Chamber Contour', 'Aim Point', 'Resultant Line'], loc="best")
+plt.legend(['Spike Contour', 'Centerline', 'Gamma_(OX) Straight Line', 'Gamma_(FUEL) Straight Line', 'Impingement Point',
+             f'Gamma_(OX) Angled Line {OX_CORE.gamma :.3f~}', 
+             f'Gamma_(FUEL) Angled Line {FUEL_CORE.gamma :.3f~}','Chamber Contour', 'Aim Point', 'Resultant Line'], loc="best")
 plt.xlabel('Distance Along Engine Axis (inches)')
 plt.ylabel('Radius (inches)')
 plt.axis('equal')
