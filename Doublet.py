@@ -69,8 +69,8 @@ Film_Cooling = np.array([0.08, 0.08]) #Outer Film Cooling, Inner Film Cooling
 Points = 1000
 di = 6.5
 ri = di / 2
-Spacing = 0.75  # in
-Rgamma_lox = 1.5  # in
+Spacing = 0.60  # in
+Rgamma_lox = 1.75  # in
 r1 = 3.50
 r2 = 2.50
 angle1 = 41.81
@@ -119,12 +119,12 @@ Pressure_Chamber = Q_(300, ureg.force_pound / ureg.inch**2)
 Doublet_Diameter_LOX = Q_(0.125, ureg.inch)
 Doublet_Diameter_Fuel = Q_(0.0625, ureg.inch) #Guess 
 #Equations and Setting classes
-OX_CORE = PROP(gamma=10, mdot=mdots[0], rho=56.794)
+OX_CORE = PROP(gamma=34, mdot=mdots[0], rho=56.794)
 FUEL_CORE = PROP(gamma = 0, mdot = mdots[1], rho=51.15666)
 def func(gamma_FUEL):
     return \
-    -((ri + Peaky)/2 - Spacing * np.sin(np.radians(90 - gamma_FUEL)) / np.sin(np.radians((OX_CORE.gamma.magnitude) + gamma_FUEL)) * np.cos(np.radians(90 - (OX_CORE.gamma.magnitude))))/ \
-    (Peakx - Rgamma_lox - Spacing * np.sin(np.radians(90 - gamma_FUEL)) / np.sin(np.radians((OX_CORE.gamma.magnitude) + gamma_FUEL)) * np.sin(np.radians(90 - (OX_CORE.gamma.magnitude)))) +\
+    -((ri + Peaky)/2 - Rgamma_lox -Spacing * np.sin(np.pi/2 + gamma_FUEL) / np.sin(np.radians(OX_CORE.gamma.magnitude) - gamma_FUEL) * np.cos(np.radians(90 - (OX_CORE.gamma.magnitude))))/ \
+    (Peakx - Spacing * np.sin(np.pi/2 + gamma_FUEL) / np.sin(np.radians(OX_CORE.gamma.magnitude) - gamma_FUEL) * np.sin(np.radians(90 - (OX_CORE.gamma.magnitude)))) +\
     (OX_CORE.mdot.magnitude * OX_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Lox).magnitude * np.sin(np.deg2rad(OX_CORE.gamma.magnitude)) \
     + FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Fuel).magnitude * np.sin(gamma_FUEL))/ \
     (OX_CORE.mdot.magnitude * OX_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Lox).magnitude * np.cos(np.deg2rad(OX_CORE.gamma.magnitude)) \
@@ -170,17 +170,16 @@ plt.axhline(Rgamma_lox, linestyle="--")
 plt.axhline(Rgamma_lox + Spacing, linestyle="--")
 
 # Calculations for impingement point and chamber contour
-#gamma_fuel = abs(gamma_fuel)
-x = Spacing * np.sin(np.radians(90 + gamma_fuel)) / np.sin(np.radians(gamma_lox - gamma_fuel)) * np.sin(np.radians(90 - gamma_lox))
+x = Spacing * np.sin(np.radians(90 + gamma_fuel)) / np.sin(np.radians(gamma_lox - gamma_fuel)) * np.sin(np.radians(90 - gamma_lox)) 
 y = Spacing * np.sin(np.radians(90 + gamma_fuel)) / np.sin(np.radians(gamma_lox - gamma_fuel)) * np.cos(np.radians(90 - gamma_lox)) + Rgamma_lox
 plt.plot(x, y, "o")
 
 x_graph = np.linspace(0, max(x_profile), Points)
 x_angled_lines = np.linspace(0, x, Points)  # Up to the impingement point for FUEL line
 gamma_lox_line = np.tan(np.radians(gamma_lox)) * x_angled_lines + Rgamma_lox
-plt.plot(x_angled_lines, gamma_lox_line,"g", "--")
+plt.plot(x_angled_lines, gamma_lox_line,"g")
 gamma_fuel_line = np.tan(np.radians(gamma_fuel)) * x_angled_lines + Rgamma_lox + Spacing
-plt.plot(x_angled_lines, gamma_fuel_line,"r", "--")
+plt.plot(x_angled_lines, gamma_fuel_line,"r")
 
 
 
@@ -202,10 +201,16 @@ resultant_y_intercept = y - tan_resultant * x
 ResultantX = x_graph / x_graph[-1] * (xprime - x) * Past_Peak + x
 ResultantY = tan_resultant * ResultantX + resultant_y_intercept
 plt.plot(ResultantX, ResultantY, "y", linewidth=2)
-
+delta = (np.arctan(tan_resultant)) *180 / np.pi
+difference = OX_CORE.gamma.magnitude - delta
+Lowest_Angle = np.arctan((yprime-Rgamma_lox)/xprime) *180 / np.pi
+print(f"tan(delta):  {tan_resultant}")
+print(f"Difference:  {difference}")
+print(f"Delta:  {delta}")
+print(f"Theoretically lowest gamma Possible:  {Lowest_Angle}")
 # Finishing touches
-plt.legend(['Spike Contour', 'Centerline', 'Gamma_{OX} Straight Line', 'Gamma_{FUEL} Straight Line', 'Gamma_{OX} Angled Line', 'Gamma_{FUEL} Angled Line',
-            'Impingement Point', 'Chamber Contour', 'Aim Point', 'Resultant Line'], loc="best")
+plt.legend(['Spike Contour', 'Centerline', 'Gamma_{OX} Straight Line', 'Gamma_{FUEL} Straight Line', 'Impingement Point', 'Gamma_{OX} Angled Line', 
+             'Gamma_{FUEL} Angled Line','Chamber Contour', 'Aim Point', 'Resultant Line'], loc="best")
 plt.xlabel('Distance Along Engine Axis (inches)')
 plt.ylabel('Radius (inches)')
 plt.axis('equal')
