@@ -1,3 +1,4 @@
+from Doublet_Functions import drill_approximation
 from matplotlib import pyplot as plt, patches
 from scipy.optimize import fsolve
 from dataclasses import dataclass
@@ -81,7 +82,8 @@ Doublet_Diameter_LOX = Q_(0.125, ureg.inch)  #Design choise for DOublet Diameter
 Doublet_Diameter_Fuel = Q_(0.0625, ureg.inch) #Guess, will find the exact number necessary later 
 OX_CORE = PROP(gamma=20., mdot=mdots[0], rho=56.794)
 FUEL_CORE = PROP(gamma = 0, mdot = mdots[1], rho=51.15666) #gamma zero for this one because it's the initialized guess just making the FUEL CORE class requires it ( should change when moving to data classes)
-
+OUT_FILM_C = PROP(gamma = 30, mdot = Film_Cooling[0]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
+IN_FILM_C = PROP(gamma = -30, mdot = Film_Cooling[1]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
 
 # -------------- Code to Make my Shitty version of the Spike COntour -------------- #
 #Constants for Spike contour
@@ -131,6 +133,14 @@ Peakx = x_profile[Peak_Point]
 
 # -------------- Code to numericlaly find Fuel gamma based on the physical constraints and Ox gamma choice -------------- #
 def func(gamma_FUEL):
+    """Numerically solving function that has Momentum Balance on one side, and Tan Resultant angle in terms of gammas and physical Dimensions
+
+    Args:
+        gamma_FUEL (float): Angle off axial for fuel to impinge at
+
+    Returns:
+        float: Returns what the numerical solver goes for A.K.A zero
+    """    
     return \
     -((ri + Peaky)/2 - Rgamma_lox -Spacing * np.sin(np.pi/2 + gamma_FUEL) / np.sin(np.radians(OX_CORE.gamma.magnitude) - gamma_FUEL) * np.cos(np.radians(90 - (OX_CORE.gamma.magnitude))))/ \
     (Peakx - Spacing * np.sin(np.pi/2 + gamma_FUEL) / np.sin(np.radians(OX_CORE.gamma.magnitude) - gamma_FUEL) * np.sin(np.radians(90 - (OX_CORE.gamma.magnitude)))) +\
@@ -138,31 +148,12 @@ def func(gamma_FUEL):
     + FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Fuel).magnitude * np.sin(gamma_FUEL))/ \
     (OX_CORE.mdot.magnitude * OX_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Lox).magnitude * np.cos(np.deg2rad(OX_CORE.gamma.magnitude)) \
     + FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Fuel).magnitude * np.cos(gamma_FUEL))    
-print(OX_CORE.mdot * OX_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Lox)  )
-print(FUEL_CORE.mdot * FUEL_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Fuel))  
 gamma_FUEL = fsolve(func, np.deg2rad(5)) 
 FUEL_CORE.gamma = Q_(np.rad2deg(gamma_FUEL[0]), ureg.degrees) 
 print(f"Originally Solved Fuel Angle is {FUEL_CORE.gamma:.3f}")
 if FUEL_CORE.gamma >= 90 * ureg.degrees:    #This section is here for if law of sins messes up and gives you the obtuse angle since numerically solving, does asin(angle) in a way
     FUEL_CORE.gamma -= 180 * ureg.degrees
 print(f"Newly Adjusted Fuel Angle is {FUEL_CORE.gamma:.3f}")
-
-
-OUT_FILM_C = PROP(gamma = 30, mdot = Film_Cooling[0]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
-IN_FILM_C = PROP(gamma = -30, mdot = Film_Cooling[1]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
-OX_CORE_Holes = OX_CORE.Number(Doublet_Diameter_LOX,CD_drill, Pressure_Chamber * (Pressure_Drop_Lox))
-print(OX_CORE_Holes)
-FUEL_CORE_Diameter = np.sqrt((FUEL_CORE.Area(CD_drill, Pressure_Chamber * (Pressure_Drop_Fuel)) / OX_CORE_Holes) * 4 / np.pi)
-print(FUEL_CORE_Diameter) #Currently gives us roughly 0.082 inches. Closest Drill size is 2.08 mm diamter which is a Drill size of 45
-FUEL_CORE_Holes = FUEL_CORE.Number(Q_(2.08, ureg.mm),CD_drill, Pressure_Chamber * (Pressure_Drop_Fuel))
-print(FUEL_CORE_Holes)
-print(f"Total FUEL Doublets Velocity: {FUEL_CORE.Velocity(CD_drill, Pressure_Chamber * (Pressure_Drop_Fuel)):.3f~}")
-print(f"Total FUEL Orifice Area Doublets: {FUEL_CORE.Area(CD_drill, Pressure_Chamber * (Pressure_Drop_Fuel)):.3f~}")
-print(f"Total OX Doublets Velocity: {OX_CORE.Velocity(CD_drill, Pressure_Chamber * (Pressure_Drop_Lox)):.3f~}")
-print(f"Total OX Orifice Area Doublets: {OX_CORE.Area(CD_drill, Pressure_Chamber * (Pressure_Drop_Lox)):.3f~}")
-FUEL_mdot_tot = FUEL_CORE.mdot + OUT_FILM_C.mdot + IN_FILM_C.mdot
-print(f"For Total Fuel mdot in normal units: {FUEL_mdot_tot:.3f~}")
-print(f"For Total Fuel mdot in commie units: {FUEL_mdot_tot.to(ureg.kilogram / ureg.second):.3f~}")
 
 
 # PLOTTING SHIT BELOW
@@ -178,7 +169,6 @@ plt.plot(x_profile, y_profile, linewidth=2)
 plt.axhline(0, linewidth=2, color="b")
 
 
-
 # -------------- Calculations and Plotting for impingement point and Resultant Point -------------- #
 x = Spacing * np.sin(np.radians(90 + gamma_fuel)) / np.sin(np.radians(gamma_lox - gamma_fuel)) * np.sin(np.radians(90 - gamma_lox)) 
 y = Spacing * np.sin(np.radians(90 + gamma_fuel)) / np.sin(np.radians(gamma_lox - gamma_fuel)) * np.cos(np.radians(90 - gamma_lox)) + Rgamma_lox
@@ -186,6 +176,7 @@ plt.plot(x, y, "o")
 yprime = (ri + Peaky) / 2
 xprime = Peakx
 plt.plot(xprime, yprime, "o")
+
 
 # -------------- Plotting Horizontal Lines axial lines (References for angles) -------------- #
 plt.axhline(Rgamma_lox, linestyle="--")
@@ -199,6 +190,7 @@ x_angled_lines = np.linspace(0, x, Points)  # Up to the impingement point for FU
 thetaRange4 = np.linspace(np.radians(90), 0, Points)
 
 
+# -------------- Making and Plotting a Shitty Chamber Drawing  -------------- #
 ChamberX = x_graph / x_graph[-1] * Peakx * Past_Peak
 ChamberY = np.ones(len(ChamberX)) * ri
 ChamberArcX = ChamberX[-1] + Chamber_Cowl_r * np.cos(thetaRange4)
@@ -242,6 +234,17 @@ print(f"Difference:  {difference}")
 print(f"Delta:  {delta}")
 print(f"Theoretically lowest gamma Possible:  {Lowest_Angle}")
 
+# -------------- Hole Size SHit -------------- #
+OX_CORE_Holes = OX_CORE.Number(Doublet_Diameter_LOX,CD_drill, Pressure_Chamber * (Pressure_Drop_Lox))
+print(OX_CORE_Holes)
+FUEL_CORE_Diameter = np.sqrt((FUEL_CORE.Area(CD_drill, Pressure_Chamber * (Pressure_Drop_Fuel)) / OX_CORE_Holes) * 4 / np.pi)
+print(FUEL_CORE_Diameter)
+closest_number, drill_size ,closest_index = drill_approximation(FUEL_CORE_Diameter.magnitude)
+print(f"Closest drill size to {FUEL_CORE_Diameter} is a diameter of {closest_number} with a drill size of {drill_size} .")
+FUEL_CORE_Holes = FUEL_CORE.Number(Q_(closest_number, ureg.inch),CD_drill, Pressure_Chamber * (Pressure_Drop_Fuel))
+print(FUEL_CORE_Holes)
+
+
 # -------------- Extra Plotting Shit -------------- #
 plt.legend(['Spike Contour', 'Centerline', 'Impingement Point', 'Aim Point', 'Gamma_(OX) Straight Line', 'Gamma_(FUEL) Straight Line','Resultant Straight Line',
              'Chamber Contour', f'Gamma_(OX) Angled Line {OX_CORE.gamma :.3f~}', 
@@ -252,3 +255,13 @@ plt.axis('equal')
 plt.title('Side View Contour of an Aerospike Nozzle')
 plt.grid(True)
 plt.show()
+
+
+# -------------- Extra Shit used to test Printed Shit -------------- #
+print(f"Total FUEL Doublets Velocity: {FUEL_CORE.Velocity(CD_drill, Pressure_Chamber * (Pressure_Drop_Fuel)):.3f~}")
+print(f"Total FUEL Orifice Area Doublets: {FUEL_CORE.Area(CD_drill, Pressure_Chamber * (Pressure_Drop_Fuel)):.3f~}")
+print(f"Total OX Doublets Velocity: {OX_CORE.Velocity(CD_drill, Pressure_Chamber * (Pressure_Drop_Lox)):.3f~}")
+print(f"Total OX Orifice Area Doublets: {OX_CORE.Area(CD_drill, Pressure_Chamber * (Pressure_Drop_Lox)):.3f~}")
+FUEL_mdot_tot = FUEL_CORE.mdot + OUT_FILM_C.mdot + IN_FILM_C.mdot
+print(f"For Total Fuel mdot in normal units: {FUEL_mdot_tot:.3f~}")
+print(f"For Total Fuel mdot in commie units: {FUEL_mdot_tot.to(ureg.kilogram / ureg.second):.3f~}")
