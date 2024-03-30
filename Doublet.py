@@ -73,7 +73,7 @@ Pressure_Chamber = Q_(300, ureg.force_pound / ureg.inch**2)
 Doublet_Diameter_LOX = Q_(0.125, ureg.inch)
 Doublet_Diameter_Fuel = Q_(0.0625, ureg.inch) #Guess 
 #Equations and Setting classes
-OX_CORE = PROP(gamma=30, mdot=mdots[0], rho=56.794)
+OX_CORE = PROP(gamma=0, mdot=mdots[0], rho=56.794)
 FUEL_CORE = PROP(gamma = 0, mdot = mdots[1], rho=51.15666)
 def func(gamma_FUEL):
     return -1 * np.tan(np.deg2rad(Exit_Angle)) + \
@@ -101,3 +101,106 @@ print(f"Total OX Orifice Area Doublets: {OX_CORE.Area(CD_drill, Pressure_Chamber
 FUEL_mdot_tot = FUEL_CORE.mdot + OUT_FILM_C.mdot + IN_FILM_C.mdot
 print(f"For Total Fuel mdot in normal units: {FUEL_mdot_tot:.3f~}")
 print(f"For Total Fuel mdot in commie units: {FUEL_mdot_tot.to(ureg.kilogram / ureg.second):.3f~}")
+
+
+# PLOTTING SHIT BELOW
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Constants and parameters
+Points = 1000
+di = 6.5
+ri = di / 2
+Spacing = 0.5  # in
+Rgamma_lox = 1.5  # in
+gamma_lox = 15  # degrees
+gamma_fuel = -12  # degrees
+Chamber_Cowl_r = 0.5  # in
+Past_Peak = 1.15
+r1 = 3.50
+r2 = 2.50
+angle1 = 41.81
+angle2 = 83.62
+
+# Initial positions
+startX, startY = 0, 1
+startX1, startY1 = 2, 1  # Adjusted based on given code
+BaseX = np.linspace(startX, startX1, Points)
+BaseY = np.linspace(startY, startY1, Points)
+
+# Calculating end points and start points for the arcs
+endX1 = startX1 + r1 * np.sin(np.radians(angle1))
+endY1 = startY1 + r1 * (1 - np.cos(np.radians(angle1)))
+startX2, startY2 = endX1, endY1
+endX2 = startX2 + r2 * (np.cos(np.radians(90 - angle2 / 2)) - np.cos(np.radians(90 + angle2 / 2)))
+endY2 = startY2 + r2 * (np.sin(np.radians(90 - angle2 / 2)) - np.sin(np.radians(90 + angle2 / 2)))
+startX3, startY3 = endX2, endY2
+endX3 = startX3 + r1 * (np.cos(3*np.pi/2) - np.cos(np.radians(270 - angle1)))
+endY3 = startY3 + r1 * (np.sin(3*np.pi/2) - np.sin(np.radians(270 - angle1)))
+
+# Defining theta ranges for the arcs
+thetaRange1 = np.linspace(0, np.radians(angle1), Points)
+thetaRange2 = np.linspace(np.radians(90 + angle2 / 2), np.radians(90 - angle2 / 2), Points)
+thetaRange3 = np.linspace(np.radians(angle1), 0, Points)
+
+# Defining arcs
+arc1_x = startX1 + r1 * np.sin(thetaRange1)
+arc1_y = startY1 + r1 * (1 - np.cos(thetaRange1))
+arc2_x = startX2 + r2 * (np.cos(np.radians(90 - angle2 / 2)) + np.cos(thetaRange2))
+arc2_y = startY2 + r2 * (-np.sin(np.radians(90 - angle2 / 2)) + np.sin(thetaRange2))
+arc3_x = endX3 + r1 * np.cos(3 * np.pi / 2 - thetaRange3)
+arc3_y = endY3 + r1 * (1 + np.sin(3 * np.pi / 2 - thetaRange3))
+
+# Combining all segments
+x_profile = np.concatenate([BaseX, arc1_x, arc2_x, arc3_x])
+y_profile = np.concatenate([BaseY, arc1_y, arc2_y, arc3_y])
+
+# Plotting the aerospike nozzle contour
+plt.figure()
+plt.plot(x_profile, y_profile, linewidth=2)
+plt.axhline(0, linewidth=2, color="b")
+plt.axhline(Rgamma_lox, linestyle="--")
+plt.axhline(Rgamma_lox + Spacing, linestyle="--")
+Peaky, Peak_Point = max(y_profile), np.argmax(y_profile)
+Peakx = x_profile[Peak_Point]
+x_graph = np.linspace(0, max(x_profile), Points)
+gamma_lox_line = np.tan(np.radians(gamma_lox)) * x_graph + Rgamma_lox
+plt.plot(x_graph, gamma_lox_line, "--")
+gamma_fuel_line = np.tan(np.radians(gamma_fuel)) * x_graph + Rgamma_lox + Spacing
+plt.plot(x_graph, gamma_fuel_line, "--")
+
+# Calculations for impingement point and chamber contour
+gamma_fuel = abs(gamma_fuel)
+x = Spacing * np.sin(np.radians(90 - gamma_fuel)) / np.sin(np.radians(gamma_lox + gamma_fuel)) * np.sin(np.radians(90 - gamma_lox))
+y = Spacing * np.sin(np.radians(90 - gamma_fuel)) / np.sin(np.radians(gamma_lox + gamma_fuel)) * np.cos(np.radians(90 - gamma_lox)) + Rgamma_lox
+plt.plot(x, y, "o")
+
+ChamberX = x_graph / x_graph[-1] * Peakx * Past_Peak
+ChamberY = np.ones(len(ChamberX)) * ri
+thetaRange4 = np.linspace(np.radians(90), 0, Points)
+ChamberArcX = ChamberX[-1] + Chamber_Cowl_r * np.cos(thetaRange4)
+ChamberArcY = ChamberY[-1] + Chamber_Cowl_r * (-1 + np.sin(thetaRange4))
+Chamber_ContourX = np.concatenate([ChamberX, ChamberArcX])
+Chamber_ContourY = np.concatenate([ChamberY, ChamberArcY])
+plt.plot(Chamber_ContourX, Chamber_ContourY, "k", linewidth=2)
+
+# Additional plotting for resultant line
+yprime = (ri + Peaky) / 2
+xprime = Peakx
+plt.plot(xprime, yprime, "o")
+tan_resultant = (yprime - y) / (xprime - x)
+resultant_y_intercept = y - tan_resultant * x
+ResultantX = x_graph / x_graph[-1] * (xprime - x) * Past_Peak + x
+ResultantY = tan_resultant * ResultantX + resultant_y_intercept
+plt.plot(ResultantX, ResultantY, "g", linewidth=2)
+
+# Finishing touches
+plt.legend(['Spike Contour', 'Centerline', 'Gamma_{OX} Straight Line', 'Gamma_{FUEL} Straight Line', 'Gamma_{OX} Angled Line', 'Gamma_{FUEL} Angled Line',
+            'Impingement Point', 'Chamber Contour', 'Aim Point', 'Resultant Line'], loc="best")
+plt.xlabel('Distance Along Engine Axis (inches)')
+plt.ylabel('Radius (inches)')
+plt.axis('equal')
+plt.title('Side View Contour of an Aerospike Nozzle')
+plt.grid(True)
+plt.show()
