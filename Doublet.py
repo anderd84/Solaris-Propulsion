@@ -1,3 +1,4 @@
+from matplotlib import pyplot as plt, patches
 from scipy.optimize import fsolve
 from dataclasses import dataclass
 import matplotlib.pyplot as plt
@@ -201,6 +202,13 @@ resultant_y_intercept = y - tan_resultant * x
 ResultantX = x_graph / x_graph[-1] * (xprime - x) * Past_Peak + x
 ResultantY = tan_resultant * ResultantX + resultant_y_intercept
 plt.plot(ResultantX, ResultantY, "y", linewidth=2)
+
+arc_lox = patches.Arc((0, Rgamma_lox), x, x, 
+                      angle=0, theta1=0, theta2=gamma_lox, color='green', label=f'Gamma_LOX: {gamma_lox} deg')
+plt.gca().add_patch(arc_lox)
+arc_fuel = patches.Arc((0, Rgamma_lox + Spacing), x, x, 
+                       angle=0, theta1=gamma_fuel, theta2=0, color='red', label=f'Gamma_FUEL: {gamma_fuel} deg')
+plt.gca().add_patch(arc_fuel)
 delta = (np.arctan(tan_resultant)) *180 / np.pi
 difference = OX_CORE.gamma.magnitude - delta
 Lowest_Angle = np.arctan((yprime-Rgamma_lox)/xprime) *180 / np.pi
