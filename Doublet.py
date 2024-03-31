@@ -1,13 +1,9 @@
 from Doublet_Functions import drill_approximation
 from matplotlib import pyplot as plt, patches
 from scipy.optimize import fsolve
-from dataclasses import dataclass
 import matplotlib.pyplot as plt
 from pint import UnitRegistry
-from scipy import integrate
-from scipy import linalg
 import numpy as np
-import scipy as sp 
 
 
 """
@@ -16,6 +12,8 @@ Shit that needs to get done still in this code:
         the larger the time necessary to vaporize and the larger the L* we need
     Add the film cooling angles onto the plot
     have A seperate figure for a 2D sketch of the hgoles to make visualization much much easier
+    Error handle the numerical solve for if the angle is bigger than 90 or less than the minimum angle possible (USE TRY CATCH)
+    Make all code blocks into functions - EASIER TO READ. So david no kill me
 """
 
 ureg = UnitRegistry()
@@ -71,7 +69,7 @@ class PROP:
         """        
         Hole_Area = (np.pi * Hole_Diameter**2 /4).to(ureg.inch**2)
         Tot_Area = self.Area(Cd,Pressure_Diff)
-        Number = np.round(Tot_Area/Hole_Area, decimals=0)
+        Number = np.ceil(Tot_Area/Hole_Area)
         return Number
 
 
@@ -84,13 +82,13 @@ mdots = np.array([5.29, 2.21]) #LOX_CORE, FUEL_CORE
 Film_Cooling = np.array([0.08, 0.08]) #Outer Film Cooling, Inner Film Cooling
 di = 6.5 #Internal Diameter of Chamber
 ri = di / 2 #Internal Radius of Chamber
-Spacing = 01.0  #Spacing between center of impingement Holes
+Spacing = 0.750  #Spacing between center of impingement Holes
 Rgamma_lox = 1.75  #Radial distance between centerline and LOX hole
 Pressure_Drop_Fuel = 0.2 #Pressure drop Percentage (ROT: Always in terms of Chamber Pressure)
 Pressure_Drop_Lox = 0.2 #Pressure drop Percentage (ROT: Always in terms of Chamber Pressure)
 Pressure_Chamber = Q_(300, ureg.force_pound / ureg.inch**2) #Chamber Pressure Pretty Obvious
 Doublet_Diameter_LOX = Q_(0.125, ureg.inch)  #Design choise for DOublet Diameter size (Need to look more properly into it as 1/4 holes might make vaporization time too long)
-OX_CORE = PROP(gamma=20., mdot=mdots[0], rho=56.794)
+OX_CORE = PROP(gamma=37., mdot=mdots[0], rho=56.794)
 FUEL_CORE = PROP(gamma = 0, mdot = mdots[1], rho=51.15666) #gamma zero for this one because it's the initialized guess just making the FUEL CORE class requires it ( should change when moving to data classes)
 OUT_FILM_C = PROP(gamma = 30, mdot = Film_Cooling[0]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
 IN_FILM_C = PROP(gamma = -30, mdot = Film_Cooling[1]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
@@ -250,11 +248,12 @@ plt.gca().add_patch(arc_delta)
 # -------------- Plotting the angles onto the graph for easier readibility -------------- #
 x_offset = -x/2  # Adjust as needed
 y_offset_lox = -3*(y - Rgamma_lox)/4  
-y_offset_fuel = 3*(y - Rgamma_lox)/4  
+y_offset_fuel = 5*(Spacing + Rgamma_lox - y)/8  
 x_offset_delta = (xprime-x)/2  
 y_offset_delta = (yprime-y)/4  
+FUEL_CORE_gamma_writing = abs(FUEL_CORE.gamma.magnitude)
 plt.text(x + x_offset,y + y_offset_lox, rf'$\gamma_{{\mathrm{{LOX}}}}: {OX_CORE.gamma.magnitude:.2f}^\circ$', color='green')
-plt.text(x + x_offset,y + y_offset_fuel, rf'$\gamma_{{\mathrm{{FUEL}}}}: {FUEL_CORE.gamma.magnitude:.2f}^\circ$', color='red')
+plt.text(x + x_offset,y + y_offset_fuel, rf'$\gamma_{{\mathrm{{FUEL}}}}: {FUEL_CORE_gamma_writing:.2f}^\circ$', color='red')
 plt.text(x + x_offset_delta, y + y_offset_delta, rf'$\delta: {delta.magnitude:.2f}^\circ$', color='y')
 
 
