@@ -15,13 +15,14 @@ Shit that needs to get done still in this code:
     Utilize the Space prop notes to find time of vaporization and make sure our chamber length design fits for that. For instance the larger the diameter
         the larger the time necessary to vaporize and the larger the L* we need
     Add the film cooling angles onto the plot
-    Convert the class to a data class and move all caclculated shit to a seperate function (Requested by el David) -  Can be put onto the header file for functions
     have A seperate figure for a 2D sketch of the hgoles to make visualization much much easier
 """
 
 ureg = UnitRegistry()
 ureg.default_system = 'US'
 Q_ = ureg.Quantity
+
+
 class PROP:
     def __init__(self, gamma, mdot, rho):
         """This is teh __init__ fn that will do a thing
@@ -218,7 +219,7 @@ Chamber_ContourY = np.concatenate([ChamberY, ChamberArcY])
 plt.plot(Chamber_ContourX, Chamber_ContourY, "k", linewidth=2)
 
 
-# -------------- Plotting the angled Lox Lines -------------- #
+# -------------- Plotting the angled Prop Lines -------------- #
 gamma_lox_line = np.tan(np.radians(gamma_lox)) * x_angled_lines + Rgamma_lox
 plt.plot(x_angled_lines, gamma_lox_line,"g")
 gamma_fuel_line = np.tan(np.radians(gamma_fuel)) * x_angled_lines + Rgamma_lox + Spacing
@@ -244,6 +245,17 @@ delta = Q_((np.arctan(tan_resultant)) *180 / np.pi, ureg.degrees)
 arc_delta = patches.Arc((x, y), 3*x, 3*x, 
                        angle=0, theta1=0, theta2=delta.magnitude, color='y', label=f'Resultant_Angle: {delta} deg')
 plt.gca().add_patch(arc_delta)
+
+
+# -------------- Plotting the angles onto the graph for easier readibility -------------- #
+x_offset = -x/2  # Adjust as needed
+y_offset_lox = -3*(y - Rgamma_lox)/4  
+y_offset_fuel = 3*(y - Rgamma_lox)/4  
+x_offset_delta = (xprime-x)/2  
+y_offset_delta = (yprime-y)/4  
+plt.text(x + x_offset,y + y_offset_lox, rf'$\gamma_{{\mathrm{{LOX}}}}: {OX_CORE.gamma.magnitude:.2f}^\circ$', color='green')
+plt.text(x + x_offset,y + y_offset_fuel, rf'$\gamma_{{\mathrm{{FUEL}}}}: {FUEL_CORE.gamma.magnitude:.2f}^\circ$', color='red')
+plt.text(x + x_offset_delta, y + y_offset_delta, rf'$\delta: {delta.magnitude:.2f}^\circ$', color='y')
 
 
 # -------------- Extra Plotting Shit -------------- #
