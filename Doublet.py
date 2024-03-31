@@ -208,7 +208,7 @@ x_angled_lines = np.linspace(0, x, Points)  # Up to the impingement point for FU
 thetaRange4 = np.linspace(np.radians(90), 0, Points)
 
 
-# -------------- Making and Plotting a Shitty Chamber Drawing  -------------- #
+# -------------- Making and Plotting a Shitty Chamber Drawing  -------------- 
 ChamberX = x_graph / x_graph[-1] * Peakx * Past_Peak
 ChamberY = np.ones(len(ChamberX)) * ri
 ChamberArcX = ChamberX[-1] + Chamber_Cowl_r * np.cos(thetaRange4)
@@ -231,6 +231,7 @@ resultant_y_intercept = y - tan_resultant * x
 ResultantX = x_graph / x_graph[-1] * (xprime - x) * Past_Peak + x
 ResultantY = tan_resultant * ResultantX + resultant_y_intercept
 plt.plot(ResultantX, ResultantY, "y", linewidth=2)
+
 
 # -------------- Plotting the arcs that show the angles -------------- #
 arc_lox = patches.Arc((0, Rgamma_lox), x, x, 
