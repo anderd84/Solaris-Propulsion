@@ -79,7 +79,7 @@ class PROP:
 CD_drill = 0.7 #Constant for Sharp Edged Orifices
 g0 = Q_(32.174, ureg.foot / ureg.second**2)
 #Design Input
-mdots = np.array([5.29, 2.21]) #LOX_CORE, FUEL_CORE
+mdots = np.array([5.29, 2.21])/4 #LOX_CORE, FUEL_CORE
 Film_Cooling = np.array([0.08, 0.08]) #Outer Film Cooling, Inner Film Cooling
 di = 6.5 #Internal Diameter of Chamber
 ri = di / 2 #Internal Radius of Chamber
@@ -89,7 +89,7 @@ Pressure_Drop_Fuel = 0.2 #Pressure drop Percentage (ROT: Always in terms of Cham
 Pressure_Drop_Lox = 0.2 #Pressure drop Percentage (ROT: Always in terms of Chamber Pressure)
 Pressure_Chamber = Q_(300, ureg.force_pound / ureg.inch**2) #Chamber Pressure Pretty Obvious
 Doublet_Diameter_LOX = Q_(0.125, ureg.inch)  #Design choise for DOublet Diameter size (Need to look more properly into it as 1/4 holes might make vaporization time too long)
-OX_CORE = PROP(gamma=37., mdot=mdots[0], rho=56.794)
+OX_CORE = PROP(gamma=20., mdot=mdots[0], rho=56.794)
 FUEL_CORE = PROP(gamma = 0, mdot = mdots[1], rho=51.15666) #gamma zero for this one because it's the initialized guess just making the FUEL CORE class requires it ( should change when moving to data classes)
 OUT_FILM_C = PROP(gamma = 30, mdot = Film_Cooling[0]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
 IN_FILM_C = PROP(gamma = -30, mdot = Film_Cooling[1]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
@@ -166,10 +166,17 @@ print(f"Newly Adjusted Fuel Angle is {FUEL_CORE.gamma:.3f}")
 OX_CORE_Holes = OX_CORE.Number(Doublet_Diameter_LOX,CD_drill, Pressure_Chamber * (Pressure_Drop_Lox))
 print(f'Number of Oxygen Doublet holes needed based on a {Doublet_Diameter_LOX} diameter is {OX_CORE_Holes.magnitude} holes')
 FUEL_CORE_Diameter = np.sqrt((FUEL_CORE.Area(CD_drill, Pressure_Chamber * (Pressure_Drop_Fuel)) / OX_CORE_Holes) * 4 / np.pi)
-Doublet_Diameter_Fuel , drill_size ,closest_index = drill_approximation(FUEL_CORE_Diameter.magnitude)
-Doublet_Diameter_Fuel = Q_(Doublet_Diameter_Fuel, ureg.inch)
+while True:
+    Doublet_Diameter_Fuel , drill_size ,closest_index = drill_approximation(FUEL_CORE_Diameter.magnitude)
+    Doublet_Diameter_Fuel = Q_(Doublet_Diameter_Fuel, ureg.inch)
+    FUEL_CORE_Holes = FUEL_CORE.Number((Doublet_Diameter_Fuel),CD_drill, Pressure_Chamber * (Pressure_Drop_Fuel))
+    if FUEL_CORE_Holes == OX_CORE_Holes:
+        break
+    elif FUEL_CORE_Holes > OX_CORE_Holes:
+        FUEL_CORE_Diameter += Q_(0.001,ureg.inch)
+    else:
+        FUEL_CORE_Diameter -= Q_(0.001,ureg.inch)
 print(f"Closest drill size to {FUEL_CORE_Diameter :.5f~} is a diameter of {Doublet_Diameter_Fuel} with a drill size of {drill_size} .")
-FUEL_CORE_Holes = FUEL_CORE.Number((Doublet_Diameter_Fuel),CD_drill, Pressure_Chamber * (Pressure_Drop_Fuel))
 print(f'Number of Fuel Doublet holes needed based on a {Doublet_Diameter_Fuel} diameter is {FUEL_CORE_Holes.magnitude} holes')
 
 
