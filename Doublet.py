@@ -83,8 +83,8 @@ mdots = np.array([5.29, 2.21])/4 #LOX_CORE, FUEL_CORE
 Film_Cooling = np.array([0.08, 0.08]) #Outer Film Cooling, Inner Film Cooling
 di = 6.5 #Internal Diameter of Chamber
 ri = di / 2 #Internal Radius of Chamber
-Spacing = 0.750  #Spacing between center of impingement Holes
-Rgamma_lox = 1.75  #Radial distance between centerline and LOX hole
+Spacing = 0.550  #Spacing between center of impingement Holes
+Rgamma_lox = 1.55  #Radial distance between centerline and LOX hole
 Pressure_Drop_Fuel = 0.2 #Pressure drop Percentage (ROT: Always in terms of Chamber Pressure)
 Pressure_Drop_Lox = 0.2 #Pressure drop Percentage (ROT: Always in terms of Chamber Pressure)
 Pressure_Chamber = Q_(300, ureg.force_pound / ureg.inch**2) #Chamber Pressure Pretty Obvious
@@ -154,12 +154,11 @@ def func(gamma_FUEL):
     + FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Fuel).magnitude * np.sin(gamma_FUEL))/ \
     (OX_CORE.mdot.magnitude * OX_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Lox).magnitude * np.cos(np.deg2rad(OX_CORE.gamma.magnitude)) \
     + FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Fuel).magnitude * np.cos(gamma_FUEL))    
-gamma_FUEL = fsolve(func, np.deg2rad(5)) 
-FUEL_CORE.gamma = Q_(np.rad2deg(gamma_FUEL[0]), ureg.degrees) 
+gamma_FUEL_original = fsolve(func, np.deg2rad(5)) 
+FUEL_CORE.gamma = Q_(np.rad2deg(gamma_FUEL_original[0]), ureg.degrees) 
 print(f"Originally Solved Fuel Angle is {FUEL_CORE.gamma:.3f}")
-if FUEL_CORE.gamma >= 90 * ureg.degrees:    #This section is here for if law of sins messes up and gives you the obtuse angle since numerically solving, does asin(angle) in a way
-    FUEL_CORE.gamma -= 180 * ureg.degrees
-print(f"Newly Adjusted Fuel Angle is {FUEL_CORE.gamma:.3f}")
+FUEL_CORE.gamma = Q_(round(FUEL_CORE.gamma.magnitude * 2)/2, ureg.degrees) 
+print(f"Newly Machinable Adjusted Fuel Angle is {FUEL_CORE.gamma:.3f}")
 
 
 # -------------- Hole Size SHit -------------- #
@@ -233,11 +232,19 @@ plt.plot(x_angled_lines, gamma_fuel_line,"r")
 
 
 # -------------- Plotting the resultant line -------------- #
-tan_resultant = (yprime - y) / (xprime - x)
+tan_resultant =     (OX_CORE.mdot.magnitude * OX_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Lox).magnitude * np.sin(np.deg2rad(OX_CORE.gamma.magnitude)) \
+    + FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Fuel).magnitude * np.sin(np.deg2rad(FUEL_CORE.gamma.magnitude)))/ \
+    (OX_CORE.mdot.magnitude * OX_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Lox).magnitude * np.cos(np.deg2rad(OX_CORE.gamma.magnitude)) \
+    + FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Fuel).magnitude * np.cos(np.deg2rad(FUEL_CORE.gamma.magnitude))) 
 resultant_y_intercept = y - tan_resultant * x
 ResultantX = x_graph / x_graph[-1] * (xprime - x) * Past_Peak + x
 ResultantY = tan_resultant * ResultantX + resultant_y_intercept
 plt.plot(ResultantX, ResultantY, "y", linewidth=2)
+
+# -------------- Plotting the resultant error line And Error -------------- #
+a,b,c = -tan_resultant,1,-resultant_y_intercept
+Error = Q_(np.abs(a*xprime + b*yprime +c)/np.sqrt(a**2 + b**2),ureg.inch)
+print(f'The Error from rounding the Fuel gamma from {np.rad2deg(gamma_FUEL_original[0]) :.4f} to {gamma_fuel} is missing the target by {Error :.4~}')
 
 
 # -------------- Plotting the arcs that show the angles -------------- #
