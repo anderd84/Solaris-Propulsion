@@ -1,4 +1,5 @@
 from Drill import drill_approximation
+from Doublet_Functions import spike_contour
 from matplotlib import pyplot as plt, patches
 from scipy.optimize import fsolve
 import matplotlib.pyplot as plt
@@ -94,43 +95,9 @@ FUEL_CORE = PROP(gamma = 0, mdot = mdots[1], rho=51.15666) #gamma zero for this 
 OUT_FILM_C = PROP(gamma = 30, mdot = Film_Cooling[0]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
 IN_FILM_C = PROP(gamma = -30, mdot = Film_Cooling[1]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
 
-
-# -------------- Code to Make my Shitty version of the Spike COntour -------------- #
-#Constants for Spike contour
+# -------------- Function in DOublet to make my version of the SHitty Spike Contour -------------- #
 Points = 1000 #also used in other plots if this section ends up getting deleted
-r1 = 3.50
-r2 = 2.50
-angle1 = 41.81
-angle2 = 83.62
-# Initial positions
-startX, startY = 0, 1
-startX1, startY1 = 2, 1  # Adjusted based on given code
-BaseX = np.linspace(startX, startX1, Points)
-BaseY = np.linspace(startY, startY1, Points)
-# Calculating end points and start points for the arcs
-endX1 = startX1 + r1 * np.sin(np.radians(angle1))
-endY1 = startY1 + r1 * (1 - np.cos(np.radians(angle1)))
-startX2, startY2 = endX1, endY1
-endX2 = startX2 + r2 * (np.cos(np.radians(90 - angle2 / 2)) - np.cos(np.radians(90 + angle2 / 2)))
-endY2 = startY2 + r2 * (np.sin(np.radians(90 - angle2 / 2)) - np.sin(np.radians(90 + angle2 / 2)))
-startX3, startY3 = endX2, endY2
-endX3 = startX3 + r1 * (np.cos(3*np.pi/2) - np.cos(np.radians(270 - angle1)))
-endY3 = startY3 + r1 * (np.sin(3*np.pi/2) - np.sin(np.radians(270 - angle1)))
-# Defining theta ranges for the arcs
-thetaRange1 = np.linspace(0, np.radians(angle1), Points)
-thetaRange2 = np.linspace(np.radians(90 + angle2 / 2), np.radians(90 - angle2 / 2), Points)
-thetaRange3 = np.linspace(np.radians(angle1), 0, Points)
-# Defining arcs
-arc1_x = startX1 + r1 * np.sin(thetaRange1)
-arc1_y = startY1 + r1 * (1 - np.cos(thetaRange1))
-arc2_x = startX2 + r2 * (np.cos(np.radians(90 - angle2 / 2)) + np.cos(thetaRange2))
-arc2_y = startY2 + r2 * (-np.sin(np.radians(90 - angle2 / 2)) + np.sin(thetaRange2))
-arc3_x = endX3 + r1 * np.cos(3 * np.pi / 2 - thetaRange3)
-arc3_y = endY3 + r1 * (1 + np.sin(3 * np.pi / 2 - thetaRange3))
-# Combining all segments (for both plotting use and finding peaks)
-x_profile = np.concatenate([BaseX, arc1_x, arc2_x, arc3_x])
-y_profile = np.concatenate([BaseY, arc1_y, arc2_y, arc3_y])
-
+x_profile,y_profile = spike_contour(Points)
 
 # -------------- Code to Find Peaks (Largest diameter)  for Spike COntour (Will work with davids 2d code) -------------- #
 Peaky, Peak_Point = max(y_profile), np.argmax(y_profile)
