@@ -1,4 +1,4 @@
-from Doublet_Functions import drill_approximation
+from Drill import drill_approximation
 from matplotlib import pyplot as plt, patches
 from scipy.optimize import fsolve
 import matplotlib.pyplot as plt
@@ -83,7 +83,7 @@ mdots = np.array([5.29, 2.21])/4 #LOX_CORE, FUEL_CORE
 Film_Cooling = np.array([0.08, 0.08]) #Outer Film Cooling, Inner Film Cooling
 di = 6.5 #Internal Diameter of Chamber
 ri = di / 2 #Internal Radius of Chamber
-Spacing = 0.550  #Spacing between center of impingement Holes
+Spacing = 0.40  #Spacing between center of impingement Holes
 Rgamma_lox = 1.55  #Radial distance between centerline and LOX hole
 Pressure_Drop_Fuel = 0.2 #Pressure drop Percentage (ROT: Always in terms of Chamber Pressure)
 Pressure_Drop_Lox = 0.2 #Pressure drop Percentage (ROT: Always in terms of Chamber Pressure)
