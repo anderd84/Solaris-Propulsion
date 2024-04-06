@@ -80,7 +80,7 @@ class PROP:
         """        
         Hole_Area = (np.pi * Hole_Diameter**2 /4).to(ureg.inch**2)
         Tot_Area = self.Area(Cd,Pressure_Diff)
-        Hole_Number = np.round(Tot_Area/Hole_Area)
+        Hole_Number = np.ceil(Tot_Area/Hole_Area)
         self.Hole_Number = Hole_Number
         return Hole_Number
     def Actual(self,Hole_Diameter, Number) -> float:
@@ -110,17 +110,17 @@ mdots = np.array([5.29, 2.21])/4 #LOX_CORE, FUEL_CORE
 Film_Cooling = np.array([0.08, 0.08]) #Outer Film Cooling, Inner Film Cooling
 di = 6.5 #Internal Diameter of Chamber
 ri = di / 2 #Internal Radius of Chamber
-Spacing = 0.40  #Spacing between center of impingement Holes
-Rgamma_lox = 1.55  #Radial distance between centerline and LOX hole
+Spacing = 0.55  #Spacing between center of impingement Holes
+Rgamma_lox = 1.75  #Radial distance between centerline and LOX hole
 Pressure_Drop_Fuel = 0.2 #Pressure drop Percentage (ROT: Always in terms of Chamber Pressure)
 Pressure_Drop_Lox = 0.2 #Pressure drop Percentage (ROT: Always in terms of Chamber Pressure)
 Pressure_Chamber = Q_(300, ureg.force_pound / ureg.inch**2) #Chamber Pressure Pretty Obvious
 Doublet_Diameter_LOX = Q_(0.125, ureg.inch)  #Design choise for DOublet Diameter size (Need to look more properly into it as 1/4 holes might make vaporization time too long)\
-Lox_Dewar_Pressure = Q_(230, ureg.force_pound / ureg.inch**2) + Prescott_pressure
+Lox_Dewar_Pressure = Q_(120, ureg.force_pound / ureg.inch**2) + Prescott_pressure
+
+# -------------- Prop Initialization -------------- #
 LOX_Sat_Temp = LOX.Ts(p=Lox_Dewar_Pressure.magnitude )
 LOX_Sat_Dens = LOX.ds(T=LOX_Sat_Temp)
-
-
 OX_CORE = PROP(gamma=20., mdot=mdots[0], rho=LOX_Sat_Dens[0][0])
 FUEL_CORE = PROP(gamma = 0, mdot = mdots[1], rho=51.15666) #gamma zero for this one because it's the initialized guess just making the FUEL CORE class requires it ( should change when moving to data classes)
 OUT_FILM_C = PROP(gamma = 30, mdot = Film_Cooling[0]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
@@ -235,8 +235,6 @@ gamma_fuel_line = np.tan(np.radians(gamma_fuel)) * x_angled_lines + Rgamma_lox +
 plt.plot(x_angled_lines, gamma_fuel_line,"r")
 
 
-#OX_CORE_Velocity_Actual = OX_CORE.Actual(Doublet_Diameter_LOX, OX_CORE_Holes)
-
 # -------------- Plotting the resultant line -------------- #
 tan_resultant =     (OX_CORE.mdot.magnitude * OX_CORE.Velocity_Actual.magnitude * np.sin(np.deg2rad(OX_CORE.gamma.magnitude)) \
     + FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity_Actual.magnitude * np.sin(np.deg2rad(FUEL_CORE.gamma.magnitude)))/ \
@@ -246,6 +244,7 @@ resultant_y_intercept = y - tan_resultant * x
 ResultantX = x_graph / x_graph[-1] * (xprime - x) * Past_Peak + x
 ResultantY = tan_resultant * ResultantX + resultant_y_intercept
 plt.plot(ResultantX, ResultantY, "y", linewidth=2)
+
 
 # -------------- Plotting the resultant error line And Error -------------- #
 a,b,c = -tan_resultant,1,-resultant_y_intercept
@@ -274,8 +273,8 @@ plt.gca().add_patch(arc_delta)
 x_offset = -x/2  # Adjust as needed
 y_offset_lox = -3*(y - Rgamma_lox)/4  
 y_offset_fuel = 5*(Spacing + Rgamma_lox - y)/8  
-x_offset_delta = (xprime-x)/2  
-y_offset_delta = (yprime-y)/4  
+x_offset_delta = 3*(xprime-x)/4  
+y_offset_delta = 5*(yprime-y)/8
 FUEL_CORE_gamma_writing = abs(FUEL_CORE.gamma.magnitude)
 plt.text(x + x_offset,y + y_offset_lox, rf'$\gamma_{{\mathrm{{LOX}}}}: {OX_CORE.gamma.magnitude:.2f}^\circ$', color='green')
 plt.text(x + x_offset,y + y_offset_fuel, rf'$\gamma_{{\mathrm{{FUEL}}}}: {FUEL_CORE_gamma_writing:.2f}^\circ$', color='red')
