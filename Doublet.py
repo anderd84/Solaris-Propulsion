@@ -51,8 +51,9 @@ class PROP:
         Returns:
             float: Velocity Out of the injector parallel to flow
         """
-        Velocity = Cd * np.sqrt(2 * Pressure_Diff/ self.rho )
-        return Velocity.to(ureg.feet / ureg.second)
+        Velocity_init = (Cd * np.sqrt(2 * Pressure_Diff/ self.rho )).to(ureg.feet / ureg.second)
+        self.Velocity_init = Velocity_init
+        return Velocity_init
     
     
     def Area(self, Cd, Pressure_Diff) -> float:
@@ -63,8 +64,9 @@ class PROP:
         Returns:
             float: Total Orifice Area needed for Propellant
         """        
-        Area = (self.mdot / (Cd * np.sqrt(2*self.rho* Pressure_Diff )))
-        return Area.to(ureg.inch**2)
+        Area_init = (self.mdot / (Cd * np.sqrt(2*self.rho* Pressure_Diff ))).to(ureg.inch**2)
+        self.Area_init = Area_init
+        return Area_init
     
     
     def Number(self, Hole_Diameter, Cd, Pressure_Diff) -> float:
@@ -78,8 +80,24 @@ class PROP:
         """        
         Hole_Area = (np.pi * Hole_Diameter**2 /4).to(ureg.inch**2)
         Tot_Area = self.Area(Cd,Pressure_Diff)
-        Number = np.ceil(Tot_Area/Hole_Area)
-        return Number
+        Hole_Number = np.round(Tot_Area/Hole_Area)
+        self.Hole_Number = Hole_Number
+        return Hole_Number
+    def Actual(self,Hole_Diameter, Number) -> float:
+        """_summary_
+
+        Args:
+            Hole_Diameter (float): Diameter of the holes, WIll match a drill size
+            Number (float): Calculated number of holes that matched the other impingement for core impingement points
+
+        Returns:
+            float: Returns actual Velocity and Area
+        """  
+        Area_Actual = (Number * 0.25 * Hole_Diameter**2 * np.pi).to(ureg.inch**2)
+        Velocity_Actual = (self.mdot/(self.rho * Area_Actual)).to(ureg.feet / ureg.second)
+        self.Area_Actual = Area_Actual
+        self.Velocity_Actual = Velocity_Actual
+        return Velocity_Actual, Area_Actual           
 
 
 # -------------- Design Inputs and Constants -------------- #    
@@ -116,7 +134,8 @@ x_profile,y_profile = spike_contour(Points)
 Peaky, Peak_Point = max(y_profile), np.argmax(y_profile)
 Peakx = x_profile[Peak_Point]
 
-
+OX_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Lox)
+FUEL_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Fuel)
 # -------------- Code to numericlaly find Fuel gamma based on the physical constraints and Ox gamma choice -------------- #
 def func(gamma_FUEL):
     """Numerically solving function that has Momentum Balance on one side, and Tan Resultant angle in terms of gammas and physical Dimensions
@@ -130,10 +149,12 @@ def func(gamma_FUEL):
     return \
     -((ri + Peaky)/2 - Rgamma_lox -Spacing * np.sin(np.pi/2 + gamma_FUEL) / np.sin(np.radians(OX_CORE.gamma.magnitude) - gamma_FUEL) * np.cos(np.radians(90 - (OX_CORE.gamma.magnitude))))/ \
     (Peakx - Spacing * np.sin(np.pi/2 + gamma_FUEL) / np.sin(np.radians(OX_CORE.gamma.magnitude) - gamma_FUEL) * np.sin(np.radians(90 - (OX_CORE.gamma.magnitude)))) +\
-    (OX_CORE.mdot.magnitude * OX_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Lox).magnitude * np.sin(np.deg2rad(OX_CORE.gamma.magnitude)) \
-    + FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Fuel).magnitude * np.sin(gamma_FUEL))/ \
-    (OX_CORE.mdot.magnitude * OX_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Lox).magnitude * np.cos(np.deg2rad(OX_CORE.gamma.magnitude)) \
-    + FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Fuel).magnitude * np.cos(gamma_FUEL))    
+    (OX_CORE.mdot.magnitude * OX_CORE.Velocity_init.magnitude * np.sin(np.deg2rad(OX_CORE.gamma.magnitude)) \
+    + FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity_init.magnitude * np.sin(gamma_FUEL))/ \
+    (OX_CORE.mdot.magnitude * OX_CORE.Velocity_init.magnitude * np.cos(np.deg2rad(OX_CORE.gamma.magnitude)) \
+    + FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity_init.magnitude * np.cos(gamma_FUEL))    
+
+
 gamma_FUEL_original = fsolve(func, np.deg2rad(5)) 
 FUEL_CORE.gamma = Q_(np.rad2deg(gamma_FUEL_original[0]), ureg.degrees) 
 print(f"Originally Solved Fuel Angle is {FUEL_CORE.gamma:.3f}")
@@ -142,21 +163,24 @@ print(f"Newly Machinable Adjusted Fuel Angle is {FUEL_CORE.gamma:.3f}")
 
 
 # -------------- Hole Size SHit -------------- #
-OX_CORE_Holes = OX_CORE.Number(Doublet_Diameter_LOX,CD_drill, Pressure_Chamber * (Pressure_Drop_Lox))
-print(f'Number of Oxygen Doublet holes needed based on a {Doublet_Diameter_LOX} diameter is {OX_CORE_Holes.magnitude} holes')
-FUEL_CORE_Diameter = np.sqrt((FUEL_CORE.Area(CD_drill, Pressure_Chamber * (Pressure_Drop_Fuel)) / OX_CORE_Holes) * 4 / np.pi)
+OX_CORE.Number(Doublet_Diameter_LOX,CD_drill, Pressure_Chamber * (Pressure_Drop_Lox))
+print(f'Number of Oxygen Doublet holes needed based on a {Doublet_Diameter_LOX} diameter is {OX_CORE.Hole_Number.magnitude} holes')
+FUEL_CORE_Diameter = np.sqrt((FUEL_CORE.Area(CD_drill, Pressure_Chamber * (Pressure_Drop_Fuel)) / OX_CORE.Hole_Number.magnitude) * 4 / np.pi)
 while True:
     Doublet_Diameter_Fuel , drill_size ,closest_index = drill_approximation(FUEL_CORE_Diameter.magnitude)
     Doublet_Diameter_Fuel = Q_(Doublet_Diameter_Fuel, ureg.inch)
-    FUEL_CORE_Holes = FUEL_CORE.Number((Doublet_Diameter_Fuel),CD_drill, Pressure_Chamber * (Pressure_Drop_Fuel))
-    if FUEL_CORE_Holes == OX_CORE_Holes:
+    FUEL_CORE.Number((Doublet_Diameter_Fuel),CD_drill, Pressure_Chamber * (Pressure_Drop_Fuel))
+    if FUEL_CORE.Hole_Number.magnitude == OX_CORE.Hole_Number.magnitude:
         break
-    elif FUEL_CORE_Holes > OX_CORE_Holes:
+    elif FUEL_CORE.Hole_Number.magnitude > OX_CORE.Hole_Number.magnitude:
         FUEL_CORE_Diameter += Q_(0.001,ureg.inch)
     else:
         FUEL_CORE_Diameter -= Q_(0.001,ureg.inch)
 print(f"Closest drill size to {FUEL_CORE_Diameter :.5f~} is a diameter of {Doublet_Diameter_Fuel} with a drill size of {drill_size} .")
-print(f'Number of Fuel Doublet holes needed based on a {Doublet_Diameter_Fuel} diameter is {FUEL_CORE_Holes.magnitude} holes')
+print(f'Number of Fuel Doublet holes needed based on a {Doublet_Diameter_Fuel} diameter is {FUEL_CORE.Hole_Number.magnitude} holes')
+OX_CORE.Actual(Doublet_Diameter_LOX,OX_CORE.Hole_Number) #Initializing the actual function to use actual velocities
+FUEL_CORE.Actual(Doublet_Diameter_Fuel,FUEL_CORE.Hole_Number) #Initializing the actual function to use actual velocities
+
 
 
 # PLOTTING SHIT BELOW
@@ -211,11 +235,13 @@ gamma_fuel_line = np.tan(np.radians(gamma_fuel)) * x_angled_lines + Rgamma_lox +
 plt.plot(x_angled_lines, gamma_fuel_line,"r")
 
 
+#OX_CORE_Velocity_Actual = OX_CORE.Actual(Doublet_Diameter_LOX, OX_CORE_Holes)
+
 # -------------- Plotting the resultant line -------------- #
-tan_resultant =     (OX_CORE.mdot.magnitude * OX_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Lox).magnitude * np.sin(np.deg2rad(OX_CORE.gamma.magnitude)) \
-    + FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Fuel).magnitude * np.sin(np.deg2rad(FUEL_CORE.gamma.magnitude)))/ \
-    (OX_CORE.mdot.magnitude * OX_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Lox).magnitude * np.cos(np.deg2rad(OX_CORE.gamma.magnitude)) \
-    + FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Fuel).magnitude * np.cos(np.deg2rad(FUEL_CORE.gamma.magnitude))) 
+tan_resultant =     (OX_CORE.mdot.magnitude * OX_CORE.Velocity_Actual.magnitude * np.sin(np.deg2rad(OX_CORE.gamma.magnitude)) \
+    + FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity_Actual.magnitude * np.sin(np.deg2rad(FUEL_CORE.gamma.magnitude)))/ \
+    (OX_CORE.mdot.magnitude * OX_CORE.Velocity_Actual.magnitude * np.cos(np.deg2rad(OX_CORE.gamma.magnitude)) \
+    + FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity_Actual.magnitude * np.cos(np.deg2rad(FUEL_CORE.gamma.magnitude))) 
 resultant_y_intercept = y - tan_resultant * x
 ResultantX = x_graph / x_graph[-1] * (xprime - x) * Past_Peak + x
 ResultantY = tan_resultant * ResultantX + resultant_y_intercept
@@ -224,7 +250,11 @@ plt.plot(ResultantX, ResultantY, "y", linewidth=2)
 # -------------- Plotting the resultant error line And Error -------------- #
 a,b,c = -tan_resultant,1,-resultant_y_intercept
 Error = Q_(np.abs(a*xprime + b*yprime +c)/np.sqrt(a**2 + b**2),ureg.inch)
-print(f'The Error from rounding the Fuel gamma from {np.rad2deg(gamma_FUEL_original[0]) :.4f} to {gamma_fuel} is missing the target by {Error :.4~}')
+print(f'The following errors are gathered from rounding to nearest drill size, and half degree for angles:\
+    \n\tFuel gamma was rounded from {np.rad2deg(gamma_FUEL_original[0]) :.4f} to {gamma_fuel}\
+    \n\tLox Velocity was supposed to be {OX_CORE.Velocity_init :.4f~} but ended up at {OX_CORE.Velocity_Actual :.4f~} with the {Doublet_Diameter_LOX :.4f} holes\
+    \n\tFuel Velocity was supposed to be {FUEL_CORE.Velocity_init :.4f~} but ended up at {FUEL_CORE.Velocity_Actual :.4f~} with the {Doublet_Diameter_Fuel :.4f} holes\
+    \n\tWhich all resulted in missing the target by {Error :.4f~}')
 
 
 # -------------- Plotting the arcs that show the angles -------------- #
