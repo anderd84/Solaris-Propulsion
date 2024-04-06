@@ -1,6 +1,6 @@
-from Drill import drill_approximation
-from Doublet_Functions import spike_contour
 from matplotlib import pyplot as plt, patches
+from Doublet_Functions import spike_contour
+from Drill import drill_approximation
 from scipy.optimize import fsolve
 import matplotlib.pyplot as plt
 from pint import UnitRegistry
@@ -104,7 +104,6 @@ LOX_Sat_Dens = LOX.ds(T=LOX_Sat_Temp)
 
 
 OX_CORE = PROP(gamma=20., mdot=mdots[0], rho=LOX_Sat_Dens[0][0])
-print(OX_CORE.rho)
 FUEL_CORE = PROP(gamma = 0, mdot = mdots[1], rho=51.15666) #gamma zero for this one because it's the initialized guess just making the FUEL CORE class requires it ( should change when moving to data classes)
 OUT_FILM_C = PROP(gamma = 30, mdot = Film_Cooling[0]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
 IN_FILM_C = PROP(gamma = -30, mdot = Film_Cooling[1]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
@@ -264,20 +263,3 @@ plt.title('Side View Contour of an Aerospike Nozzle')
 plt.grid(True)
 plt.show()
 
-
-
-# -------------- Extra Calcs for Later Usage (Don't know if we need it just was using as a reference and checking shit)-------------- #
-#difference = OX_CORE.gamma.magnitude - delta
-#Lowest_Angle = np.arctan((yprime-Rgamma_lox)/xprime) *180 / np.pi
-#print(f"tan(delta):  {tan_resultant}")
-#print(f"Difference:  {difference}")
-#print(f"Delta:  {delta}")
-#print(f"Theoretically lowest gamma Possible:  {Lowest_Angle}")
-# -------------- Extra Shit used to test Printed Shit -------------- #
-#print(f"Total FUEL Doublets Velocity: {FUEL_CORE.Velocity(CD_drill, Pressure_Chamber * (Pressure_Drop_Fuel)):.3f~}")
-#print(f"Total FUEL Orifice Area Doublets: {FUEL_CORE.Area(CD_drill, Pressure_Chamber * (Pressure_Drop_Fuel)):.3f~}")
-#print(f"Total OX Doublets Velocity: {OX_CORE.Velocity(CD_drill, Pressure_Chamber * (Pressure_Drop_Lox)):.3f~}")
-#print(f"Total OX Orifice Area Doublets: {OX_CORE.Area(CD_drill, Pressure_Chamber * (Pressure_Drop_Lox)):.3f~}")
-#FUEL_mdot_tot = FUEL_CORE.mdot + OUT_FILM_C.mdot + IN_FILM_C.mdot
-#print(f"For Total Fuel mdot in normal units: {FUEL_mdot_tot:.3f~}")
-#print(f"For Total Fuel mdot in commie units: {FUEL_mdot_tot.to(ureg.kilogram / ureg.second):.3f~}")
