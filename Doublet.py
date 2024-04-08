@@ -116,7 +116,7 @@ Pressure_Drop_Fuel = 0.2 #Pressure drop Percentage (ROT: Always in terms of Cham
 Pressure_Drop_Lox = 0.2 #Pressure drop Percentage (ROT: Always in terms of Chamber Pressure)
 Pressure_Chamber = Q_(300, ureg.force_pound / ureg.inch**2) #Chamber Pressure Pretty Obvious
 Doublet_Diameter_LOX = Q_(0.125, ureg.inch)  #Design choise for DOublet Diameter size (Need to look more properly into it as 1/4 holes might make vaporization time too long)\
-Lox_Dewar_Pressure = Q_(120, ureg.force_pound / ureg.inch**2) + Prescott_pressure
+Lox_Dewar_Pressure = Q_(230, ureg.force_pound / ureg.inch**2) + Prescott_pressure
 
 # -------------- Prop Initialization -------------- #
 LOX_Sat_Temp = LOX.Ts(p=Lox_Dewar_Pressure.magnitude )
