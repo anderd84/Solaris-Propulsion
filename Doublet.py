@@ -11,9 +11,9 @@ import pyromat as pm
 import subprocess
 
 """
-Shit that needs to get done still in this code:
+    Shit that needs to get done still in this code:
     Utilize the Space prop notes to find time of vaporization and make sure our chamber length design fits for that. For instance the larger the diameter
-        the larger the time necessary to vaporize and the larger the L* we need
+    the larger the time necessary to vaporize and the larger the L* we need
     Add the film cooling angles onto the plot
     have A seperate figure for a 2D sketch of the hgoles to make visualization much much easier
     Error handle the numerical solve for if the angle is bigger than 90 or less than the minimum angle possible (USE TRY CATCH)
