@@ -1,10 +1,12 @@
 from matplotlib import pyplot as plt, patches
 from Doublet_Functions import spike_contour
+from InjectorCad import injector_cad_write
 from Drill import drill_approximation
 from scipy.optimize import fsolve
 import matplotlib.pyplot as plt
 from pint import UnitRegistry
 import numpy as np
+import os
 import pyromat as pm
 
 """
@@ -291,4 +293,5 @@ plt.axis('equal')
 plt.title('Side View Contour of an Aerospike Nozzle')
 plt.grid(True)
 plt.show()
+
 
