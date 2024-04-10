@@ -1,3 +1,4 @@
+import subprocess
 def injector_cad_write():
     # Python code to generate an OpenSCAD script for an injector plate
     # Example parameters for the injector plate
@@ -35,3 +36,14 @@ def injector_cad_write():
         file.write(scad_script)
 
     print(f"OpenSCAD script written to {file_path}")
+    
+    open_command = f'openscad {file_path}'
+
+    # Execute the command
+    subprocess.call(open_command, shell=True)
+
+    # OpenSCAD command - adjust the path to the OpenSCAD executable if needed
+    open_command = f'"C:\\Program Files\\OpenSCAD\\openscad.exe" {file_path}'  # Use the full path to openscad.exe
+    
+    # Execute the command to open the .scad file with OpenSCAD
+    subprocess.call(open_command, shell=True)

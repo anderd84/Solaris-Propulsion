@@ -8,6 +8,7 @@ from pint import UnitRegistry
 import numpy as np
 import os
 import pyromat as pm
+import subprocess
 
 """
 Shit that needs to get done still in this code:
@@ -295,3 +296,4 @@ plt.grid(True)
 plt.show()
 
 
+injector_cad_write()
