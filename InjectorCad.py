@@ -37,11 +37,7 @@ def injector_cad_write():
 
     print(f"OpenSCAD script written to {file_path}")
     
-    open_command = f'openscad {file_path}'
-
-    # Execute the command
-    subprocess.call(open_command, shell=True)
-
+    
     # OpenSCAD command - adjust the path to the OpenSCAD executable if needed
     open_command = f'"C:\\Program Files\\OpenSCAD\\openscad.exe" {file_path}'  # Use the full path to openscad.exe
     
