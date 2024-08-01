@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 import gas
 
 def Angelino(expansionRatio, radiusBaseNonDim, machExit, gamma):
@@ -19,11 +20,29 @@ def Angelino(expansionRatio, radiusBaseNonDim, machExit, gamma):
 def Rao(expansionRatio, length, gamma):
     pass
 
+def RaoGenerateInputMatrix(machArray, thetaArray, gamma, deltaMach, PbPc):
+    data = np.zeros((len(machArray), len(thetaArray), 3))
+    for i, mach in enumerate(machArray):
+        for j, theta in enumerate(thetaArray):
+            print(mach, theta)
+            data[i, j, :] = RaoInputDataGenerate(mach, theta, gamma, deltaMach, PbPc)
+    return data
+
+def RaoGenerateInputChart(machArray, thetaArray, gamma, deltaMach, PbPc):
+    data = RaoGenerateInputMatrix(machArray, thetaArray, gamma, deltaMach, PbPc)
+
+    fig = plt.figure()
+    
+    plt.plot(data[:, :, 2], data[:, :, 0])
+    plt.plot(np.transpose(data[:, :, 2]), np.transpose(data[:, :, 0]))
+    plt.grid(True)
+    plt.show()
+
+
 def RaoInputDataGenerate(machE, thetaE, gamma, deltaMach, PbPc):
     thetaE = np.deg2rad(thetaE)
 
     # useful gamma terms
-
     gam1 = (gamma + 1) / 2
     gam2 = (gamma - 1) / 2
     gam3 = 1 / (gamma - 1)
@@ -62,14 +81,19 @@ def RaoInputDataGenerate(machE, thetaE, gamma, deltaMach, PbPc):
     Cf = 0
     lengthRatio = 0
 
-    mplot = [machB]
-    tplot = [thetaB]
+    mplot = []
+    tplot = []
+    aplot = []
+    rplot = []
+    lplot = []
 
-    def isAtD(mach, theta): 
+    def isAtD(mach, theta):
         # test for end
-        temp = 2*np.sqrt(mach*mach - 1)/(gamma*mach*mach)
-        temp2 = (1+gam2*mach*mach)**(gam5)
-        return (np.sin(-2 * theta) - temp + PbPc*temp*temp2) > 0 # want to be positive
+        test = (2/(gamma*mach*mach))*np.sqrt(mach*mach - 1) - np.sin(-2*theta)
+        c = (1 + gam2 * mach * mach)**gam5
+        c1 = (2/(gamma*mach*mach))*np.sqrt(mach*mach - 1)
+        c2 = PbPc * c1 * c
+        return (test - c2 < 0) # want to be positive
 
     while not isAtD(machA, thetaA):
         # current state calculations
@@ -80,19 +104,18 @@ def RaoInputDataGenerate(machE, thetaE, gamma, deltaMach, PbPc):
 
         mach2 = machStarA**2
         gammaTemp = gam4*mach2/(mach2 - 1)
-        temp1 = (1-gam6*mach2)/(mach2-1)
+        temp1 = (1-gam6*mach2)/(mach2 - 1)
         temp2 = (-2*A)/machStarA*np.sqrt(temp1)
-        temp3 = (4*A*A)/mach2*temp1 - 4*gammaTemp*((A*A/mach2)-1)
-        temp3 = np.sqrt(temp3)
+        temp3 = np.sqrt((4*A*A)/mach2*temp1 - 4*gammaTemp*((A*A/mach2)-1))
         temp4 = 2*gammaTemp
 
-        sinTheta = (temp2+temp3)/temp4
-        thetaA = np.arcsin(sinTheta)
+        sinThetaA = (temp2+temp3)/temp4
+        thetaA = np.arcsin(sinThetaA)
 
-        rRatioA = B / ((machStarA*np.sin(-thetaA))**2 * tanAlphaA*(1+gam2*machA**2)**(-gam3))
+        rRatioA = B / ((machStarA * np.sin(-thetaA))**2 * (tanAlphaA*(1+gam2*machA**2)**(-gam3)))
 
         t1 = (1/((1+gam2*machB**2)*gam4)**gam3)
-        t2 = np.sqrt((gam1*machB*machB)/(1+gam2*machB*machB))*rRatioA
+        t2 = np.sqrt((gam1*machB*machB)/(1+gam2*machB*machB))*rRatioB
         t2 = t2*np.sin(alphaB)/np.sin(thetaB-alphaB)
 
         t3 = (1/((1+gam2*machA**2)*gam4)**gam3)
@@ -106,8 +129,10 @@ def RaoInputDataGenerate(machE, thetaE, gamma, deltaMach, PbPc):
 
         f1 = (1+gam2*machB**2)**(-gam5)
         f2 = (1 + gamma*machB**2*((np.sin(alphaB)*np.cos(-thetaB))/(np.sin(-thetaB+alphaB))))*rRatioB
+
         f3 = (1+gam2*machA**2)**(-gam5)
         f4 = (1 + gamma*machA**2*((np.sin(alphaA)*np.cos(-thetaA))/(np.sin(-thetaA+alphaA))))*rRatioA
+
         sumForce += (f1*f2 + f3*f4)*(-dRR)
 
         areaRatio = 1/sumAreaRatio
@@ -121,8 +146,11 @@ def RaoInputDataGenerate(machE, thetaE, gamma, deltaMach, PbPc):
         
         mplot.append(machB)
         tplot.append(thetaB)
+        aplot.append(areaRatio)
+        rplot.append(rRatioB)
+        lplot.append(lengthRatio)
 
-    return areaRatio, Cf, lengthRatio, machA, np.rad2deg(thetaA), mplot, tplot
+    return areaRatio, Cf, lengthRatio, aplot, rplot, lplot, tplot, mplot
 
 
 

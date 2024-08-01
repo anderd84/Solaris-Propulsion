@@ -18,7 +18,27 @@ areaThroat = .3 * ureg.inch**2
 radiusBase = 0 * ureg.inch
 
 
-areaRatio, Cf, lengthRatio, machA, thetaA, mplot, tplot = nozzle.RaoInputDataGenerate(2.4, -8.25, 1.23, .001, 0)
+areaRatio, Cf, lengthRatio, aplot, rplot, lplot, tplot, mplot = nozzle.RaoInputDataGenerate(2.4, -8.25, 1.23, .0001, 0)
+print()
+print(areaRatio, Cf, lengthRatio)
+print(mplot[-1], np.rad2deg(tplot[-1]))
 
-print(areaRatio, Cf, lengthRatio, machA, thetaA)
+# plt.plot(rplot, mplot)
+# plt.grid(True)
+# plt.show()
 
+# plt.plot(rplot, aplot) # v
+# plt.grid(True)
+# plt.show()
+
+plt.plot(rplot, np.rad2deg(tplot)) # ^
+
+plt.ylim((-22, -6))
+plt.xlim((0, 1))
+plt.gca().invert_xaxis()
+plt.gca().set_xticks(np.linspace(0, 1, 11))
+plt.grid(True, 'both')
+plt.show()
+
+
+# nozzle.RaoGenerateInputChart(np.linspace(2,4.4,25), np.linspace(-8, 0, 9), 1.4, .001, .0001)
