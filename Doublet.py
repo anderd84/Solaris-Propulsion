@@ -218,6 +218,7 @@ plt.axhline(y, linestyle="--") #need y before this plot. THis is the horizontal 
 # -------------- Creating all linspaces needed for the following plots -------------- #
 x_graph = np.linspace(0, max(x_profile), Points)
 x_angled_lines = np.linspace(0, x, Points)  # Up to the impingement point for FUEL line
+x_filmcooling = np.linspace(0, x, Points)
 thetaRange4 = np.linspace(np.radians(90), 0, Points)
 
 
@@ -238,8 +239,8 @@ gamma_fuel_line = np.tan(np.radians(gamma_fuel)) * x_angled_lines + Rgamma_lox +
 plt.plot(x_angled_lines, gamma_fuel_line,"r")
 
 # -------------- Plotting the film cooling lines -------------- #
-innercooling_line 
-outercooling_line
+innercooling_line = np.tan(np.radians(IN_FILM_C.gamma.magnitude)) * x_filmcooling + y_profile
+outercooling_line = np.tan(np.radians(OUT_FILM_C.gamma.magnitude)) * x_filmcooling + ChamberY
 
 gamma_lox_line = np.tan(np.radians(gamma_lox)) * x_angled_lines + Rgamma_lox
 plt.plot(x_angled_lines, gamma_lox_line,"g")
