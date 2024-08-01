@@ -110,7 +110,7 @@ g0 = Q_(32.174, ureg.foot / ureg.second**2)
 Prescott_pressure = Q_(12.04, ureg.force_pound / ureg.inch**2)
 #Design Input
 mdots = np.array([5.29, 2.21])/4 #LOX_CORE, FUEL_CORE
-Film_Cooling = np.array([0.08, 0.08]) #Outer Film Cooling, Inner Film Cooling
+Film_Cooling = np.array([0.08, 0.08]) #Outer Film Cooling Percentage, Inner Film Cooling Percentage
 di = 6.5 #Internal Diameter of Chamber
 ri = di / 2 #Internal Radius of Chamber
 Spacing = 0.75  #Spacing between center of impingement Holes
@@ -126,8 +126,8 @@ LOX_Sat_Temp = LOX.Ts(p=Lox_Dewar_Pressure.magnitude )
 LOX_Sat_Dens = LOX.ds(T=LOX_Sat_Temp)
 OX_CORE = PROP(gamma=20., mdot=mdots[0], rho=LOX_Sat_Dens[0][0])
 FUEL_CORE = PROP(gamma = 0, mdot = mdots[1], rho=51.15666) #gamma zero for this one because it's the initialized guess just making the FUEL CORE class requires it ( should change when moving to data classes)
-OUT_FILM_C = PROP(gamma = 30, mdot = Film_Cooling[0]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
-IN_FILM_C = PROP(gamma = -30, mdot = Film_Cooling[1]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
+OUT_FILM_C = PROP(gamma = 10, mdot = Film_Cooling[0]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
+IN_FILM_C = PROP(gamma = -10, mdot = Film_Cooling[1]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
 
 # -------------- Function in DOublet to make my version of the SHitty Spike Contour -------------- #
 Points = 1000 #also used in other plots if this section ends up getting deleted
@@ -237,6 +237,15 @@ plt.plot(x_angled_lines, gamma_lox_line,"g")
 gamma_fuel_line = np.tan(np.radians(gamma_fuel)) * x_angled_lines + Rgamma_lox + Spacing
 plt.plot(x_angled_lines, gamma_fuel_line,"r")
 
+# -------------- Plotting the film cooling lines -------------- #
+innercooling_line 
+outercooling_line
+
+gamma_lox_line = np.tan(np.radians(gamma_lox)) * x_angled_lines + Rgamma_lox
+plt.plot(x_angled_lines, gamma_lox_line,"g")
+gamma_fuel_line = np.tan(np.radians(gamma_fuel)) * x_angled_lines + Rgamma_lox + Spacing
+plt.plot(x_angled_lines, gamma_fuel_line,"r")
+
 
 # -------------- Plotting the resultant line -------------- #
 tan_resultant =     (OX_CORE.mdot.magnitude * OX_CORE.Velocity_Actual.magnitude * np.sin(np.deg2rad(OX_CORE.gamma.magnitude)) \
@@ -296,4 +305,4 @@ plt.grid(True)
 plt.show()
 
 
-injector_cad_write()
+# injector_cad_write()
