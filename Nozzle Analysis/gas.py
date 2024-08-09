@@ -11,3 +11,9 @@ def MachAngle(M):
 
 def Isentropic1DExpansion(Astar, M, gamma):
     return Astar / M * (1 + (gamma-1)/2*M**2)**((gamma+1)/(2*(gamma-1)))
+
+def mach2machStar(mach, gamma):
+    return np.sqrt((((gamma+1)/2)*mach**2) / (1 + ((gamma-1)/2)*mach**2))
+
+def machStar2mach(machStar, gamma):
+    return np.sqrt(((2/(gamma+1))*machStar**2)/(1-((gamma-1)/(gamma+1))*machStar**2))
