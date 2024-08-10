@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import fsolve
-from gas import mach2machStar, machStar2mach
+from gas import mach2machStar, machStar2mach, PrandtlMeyerFunction, MachAngle
 
 def GenerateInputMatrix(machArray, thetaArray, gamma, deltaMach, PbPc):
     data = np.zeros((len(machArray), len(thetaArray), 3))
@@ -135,9 +135,50 @@ def InputDataGenerate(machE, thetaE, gamma, deltaMach, PbPc):
 
     return areaRatio, Cf, lengthRatio, aplot, rplot, lplot, tplot, mplot
 
-def GetControlSurfaceProperties(machE, thetaE, lengthRatio, gamma, arraySize = 100):
-    thetaE = np.deg2rad(thetaE)
+@dataclass
+class CharacteristicPoint:
+    x: float
+    r: float
+    theta: float
+    alpha: float
+    mach: float = 0
+    machStar: float = 0
+    lambda_: float = 0
+    eta: float = 0
+    beta: float = 0
 
+    def LeftInvarient(self):
+        LI = self.clone()
+        LI.lambda_ = np.tan(LI.theta + LI.alpha)
+        LI.eta = 1/(np.tan(LI.alpha)*LI.machStar)
+        LI.beta = np.sin(LI.theta)*np.sin(LI.alpha)/(LI.r*np.cos(LI.theta + LI.alpha))
+        return LI
+
+    def RightInvarient(self):
+        RI = self.clone()
+        RI.lambda_ = np.tan(RI.theta - RI.alpha)
+        RI.eta = 1/(np.tan(RI.alpha)*RI.machStar)
+        RI.beta = np.sin(RI.theta)*np.sin(RI.alpha)/(RI.r*np.cos(RI.theta - RI.alpha))
+        return RI
+
+    def AverageInvarients(self, N: 'CharacteristicPoint'):
+        lambda_ = (self.lambda_ + N.lambda_) / 2
+        eta = (self.eta + N.eta) / 2
+        beta = (self.beta + N.beta) / 2
+
+        return CharacteristicPoint(x=self.x, r=self.r, theta=self.theta, alpha=self.alpha, mach=self.mach, machStar=self.machStar, lambda_=lambda_, eta=eta, beta=beta)
+    
+    def LRCombine(self, L: 'CharacteristicPoint', R: 'CharacteristicPoint') -> 'CharacteristicPoint':
+        self.x = ((R.lambda_*R.x - L.lambda_*L.x) + (L.r - R.r)) / (R.lambda_ - L.lambda_)
+        self.r = L.r - L.lambda_*(L.x - self.x)
+        self.machStar = (R.theta - L.theta + L.eta*L.machStar + R.eta*R.machStar - R.beta*(R.r - self.r) - L.beta*(L.x - self.x)) / (L.eta + R.eta)
+        self.theta = L.theta - L.eta*(L.machStar - self.machStar) + L.beta*(L.x - self.x)
+        return self
+
+    def clone(self):
+        return CharacteristicPoint(self.x, self.r, self.theta, self.alpha, self.mach, self.machStar, self.lambda_, self.eta, self.beta)
+    
+def GetControlSurfaceProperties(machE, thetaE, lengthRatio, gamma, arraySize = 100):
     gam1 = (gamma + 1) / 2
     gam2 = (gamma - 1) / 2
     gam3 = 1 / (gamma - 1)
@@ -155,15 +196,9 @@ def GetControlSurfaceProperties(machE, thetaE, lengthRatio, gamma, arraySize = 1
 
     # start at x=0, go down to x=lenghRatio
     xArr = np.linspace(0, lengthRatio, arraySize)
-    rArr = np.zeros(arraySize)
-    alphaArr = np.zeros(arraySize)
-    machArr = np.zeros(arraySize)
-    thetaArr = np.zeros(arraySize)
 
-    rArr[0] = 1
-    machArr[0] = machE
-    thetaArr[0] = thetaE
-    alphaArr[0] = np.arctan(tanAlphaE)
+    controlSurfaceArray = np.zeros(arraySize, dtype=CharacteristicPoint)
+    controlSurfaceArray[0] = CharacteristicPoint(0, 1, thetaE, np.arctan(tanAlphaE), mach=machE)
 
     def CalcTheta(M):
         machStarA = mach2machStar(M, gamma)
@@ -186,88 +221,81 @@ def GetControlSurfaceProperties(machE, thetaE, lengthRatio, gamma, arraySize = 1
 
     for i, x in enumerate(xArr[1:]):
         dx = x - xArr[i]
-        dr = np.tan(thetaArr[i] - alphaArr[i]) * dx
-        r = rArr[i] + dr
-        mach = fsolve(lambda M: CalcB(M, CalcTheta(M), r) - B, machArr[i], xtol=1e-12)[0]
+        # dr = np.tan(thetaArr[i] - alphaArr[i]) * dx
+        dr = np.tan(controlSurfaceArray[i].theta - controlSurfaceArray[i].alpha) * dx
+        # r = rArr[i] + dr
+        r = controlSurfaceArray[i].r + dr
+        mach = fsolve(lambda M: CalcB(M, CalcTheta(M), r) - B, controlSurfaceArray[i].mach, xtol=1e-12)[0]
         theta = CalcTheta(mach)
-        alpha = np.arctan(TanAlpha(mach))
+        alpha = np.arcsin(1/mach)
 
-        rArr[i+1] = r
-        machArr[i+1] = mach
-        thetaArr[i+1] = theta
-        alphaArr[i+1] = alpha
+        controlSurfaceArray[i+1] = CharacteristicPoint(x, r, theta, alpha, mach=mach)
         
-    return xArr, rArr, machArr, thetaArr, alphaArr
+    return controlSurfaceArray
 
+# tt =  te -ne -nt
+# t = tt + m - nt
 
-    
+def CalculateThroatAngle(machE, thetaE, machT, gamma):
+    return thetaE - PrandtlMeyerFunction(machE, gamma) + PrandtlMeyerFunction(machT, gamma)
 
-def GenerateFlowField(gamma):
-    @dataclass
-    class CharacteristicLine:
-        x: float
-        r: float
-        theta: float
-        alpha: float
-        mach: float = 0
-        machStar: float = 0
-        lambda_: float = 0
-        eta: float = 0
-        beta: float = 0
+def GenerateExpansionFan(machE, thetaE, machT, thetaT, gamma, arraySize = 100) -> np.ndarray[CharacteristicPoint]:
+    machArr = np.linspace(machT, machE, arraySize)
+    nuT = PrandtlMeyerFunction(machT, gamma)
 
-        def LeftProps(self):
-            self.lambda_ = np.tan(self.theta + self.alpha)
-            self.eta = 1/(np.tan(self.alpha)*self.machStar)
-            self.beta = np.sin(self.theta)*np.sin(self.alpha)/(self.r*np.cos(self.theta + self.alpha))
+    expansionFanArray = np.zeros(arraySize, dtype=CharacteristicPoint)
+    for i, mach in enumerate(machArr):
+        delta = PrandtlMeyerFunction(mach, gamma) - nuT
+        theta = thetaT + delta
+        expansionFanArray[i] = CharacteristicPoint(0, 1, theta, MachAngle(mach), mach=mach)
 
-        def RightProps(self):
-            self.lambda_ = np.tan(self.theta - self.alpha)
-            self.eta = 1/(np.tan(self.alpha)*self.machStar)
-            self.beta = np.sin(self.theta)*np.sin(self.alpha)/(self.r*np.cos(self.theta - self.alpha))
+    return expansionFanArray[-2::-1]
 
-        def AverageWith(self, N: 'CharacteristicLine'):
-            x = (self.x + N.x) / 2
-            r = (self.r + N.r) / 2
-            theta = (self.theta + N.theta) / 2
-            alpha = (self.alpha + N.alpha) / 2
-            mach = (self.mach + N.mach) / 2
-            return CharacteristicLine(x, r, theta, alpha, mach=mach)
-        
-        def LRCombine(self, L: 'CharacteristicLine', R: 'CharacteristicLine') -> 'CharacteristicLine':
-            self.x = ((R.lambda_*R.x - L.lambda_*L.x) + (L.r - R.r)) / (R.lambda_ - L.lambda_)
-            self.r = L.r - L.lambda_*(L.x - self.x)
-            self.machStar = (R.theta - L.theta + L.eta*L.machStar + R.eta*R.machStar - R.beta*(R.r - self.r) - L.beta*(L.x - self.x)) / (L.eta + R.eta)
-            self.theta = L.theta - L.eta*(L.machStar - self.machStar) + L.beta*(L.x - self.x)
-            
-            return self
-
-        def clone(self):
-            return CharacteristicLine(self.x, self.r, self.theta, self.alpha, self.mach, self.machStar, self.lambda_, self.eta, self.beta)
-
-    def CalculateFieldPoint(L: CharacteristicLine, R: CharacteristicLine, gamma: float):
-        N = CharacteristicLine(0, 0, 0, 0).LRCombine(L, R)
+def GenerateFlowField(expansionFanArray: np.ndarray[CharacteristicPoint], controlSurfaceArray: np.ndarray[CharacteristicPoint], gamma):
+    def CalculateFieldPoint(L: CharacteristicPoint, R: CharacteristicPoint, gamma: float):
+        L, R = PrepBoundaryPoints(L, R, gamma)
+        N = CharacteristicPoint(0, 0, 0, 0).LRCombine(L, R)
 
         N.mach = machStar2mach(N.machStar, gamma)
         N.alpha = np.arcsin(1/N.mach)
-
         for i in range(30):
-            NR = N.clone().RightProps()
-            NL = N.clone().LeftProps()
+            NL = N.LeftInvarient()
+            NR = N.RightInvarient()
 
-            NRbar = NR.AverageWith(R)
-            NLbar = NL.AverageWith(L)
+            NLbar = L.AverageInvarients(NL)
+            NRbar = R.AverageInvarients(NR)
 
-            NN = N.clone().LRCombine(NLbar, NRbar)
+            NN = CharacteristicPoint(0,0,0,0).LRCombine(NLbar, NRbar)
+            NN.mach = machStar2mach(NN.machStar, gamma)
+            NN.alpha = np.arcsin(1/NN.mach)
 
-            if np.abs(N.theta - NN.theta)/N.theta < 1e-12:
-                break
+            print(f"percent diff: {np.abs(NN.theta - N.theta)/abs(NN.theta)}")
+            if np.abs((NN.theta - N.theta)/(NN.theta)) < 1e-2:
+                print(f"converged in {i + 1} iterations")
+                return NN
             else:
-                N = NN
+                N = NN.clone()
 
+        print("did not converge")
         return N
-    
-    
 
+    def PrepBoundaryPoints(L: CharacteristicPoint, R: CharacteristicPoint, gamma: float):
+        L.machStar = mach2machStar(L.mach, gamma)
+        L = L.LeftInvarient()
+        R.machStar = mach2machStar(R.mach, gamma)
+        R = R.RightInvarient()
+        return L, R
+
+    field = np.empty((len(expansionFanArray) + 1, len(controlSurfaceArray)), dtype=CharacteristicPoint) # v axis is expansion fan, h axis is control surface
+    field[0, :] = controlSurfaceArray
+    field[1:, 0] = expansionFanArray
+
+    for j in range(1, len(controlSurfaceArray)):
+        for i in range(1, len(expansionFanArray) + 1):
+            print(f"calculating at point {i}, {j}")
+            field[i, j] = CalculateFieldPoint(field[i-1, j], field[i, j-1], gamma)
+            # field[i, j] = CharacteristicPoint(0,0,0,0)
+    return field
 
 
 
@@ -282,13 +310,3 @@ def GenerateFlowField(gamma):
 
 def CalculateNozzleContour():
     pass
-
-
-xArr, rArr, machArr, thetaArr, alphaArr = GetControlSurfaceProperties(4.688, -5.4, 1.9554, 1.4)
-
-plt.plot(xArr, rArr)
-plt.grid(True)
-plt.show()
-
-print()
-print(xArr[-1], rArr[-1], machArr[-1], np.tan(thetaArr[-1]), np.rad2deg(alphaArr[-1]))
