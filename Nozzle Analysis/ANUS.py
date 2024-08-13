@@ -20,7 +20,7 @@ radiusBase = 0 * ureg.inch
 
 
 # areaRatio, Cf, lengthRatio, aplot, rplot, lplot, tplot, mplot =  Rao.InputDataGenerate(2.4, -8.25, 1.23, .00001, 0)
-areaRatio, Cf, lengthRatio, aplot, rplot, lplot, tplot, mplot = Rao.InputDataGenerate(4.688, -5.4, 1.4, .00001, 0)
+areaRatio, Cf, lengthRatio, aplot, rplot, lplot, tplot, mplot = Rao.InputDataGenerate(2.4, -1, 1.4, .00001, .01)
 
 print()
 print(areaRatio, Cf, lengthRatio)
