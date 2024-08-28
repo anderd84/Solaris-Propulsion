@@ -19,8 +19,8 @@ areaThroat = .3 * ureg.inch**2
 radiusBase = 0 * ureg.inch
 
 
-# areaRatio, Cf, lengthRatio, aplot, rplot, lplot, tplot, mplot =  Rao.InputDataGenerate(2.4, -8.25, 1.23, .00001, 0)
-areaRatio, Cf, lengthRatio, aplot, rplot, lplot, tplot, mplot = Rao.InputDataGenerate(2.4, -1, 1.4, .00001, .01)
+areaRatio, Cf, lengthRatio, aplot, rplot, lplot, tplot, mplot =  Rao.InputDataGenerate(2.4, np.deg2rad(-8.25), 1.23, .001, 0)
+# areaRatio, Cf, lengthRatio, aplot, rplot, lplot, tplot, mplot = Rao.InputDataGenerate(2.4, -1, 1.4, .00001, .01)
 
 print()
 print(areaRatio, Cf, lengthRatio)

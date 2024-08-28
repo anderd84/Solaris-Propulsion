@@ -3,13 +3,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matrix_viewer as mv
 
-gamma = 1.4
-Me = 3.2
-Te = np.deg2rad(-2.4)
+gamma = 1.23
+Me = 2.4
+Te = np.deg2rad(-8.25)
 Mt = 1.15
-PbPc = 0.01
+PbPc = 0
 
 areaRatio, Cf, lengthRatio, aplot, rplot, lplot, tplot, mplot = rao.InputDataGenerate(Me, Te, gamma, .00001, PbPc)
+
+print(areaRatio, Cf, lengthRatio)
+# input("Press Enter to continue...")
+
 
 Tt = rao.CalculateThroatAngle(Me, Te, Mt, gamma)
 # length = 1.9554
@@ -19,7 +23,7 @@ length = lengthRatio
 expansionRatio = areaRatio
 
 controlSurface: np.ndarray[rao.CharacteristicPoint] = rao.GetControlSurfaceProperties(Me, Te, length, gamma, 50)
-expansionFan: np.ndarray[rao.CharacteristicPoint] = rao.GenerateExpansionFan(Me, Te, Mt, Tt, gamma , 50)
+expansionFan: np.ndarray[rao.CharacteristicPoint] = rao.GenerateExpansionFan(Me, Mt, Tt, gamma , 50)
 
 csx = [p.x for p in controlSurface]
 csr = [p.r for p in controlSurface]
