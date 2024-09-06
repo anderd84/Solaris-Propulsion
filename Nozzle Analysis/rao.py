@@ -3,7 +3,23 @@ import numpy as np
 import numpy.typing as npt
 import matplotlib.pyplot as plt
 from scipy.optimize import fsolve
-from gas import mach2machStar, machStar2mach, PrandtlMeyerFunction, MachAngle
+import scipy.integrate as integrate
+from gas import mach2machStar, machStar2mach, PrandtlMeyerFunction, MachAngle, SpHeatRatio
+
+def cot(x: float) -> float:
+    return np.cos(x) / np.sin(x)
+
+def CalcTheta(mach: float, gamma: SpHeatRatio, A: float) -> float:
+    machStar = mach2machStar(mach, gamma)
+    mach2 = machStar**2
+    gammaTemp = gamma[4]*mach2/(mach2 - 1)
+    temp1 = (1-gamma[6]*mach2)/(mach2 - 1)
+    temp2 = (-2*A)/machStar*np.sqrt(temp1)
+    temp3 = np.sqrt(abs((4*A*A)/mach2*temp1 - 4*gammaTemp*((A*A/mach2)-1)))
+    temp4 = 2*gammaTemp
+
+    sinTheta = (temp2+temp3)/temp4
+    return np.arcsin(sinTheta)
 
 def GenerateInputMatrix(machArray: npt.ArrayLike, thetaArray: npt.ArrayLike, gamma: float, deltaMach: float, PbPc: float) -> np.ndarray:
     """
@@ -50,124 +66,53 @@ def GenerateInputChart(data: np.ndarray) -> None:
     plt.grid(True)
     plt.show()
 
-
-def InputDataGenerate(machE: float, thetaE: float, gamma: float, deltaMach: float, PbPc: float) -> tuple: # update return data to be more intuitive
-    """
-    this function needs to be finalized, verify the reason for small errors
-
-    write docstring later
-    """
-    # useful gamma terms
-    gam1 = (gamma + 1) / 2
-    gam2 = (gamma - 1) / 2
-    gam3 = 1 / (gamma - 1)
-    gam4 = 2 / (gamma + 1)
-    gam5 = gamma / (gamma - 1)
-    gam6 = (gamma - 1) / (gamma + 1)
-
-    TanAlpha = lambda mach: 1 / np.sqrt(mach**2 - 1)
-    cot = lambda x: np.cos(x) / np.sin(x)
-
+def CalculateMachD(machE: float, thetaE: float, gamma: SpHeatRatio, PbPc: float, tol: float = 1e-8) -> float:
     machStarE = mach2machStar(machE, gamma) 
-    tanAlphaE = TanAlpha(machE)
-    alphaE = np.arctan(tanAlphaE)
+    alphaE = MachAngle(machE)
+    tanAlphaE = np.tan(alphaE)
 
     A = machStarE * (np.cos(thetaE) + tanAlphaE*np.sin(-thetaE))
-    B = (machStarE * np.sin(-thetaE))**2 * (tanAlphaE*(1+gam2*machE**2)**(-gam3))
+    B = (machStarE * np.sin(-thetaE))**2 * (tanAlphaE*(1+gamma[2]*machE**2)**(-gamma[3]))
 
-    # need to track 4 states while integrating, mach, theta, alpha, and rRatio
-    # B terms represent the state from the previous iteration, A terms are for the current iteration
-    machA = 1
-    thetaA = 0
-    alphaA = 0
-    rRatioA = 1
-
-    machB = machE
-    thetaB = thetaE
-    alphaB = alphaE
-    rRatioB = 1
-
-    sumAreaRatio = 0
-    sumLengthRatio = 0
-    sumForce = 0
-
-    areaRatio = 0
-    Cf = 0
-    lengthRatio = 0
-
-    mplot = []
-    tplot = []
-    aplot = []
-    rplot = []
-    lplot = []
-
-    def isAtD(mach: float, theta: float) -> bool:
-        """
-        does this need a docstring??? function may get deleted when InputDataGenerate is finalized
-        """
-        # test for end
-        test = (2/(gamma*mach*mach))*np.sqrt(mach*mach - 1) - np.sin(-2*theta)
-        c = (1 + gam2*mach*mach)**gam5
-        c1 = (2/(gamma*mach*mach))*np.sqrt(mach*mach - 1)
+    def EndCondition(mach):
+        theta = CalcTheta(mach, gamma, A)
+        test = (2/(gamma*mach*mach))*np.sqrt(abs(mach*mach - 1)) - np.sin(-2*theta)
+        c = (1 + gamma[2]*mach*mach)**gamma[5]
+        c1 = (2/(gamma*mach*mach))*np.sqrt(abs(mach*mach - 1))
         c2 = PbPc * c1 * c
-        return (test - c2 < 0) # want to be negative
+        return test - c2
+    
+    machD = fsolve(EndCondition, machE - .2, xtol=tol)[0]
 
-    while not isAtD(machA, thetaA):
-        # current state calculations
-        machA = machB - deltaMach
-        tanAlphaA = TanAlpha(machA)
-        alphaA = np.arctan(tanAlphaA)
-        machStarA = mach2machStar(machA, gamma)
+    return machD
 
-        mach2 = machStarA**2
-        gammaTemp = gam4*mach2/(mach2 - 1)
-        temp1 = (1-gam6*mach2)/(mach2 - 1)
-        temp2 = (-2*A)/machStarA*np.sqrt(temp1)
-        temp3 = np.sqrt((4*A*A)/mach2*temp1 - 4*gammaTemp*((A*A/mach2)-1))
-        temp4 = 2*gammaTemp
+def CalculatePlugMetrics(machE: float, thetaE: float, machD: float, gamma: SpHeatRatio, PbPc: float, steps: int = 100) -> tuple:    
+    machStarE = mach2machStar(machE, gamma) 
+    alphaE = MachAngle(machE)
+    tanAlphaE = np.tan(alphaE)
 
-        sinThetaA = (temp2+temp3)/temp4
-        thetaA = np.arcsin(sinThetaA)
+    A = machStarE * (np.cos(thetaE) + tanAlphaE*np.sin(-thetaE))
+    B = (machStarE * np.sin(-thetaE))**2 * (tanAlphaE*(1+gamma[2]*machE**2)**(-gamma[3]))
 
-        rRatioA = B / ((machStarA * np.sin(-thetaA))**2 * (tanAlphaA*(1+gam2*machA**2)**(-gam3)))
+    machs = np.linspace(machD, machE, steps)
+    machStars = mach2machStar(machs, gamma)
+    thetas = CalcTheta(machs, gamma, A)
+    alphas = MachAngle(machs)
 
-        t1 = (1/((1+gam2*machB**2)*gam4)**gam3)
-        t2 = np.sqrt((gam1*machB*machB)/(1+gam2*machB*machB))*rRatioB
-        t2 = t2*np.sin(alphaB)/np.sin(thetaB-alphaB)
+    rRatios = B / ((machStars * np.sin(-thetas))**2 * (np.tan(MachAngle(machs))*(1+gamma[2]*machs**2)**(-gamma[3])))
 
-        t3 = (1/((1+gam2*machA**2)*gam4)**gam3)
-        t4 = np.sqrt((gam1*machA*machA)/(1+gam2*machA*machA))*rRatioA
-        t4 = t4*np.sin(alphaA)/np.sin(thetaA-alphaA)
+    t1 = -(1/((1+gamma[2]*machs**2)*gamma[4])**gamma[3])
+    t2 = np.sqrt((gamma[1]*machs*machs)/(1+gamma[2]*machs*machs))*rRatios
+    t2 *= np.sin(alphas)/np.sin(thetas-alphas)
 
-        dRR = rRatioA - rRatioB
+    f1 = (1+gamma[2]*machs**2)**(-gamma[5])
+    f2 = (1 + gamma*machs**2*((np.sin(alphas)*np.cos(-thetas))/(np.sin(-thetas+alphas))))*rRatios
 
-        sumAreaRatio += (t1*t2 + t3*t4)*dRR
-        sumLengthRatio += .5*(cot(thetaB - alphaB) + cot(thetaA - alphaA))*dRR
+    areaRatio = 1/integrate.trapezoid(2*t1*t2, rRatios)
+    lengthRatio = integrate.trapezoid(cot(-thetas + alphas), rRatios)
+    Cf = areaRatio*integrate.trapezoid(2*f1*f2, rRatios)
 
-        f1 = (1+gam2*machB**2)**(-gam5)
-        f2 = (1 + gamma*machB**2*((np.sin(alphaB)*np.cos(-thetaB))/(np.sin(-thetaB+alphaB))))*rRatioB
-
-        f3 = (1+gam2*machA**2)**(-gam5)
-        f4 = (1 + gamma*machA**2*((np.sin(alphaA)*np.cos(-thetaA))/(np.sin(-thetaA+alphaA))))*rRatioA
-
-        sumForce += (f1*f2 + f3*f4)*(-dRR)
-
-        areaRatio = 1/sumAreaRatio
-        Cf = areaRatio*sumForce
-        lengthRatio = sumLengthRatio
-
-        machB = machA
-        thetaB = thetaA
-        alphaB = alphaA
-        rRatioB = rRatioA
-        
-        mplot.append(machB)
-        tplot.append(thetaB)
-        aplot.append(areaRatio)
-        rplot.append(rRatioB)
-        lplot.append(lengthRatio)
-
-    return areaRatio, Cf, lengthRatio, aplot, rplot, lplot, tplot, mplot
+    return areaRatio, Cf, lengthRatio
 
 @dataclass
 class CharacteristicPoint:
@@ -436,3 +381,6 @@ def PruneUnderContour(field: np.ndarray[CharacteristicPoint], contour: np.ndarra
 
 def distance(p1: CharacteristicPoint, p2: CharacteristicPoint) -> float:
     return np.sqrt((p1.x - p2.x)**2 + (p1.r - p2.r)**2)
+
+def fuckinround(P0Pamb: float, Me, Te):
+    pass
