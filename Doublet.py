@@ -210,12 +210,6 @@ xprime = Peakx
 plt.plot(xprime, yprime, "o")
 
 
-# -------------- Plotting Horizontal Lines axial lines (References for angles) -------------- #
-plt.axhline(Rgamma_lox, linestyle="--")
-plt.axhline(Rgamma_lox + Spacing, linestyle="--")
-plt.axhline(y, linestyle="--") #need y before this plot. THis is the horizontal line to represent the axial POV from the resultant angle
-
-
 # -------------- Creating all linspaces needed for the following plots -------------- #
 x_graph = np.linspace(0, max(x_profile), Points)
 x_angled_lines = np.linspace(0, x, Points)  # Up to the impingement point for FUEL line
@@ -234,6 +228,12 @@ Chamber_ContourX = np.concatenate([ChamberX, ChamberArcX])
 Chamber_ContourY = np.concatenate([ChamberY, ChamberArcY])
 plt.plot(Chamber_ContourX, Chamber_ContourY, "k", linewidth=2)
 
+# -------------- Plotting Horizontal Lines axial lines (References for angles) -------------- #
+plt.axhline(Rgamma_lox, linestyle="--")
+plt.axhline(Rgamma_lox + Spacing, linestyle="--")
+plt.axhline(y, linestyle="--") #need y before this plot. THis is the horizontal line to represent the axial POV from the resultant angle
+plt.axhline((y_profile[0] + FilmCoolingSpacing[0]) , linestyle="dotted")
+plt.axhline((ChamberY[0] - FilmCoolingSpacing[1]) , linestyle="dotted")
 
 # -------------- Plotting the angled Prop Lines -------------- #
 gamma_lox_line = np.tan(np.radians(gamma_lox)) * x_angled_lines + Rgamma_lox
@@ -244,7 +244,7 @@ plt.plot(x_angled_lines, gamma_fuel_line,"r")
 # -------------- Plotting the film cooling lines -------------- #
 innercooling_line = np.tan(np.radians(IN_FILM_C.gamma.magnitude)) * x_filmcooling_inner + y_profile[0] + FilmCoolingSpacing[0] 
 plt.plot(x_filmcooling_inner, innercooling_line,"r")
-outercooling_line = np.tan(np.radians(OUT_FILM_C.gamma.magnitude)) * x_filmcooling_outer + ChamberY - FilmCoolingSpacing[1] 
+outercooling_line = np.tan(np.radians(OUT_FILM_C.gamma.magnitude)) * x_filmcooling_outer + ChamberY[0] - FilmCoolingSpacing[1] 
 plt.plot(x_filmcooling_outer, outercooling_line,"r")
 
 
@@ -280,6 +280,12 @@ delta = Q_((np.arctan(tan_resultant)) *180 / np.pi, ureg.degrees)
 arc_delta = patches.Arc((x, y), 3*x, 3*x, 
                        angle=0, theta1=0, theta2=delta.magnitude, color='y', label=f'Resultant_Angle: {delta} deg')
 plt.gca().add_patch(arc_delta)
+arc_filmcooling_inner = patches.Arc((0, (y_profile[0] + FilmCoolingSpacing[0])), 2*x, 2*x, 
+                      angle=0, theta1=IN_FILM_C.gamma.magnitude, theta2=0, color='red', label=f'Gamma_Filmcooling_Inner: {IN_FILM_C.gamma.magnitude} deg')
+plt.gca().add_patch(arc_filmcooling_inner)
+arc_filmcooling_outer = patches.Arc((0, (ChamberY[0] - FilmCoolingSpacing[1])), 2*x, 2*x, 
+                      angle=0, theta1=0, theta2=OUT_FILM_C.gamma.magnitude, color='red', label=f'Gamma_FilmCooling_Outer: {OUT_FILM_C.gamma.magnitude} deg')
+plt.gca().add_patch(arc_filmcooling_outer)
 
 
 # -------------- Plotting the angles onto the graph for easier readibility -------------- #
@@ -288,16 +294,25 @@ y_offset_lox = -3*(y - Rgamma_lox)/4
 y_offset_fuel = 5*(Spacing + Rgamma_lox - y)/8  
 x_offset_delta = 3*(xprime-x)/4  
 y_offset_delta = 5*(yprime-y)/8
+x_offset_Filmcooling = 1.75*x
+y_offset_Filmcooling_Inner = -3*FilmCoolingSpacing[0]/4
+y_offset_Filmcooling_Outer =  FilmCoolingSpacing[1]/4
 FUEL_CORE_gamma_writing = abs(FUEL_CORE.gamma.magnitude)
 plt.text(x + x_offset,y + y_offset_lox, rf'$\gamma_{{\mathrm{{LOX}}}}: {OX_CORE.gamma.magnitude:.2f}^\circ$', color='green')
 plt.text(x + x_offset,y + y_offset_fuel, rf'$\gamma_{{\mathrm{{FUEL}}}}: {FUEL_CORE_gamma_writing:.2f}^\circ$', color='red')
 plt.text(x + x_offset_delta, y + y_offset_delta, rf'$\delta: {delta.magnitude:.2f}^\circ$', color='y')
+plt.text(x_offset_Filmcooling, (y_profile[0] + FilmCoolingSpacing[0]) + y_offset_Filmcooling_Inner, rf'$\delta: {IN_FILM_C.gamma.magnitude:.2f}^\circ$', color='red')
+plt.text(x_offset_Filmcooling, (ChamberY[0] - FilmCoolingSpacing[1]) + y_offset_Filmcooling_Outer, rf'$\delta: {OUT_FILM_C.gamma.magnitude:.2f}^\circ$', color='red')
 
 
 # -------------- Extra Plotting Shit -------------- #
-plt.legend(['Spike Contour', 'Centerline', 'Impingement Point', 'Aim Point', 'Gamma_(OX) Straight Line', 'Gamma_(FUEL) Straight Line','Resultant Straight Line',
-             'Chamber Contour', f'Gamma_(OX) Angled Line {OX_CORE.gamma :.3f~}', 
-             f'Gamma_(FUEL) Angled Line {FUEL_CORE.gamma :.3f~}', f'Resultant Line {delta :.3f~}'], loc="best")
+plt.legend(['Spike Contour', 'Centerline', 'Impingement Point', 'Aim Point','Chamber Contour', 'Gamma_(OX) Straight Line', 'Gamma_(FUEL) Straight Line','Resultant Straight Line', 
+            '(Film Cooling Inner) Straight Line', 'Film Cooling Outer Straight Line',
+              f'Gamma_(OX) Angled Line {OX_CORE.gamma :.3f~}', 
+             f'Gamma_(FUEL) Angled Line {FUEL_CORE.gamma :.3f~}', 
+             f'Gamma_Filmcooling_Inner {IN_FILM_C.gamma :.3f~}',
+             f'Gamma_FilmCooling_Outer {OUT_FILM_C.gamma :.3f~}',
+             f'Resultant Line {delta :.3f~}'], loc="upper right", bbox_to_anchor=(1.10,1.15))
 plt.xlabel('Distance Along Engine Axis (inches)')
 plt.ylabel('Radius (inches)')
 plt.axis('equal')
