@@ -312,7 +312,11 @@ plt.legend(['Spike Contour', 'Centerline', 'Impingement Point', 'Aim Point','Cha
              f'Gamma_(FUEL) Angled Line {FUEL_CORE.gamma :.3f~}', 
              f'Gamma_Filmcooling_Inner {IN_FILM_C.gamma :.3f~}',
              f'Gamma_FilmCooling_Outer {OUT_FILM_C.gamma :.3f~}',
-             f'Resultant Line {delta :.3f~}'], loc="upper right", bbox_to_anchor=(1.10,1.15))
+             f'Resultant Line {delta :.3f~}'], loc="upper right", bbox_to_anchor=(1.10,.85), mode="expand")
+plt.subplots_adjust(left=0.06)
+plt.subplots_adjust(bottom=0.09)
+plt.subplots_adjust(right=0.69)
+plt.subplots_adjust(top=0.765)
 plt.xlabel('Distance Along Engine Axis (inches)')
 plt.ylabel('Radius (inches)')
 plt.axis('equal')
