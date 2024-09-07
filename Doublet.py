@@ -295,14 +295,14 @@ y_offset_fuel = 5*(Spacing + Rgamma_lox - y)/8
 x_offset_delta = 3*(xprime-x)/4  
 y_offset_delta = 5*(yprime-y)/8
 x_offset_Filmcooling = 1.75*x
-y_offset_Filmcooling_Inner = -3*FilmCoolingSpacing[0]/4
+y_offset_Filmcooling_Inner = -2*FilmCoolingSpacing[0]/4
 y_offset_Filmcooling_Outer =  FilmCoolingSpacing[1]/4
 FUEL_CORE_gamma_writing = abs(FUEL_CORE.gamma.magnitude)
-plt.text(x + x_offset,y + y_offset_lox, rf'$\gamma_{{\mathrm{{LOX}}}}: {OX_CORE.gamma.magnitude:.2f}^\circ$', color='green')
-plt.text(x + x_offset,y + y_offset_fuel, rf'$\gamma_{{\mathrm{{FUEL}}}}: {FUEL_CORE_gamma_writing:.2f}^\circ$', color='red')
+plt.text(x + x_offset,y + y_offset_lox, rf'$\gamma_{{\mathrm{{OX}}}}: {OX_CORE.gamma.magnitude:.2f}^\circ$', color='green')
+plt.text(x + x_offset,y + y_offset_fuel, rf'$\gamma_{{\mathrm{{F}}}}: {FUEL_CORE_gamma_writing:.2f}^\circ$', color='red')
 plt.text(x + x_offset_delta, y + y_offset_delta, rf'$\delta: {delta.magnitude:.2f}^\circ$', color='y')
-plt.text(x_offset_Filmcooling, (y_profile[0] + FilmCoolingSpacing[0]) + y_offset_Filmcooling_Inner, rf'$\delta: {IN_FILM_C.gamma.magnitude:.2f}^\circ$', color='red')
-plt.text(x_offset_Filmcooling, (ChamberY[0] - FilmCoolingSpacing[1]) + y_offset_Filmcooling_Outer, rf'$\delta: {OUT_FILM_C.gamma.magnitude:.2f}^\circ$', color='red')
+plt.text(x_offset_Filmcooling, (y_profile[0] + FilmCoolingSpacing[0]) + y_offset_Filmcooling_Inner, rf'$\gamma_{{\mathrm{{FCI}}}}: {IN_FILM_C.gamma.magnitude:.2f}^\circ$', color='red')
+plt.text(x_offset_Filmcooling, (ChamberY[0] - FilmCoolingSpacing[1]) + y_offset_Filmcooling_Outer, rf'$\gamma_{{\mathrm{{FCO}}}}: {OUT_FILM_C.gamma.magnitude:.2f}^\circ$', color='red')
 
 
 # -------------- Extra Plotting Shit -------------- #
@@ -310,13 +310,13 @@ plt.legend(['Spike Contour', 'Centerline', 'Impingement Point', 'Aim Point','Cha
             '(Film Cooling Inner) Straight Line', 'Film Cooling Outer Straight Line',
               f'Gamma_(OX) Angled Line {OX_CORE.gamma :.3f~}', 
              f'Gamma_(FUEL) Angled Line {FUEL_CORE.gamma :.3f~}', 
-             f'Gamma_Filmcooling_Inner {IN_FILM_C.gamma :.3f~}',
+             f'Gamma_FilmCooling_Inner {IN_FILM_C.gamma :.3f~}',
              f'Gamma_FilmCooling_Outer {OUT_FILM_C.gamma :.3f~}',
-             f'Resultant Line {delta :.3f~}'], loc="upper right", bbox_to_anchor=(1.10,.85), mode="expand")
+             f'Resultant Line {delta :.3f~}'], loc="upper right", bbox_to_anchor=(1.05,.85), mode="expand")
 plt.subplots_adjust(left=0.06)
-plt.subplots_adjust(bottom=0.09)
-plt.subplots_adjust(right=0.69)
-plt.subplots_adjust(top=0.765)
+plt.subplots_adjust(bottom=0.069)
+plt.subplots_adjust(right=0.7420)
+plt.subplots_adjust(top=0.9)
 plt.xlabel('Distance Along Engine Axis (inches)')
 plt.ylabel('Radius (inches)')
 plt.axis('equal')
