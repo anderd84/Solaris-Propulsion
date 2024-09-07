@@ -105,7 +105,7 @@ class PROP:
 
 # -------------- Design Inputs and Constants -------------- #    
 #Constants
-CD_drill = 0.7 #Constant for Sharp Edged Orifices
+CD_drill = 0.7 #Constant for Sharp Edged Orifices         
 g0 = Q_(32.174, ureg.foot / ureg.second**2)
 Prescott_pressure = Q_(12.04, ureg.force_pound / ureg.inch**2)
 #Design Input
@@ -115,6 +115,7 @@ di = 6.5 #Internal Diameter of Chamber
 ri = di / 2 #Internal Radius of Chamber
 Spacing = 0.75  #Spacing between center of impingement Holes
 Rgamma_lox = 1.75  #Radial distance between centerline and LOX hole
+FilmCoolingSpacing = np.array([.25, .25]) #inches Inner, Outer
 Pressure_Drop_Fuel = 0.2 #Pressure drop Percentage (ROT: Always in terms of Chamber Pressure)
 Pressure_Drop_Lox = 0.2 #Pressure drop Percentage (ROT: Always in terms of Chamber Pressure)
 Pressure_Chamber = Q_(300, ureg.force_pound / ureg.inch**2) #Chamber Pressure Pretty Obvious
@@ -124,7 +125,7 @@ Lox_Dewar_Pressure = Q_(22, ureg.force_pound / ureg.inch**2) + Prescott_pressure
 # -------------- Prop Initialization -------------- #
 LOX_Sat_Temp = LOX.Ts(p=Lox_Dewar_Pressure.magnitude )
 LOX_Sat_Dens = LOX.ds(T=LOX_Sat_Temp)
-OX_CORE = PROP(gamma=20., mdot=mdots[0], rho=LOX_Sat_Dens[0][0])
+OX_CORE = PROP(gamma=25., mdot=mdots[0], rho=LOX_Sat_Dens[0][0])
 FUEL_CORE = PROP(gamma = 0, mdot = mdots[1], rho=51.15666) #gamma zero for this one because it's the initialized guess just making the FUEL CORE class requires it ( should change when moving to data classes)
 OUT_FILM_C = PROP(gamma = 10, mdot = Film_Cooling[0]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
 IN_FILM_C = PROP(gamma = -10, mdot = Film_Cooling[1]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
@@ -218,7 +219,9 @@ plt.axhline(y, linestyle="--") #need y before this plot. THis is the horizontal 
 # -------------- Creating all linspaces needed for the following plots -------------- #
 x_graph = np.linspace(0, max(x_profile), Points)
 x_angled_lines = np.linspace(0, x, Points)  # Up to the impingement point for FUEL line
-x_filmcooling = np.linspace(0, x, Points)
+print(FilmCoolingSpacing[0]* np.tan( np.pi / 2  - np.radians(IN_FILM_C.gamma.magnitude)))
+x_filmcooling_inner = np.linspace(0, FilmCoolingSpacing[0]* np.tan( np.pi / 2  - np.abs(np.radians(IN_FILM_C.gamma.magnitude))), Points)
+x_filmcooling_outer = np.linspace(0, FilmCoolingSpacing[1]* np.tan( np.pi / 2  - np.abs(np.radians(OUT_FILM_C.gamma.magnitude))), Points)
 thetaRange4 = np.linspace(np.radians(90), 0, Points)
 
 
@@ -239,13 +242,10 @@ gamma_fuel_line = np.tan(np.radians(gamma_fuel)) * x_angled_lines + Rgamma_lox +
 plt.plot(x_angled_lines, gamma_fuel_line,"r")
 
 # -------------- Plotting the film cooling lines -------------- #
-innercooling_line = np.tan(np.radians(IN_FILM_C.gamma.magnitude)) * x_filmcooling + y_profile
-outercooling_line = np.tan(np.radians(OUT_FILM_C.gamma.magnitude)) * x_filmcooling + ChamberY
-
-gamma_lox_line = np.tan(np.radians(gamma_lox)) * x_angled_lines + Rgamma_lox
-plt.plot(x_angled_lines, gamma_lox_line,"g")
-gamma_fuel_line = np.tan(np.radians(gamma_fuel)) * x_angled_lines + Rgamma_lox + Spacing
-plt.plot(x_angled_lines, gamma_fuel_line,"r")
+innercooling_line = np.tan(np.radians(IN_FILM_C.gamma.magnitude)) * x_filmcooling_inner + y_profile[0] + FilmCoolingSpacing[0] 
+plt.plot(x_filmcooling_inner, innercooling_line,"r")
+outercooling_line = np.tan(np.radians(OUT_FILM_C.gamma.magnitude)) * x_filmcooling_outer + ChamberY - FilmCoolingSpacing[1] 
+plt.plot(x_filmcooling_outer, outercooling_line,"r")
 
 
 # -------------- Plotting the resultant line -------------- #
