@@ -110,7 +110,7 @@ g0 = Q_(32.174, ureg.foot / ureg.second**2)
 Prescott_pressure = Q_(12.04, ureg.force_pound / ureg.inch**2)
 #Design Input
 mdots = np.array([5.29, 2.21])/4 #LOX_CORE, FUEL_CORE
-Film_Cooling = np.array([0.08, 0.08]) #Outer Film Cooling Percentage, Inner Film Cooling Percentage
+Film_Cooling = np.array([0.05, 0.05]) #Outer Film Cooling Percentage, Inner Film Cooling Percentage
 di = 6.5 #Internal Diameter of Chamber
 ri = di / 2 #Internal Radius of Chamber
 Spacing = 0.55  #Spacing between center of impingement Holes
@@ -127,8 +127,8 @@ LOX_Sat_Temp = LOX.Ts(p=Lox_Dewar_Pressure.magnitude )
 LOX_Sat_Dens = LOX.ds(T=LOX_Sat_Temp)
 OX_CORE = PROP(gamma=25., mdot=mdots[0], rho=LOX_Sat_Dens[0][0])
 FUEL_CORE = PROP(gamma = 0, mdot = mdots[1], rho=51.15666) #gamma zero for this one because it's the initialized guess just making the FUEL CORE class requires it ( should change when moving to data classes)
-OUT_FILM_C = PROP(gamma = 10, mdot = Film_Cooling[0]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
-IN_FILM_C = PROP(gamma = -10, mdot = Film_Cooling[1]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
+OUT_FILM_C = PROP(gamma = 30, mdot = Film_Cooling[0]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
+IN_FILM_C = PROP(gamma = -30, mdot = Film_Cooling[1]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
 
 # -------------- Function in DOublet to make my version of the SHitty Spike Contour -------------- #
 Points = 1000 #also used in other plots if this section ends up getting deleted
@@ -280,10 +280,10 @@ delta = Q_((np.arctan(tan_resultant)) *180 / np.pi, ureg.degrees)
 arc_delta = patches.Arc((x, y), 3*x, 3*x, 
                        angle=0, theta1=0, theta2=delta.magnitude, color='y', label=f'Resultant_Angle: {delta} deg')
 plt.gca().add_patch(arc_delta)
-arc_filmcooling_inner = patches.Arc((0, (y_profile[0] + FilmCoolingSpacing[0])), 2*x, 2*x, 
+arc_filmcooling_inner = patches.Arc((0, (y_profile[0] + FilmCoolingSpacing[0])), 1.5*x, 1.5*x, 
                       angle=0, theta1=IN_FILM_C.gamma.magnitude, theta2=0, color='red', label=f'Gamma_Filmcooling_Inner: {IN_FILM_C.gamma.magnitude} deg')
 plt.gca().add_patch(arc_filmcooling_inner)
-arc_filmcooling_outer = patches.Arc((0, (ChamberY[0] - FilmCoolingSpacing[1])), 2*x, 2*x, 
+arc_filmcooling_outer = patches.Arc((0, (ChamberY[0] - FilmCoolingSpacing[1])), 1.5*x, 1.5*x, 
                       angle=0, theta1=0, theta2=OUT_FILM_C.gamma.magnitude, color='red', label=f'Gamma_FilmCooling_Outer: {OUT_FILM_C.gamma.magnitude} deg')
 plt.gca().add_patch(arc_filmcooling_outer)
 
@@ -294,7 +294,7 @@ y_offset_lox = -3*(y - Rgamma_lox)/4
 y_offset_fuel = 5*(Spacing + Rgamma_lox - y)/8  
 x_offset_delta = 3*(xprime-x)/4  
 y_offset_delta = 5*(yprime-y)/8
-x_offset_Filmcooling = 1.75*x
+x_offset_Filmcooling = x
 y_offset_Filmcooling_Inner = -2*FilmCoolingSpacing[0]/4
 y_offset_Filmcooling_Outer =  FilmCoolingSpacing[1]/4
 FUEL_CORE_gamma_writing = abs(FUEL_CORE.gamma.magnitude)
