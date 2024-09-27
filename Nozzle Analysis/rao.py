@@ -21,48 +21,18 @@ def CalcTheta(mach: float, gamma: SpHeatRatio, A: float) -> float:
     sinTheta = (temp2+temp3)/temp4
     return np.arcsin(sinTheta)
 
-def GenerateInputMatrix(machArray: npt.ArrayLike, thetaArray: npt.ArrayLike, gamma: float, deltaMach: float, PbPc: float) -> np.ndarray:
-    """
-    Creates a matrix of data using the output of InputDataGenerate
-    Iterates over machArray and thetaArray to create all combinations of data
-
-    Both arrays are for the values at point E
-
-    ### Parameters:
-    1. machArray: npt.ArrayLike
-        array of mach numbers to iterate over
-    2. thetaArray: npt.ArrayLike
-        array of theta values to iterate over
-    3. gamma: float
-        specific heat ratio
-    4. deltaMach: float
-        step size for mach number within InputDataGenerate
-    5. PbPc: float
-        base pressure to chamber pressure ratio
-
-    
-    ### Returns:
-    np.ndarray
-        matrix of data, shape is (len(machArray), len(thetaArray), ?) <- may change with InputDataGenerate
-    """
+def GenerateInputMatrix(machArray: npt.ArrayLike, thetaArray: npt.ArrayLike, gamma: SpHeatRatio, PbPc: float) -> np.ndarray:
     data = np.zeros((len(machArray), len(thetaArray), 3))
     for i, mach in enumerate(machArray):
         for j, theta in enumerate(thetaArray):
-            print(mach, theta)
-            data[i, j, :] = InputDataGenerate(mach, theta, gamma, deltaMach, PbPc)
+            data[i, j, :] = CalculatePlugMetrics(mach, theta, CalculateMachD(mach, theta, gamma, PbPc), gamma, steps=10000)
     return data
 
 def GenerateInputChart(data: np.ndarray) -> None:
-    """
-    Uses output from GenerateInputMatrix to plot the data in a chart of Expansion Ratio and L/Re
-    Constant mach and theta lines are plotted
-
-    ### Parameters:
-    1. data: np.ndarray
-        matrix of data, shape is (len(machArray), len(thetaArray), ?) <- may change with InputDataGenerate
-    """
-    plt.plot(data[:, :, 2], data[:, :, 0])
-    plt.plot(np.transpose(data[:, :, 2]), np.transpose(data[:, :, 0]))
+    plt.contourf(np.transpose(data[:, :, 2]), np.transpose(data[:, :, 0]), data[:, :, 1]/np.max(data[:,:,1]), levels=10, cmap='jet')
+    plt.plot(data[:, :, 2], data[:, :, 0], 'k', linewidth=.5)
+    plt.plot(np.transpose(data[:, :, 2]), np.transpose(data[:, :, 0]), 'k', linewidth=.5)
+    plt.colorbar()
     plt.grid(True)
     plt.show()
 
@@ -86,7 +56,7 @@ def CalculateMachD(machE: float, thetaE: float, gamma: SpHeatRatio, PbPc: float,
 
     return machD
 
-def CalculatePlugMetrics(machE: float, thetaE: float, machD: float, gamma: SpHeatRatio, PbPc: float, steps: int = 100) -> tuple:    
+def CalculatePlugMetrics(machE: float, thetaE: float, machD: float, gamma: SpHeatRatio, steps: int = 100) -> tuple:    
     machStarE = mach2machStar(machE, gamma) 
     alphaE = MachAngle(machE)
     tanAlphaE = np.tan(alphaE)
@@ -194,49 +164,28 @@ class CharacteristicPoint:
     def clone(self) -> 'CharacteristicPoint':
         return CharacteristicPoint(x=self.x, r=self.r, theta=self.theta, alpha=self.alpha, mach=self.mach, machStar=self.machStar, lambda_=self.lambda_, eta=self.eta, beta=self.beta)
     
-def GetControlSurfaceProperties(machE: float, thetaE: float, lengthRatio: float, gamma: float, arraySize: int = 100) -> np.ndarray[CharacteristicPoint]:
+def GetControlSurfaceProperties(machE: float, thetaE: float, lengthRatio: float, gamma: SpHeatRatio, arraySize: int = 100) -> np.ndarray[CharacteristicPoint]:
     """
     this function also needs to be finalized, equations are same so error propogates
     """
-    gam1 = (gamma + 1) / 2
-    gam2 = (gamma - 1) / 2
-    gam3 = 1 / (gamma - 1)
-    gam4 = 2 / (gamma + 1)
-    gam5 = gamma / (gamma - 1)
-    gam6 = (gamma - 1) / (gamma + 1)
-
     TanAlpha = lambda mach: 1 / np.sqrt(mach**2 - 1)
 
     machStarE = mach2machStar(machE, gamma)
     tanAlphaE = TanAlpha(machE)
 
     A = machStarE * (np.cos(thetaE) + tanAlphaE*np.sin(-thetaE))
-    B = (machStarE * np.sin(-thetaE))**2 * (tanAlphaE*(1+gam2*machE**2)**(-gam3))
+    B = (machStarE * np.sin(-thetaE))**2 * (tanAlphaE*(1+gamma[2]*machE**2)**(-gamma[3]))
 
     # start at x=0, go down to x=lenghRatio
     xArr = np.linspace(0, lengthRatio, arraySize)
 
     controlSurfaceArray = np.zeros(arraySize, dtype=CharacteristicPoint)
     controlSurfaceArray[0] = CharacteristicPoint(0, 1, thetaE, np.arctan(tanAlphaE), mach=machE)
-
-    def CalcTheta(M: float) -> float:
-        machStarA = mach2machStar(M, gamma)
-
-        mach2 = machStarA**2
-        gammaTemp = gam4*mach2/(mach2 - 1)
-        temp1 = (1-gam6*mach2)/(mach2 - 1)
-        temp2 = (-2*A)/machStarA*np.sqrt(temp1)
-        temp3 = np.sqrt(np.abs((4*A*A)/mach2*temp1 - 4*gammaTemp*((A*A/mach2)-1)))
-        temp4 = 2*gammaTemp
-
-        sinThetaA = (temp2+temp3)/temp4
-        theta = np.arcsin(sinThetaA)
-        return theta
     
     def CalcB(mach: float, theta: float, rRatio: float) -> float:
         machStar = mach2machStar(mach, gamma)
         tanAlpha = TanAlpha(mach)
-        return (machStar * np.sin(-theta))**2 * (tanAlpha*(1+gam2*mach**2)**(-gam3)) * rRatio
+        return (machStar * np.sin(-theta))**2 * (tanAlpha*(1+gamma[2]*mach**2)**(-gamma[3])) * rRatio
 
     for i, x in enumerate(xArr[1:]):
         dx = x - xArr[i]
@@ -244,18 +193,18 @@ def GetControlSurfaceProperties(machE: float, thetaE: float, lengthRatio: float,
         dr = np.tan(controlSurfaceArray[i].theta - controlSurfaceArray[i].alpha) * dx
         # r = rArr[i] + dr
         r = controlSurfaceArray[i].r + dr
-        mach = fsolve(lambda M: CalcB(M, CalcTheta(M), r) - B, controlSurfaceArray[i].mach, xtol=1e-12)[0]
-        theta = CalcTheta(mach)
+        mach = fsolve(lambda M: CalcB(M, CalcTheta(M, gamma, A), r) - B, controlSurfaceArray[i].mach, xtol=1e-12)[0]
+        theta = CalcTheta(mach, gamma, A)
         alpha = np.arcsin(1/mach)
 
         controlSurfaceArray[i+1] = CharacteristicPoint(x, r, theta, alpha, mach=mach)
         
     return controlSurfaceArray
 
-def CalculateThroatAngle(machE: float, thetaE: float, machT: float, gamma: float) -> float:
+def CalculateThroatAngle(machE: float, thetaE: float, machT: float, gamma: SpHeatRatio) -> float:
     return thetaE - PrandtlMeyerFunction(machE, gamma) + PrandtlMeyerFunction(machT, gamma)
 
-def GenerateExpansionFan(machE: float, machT: float, thetaT: float, gamma: float, arraySize: int = 100) -> np.ndarray[CharacteristicPoint]: # look into making the linspace angles instead of mach
+def GenerateExpansionFan(machE: float, machT: float, thetaT: float, gamma: SpHeatRatio, arraySize: int = 100) -> np.ndarray[CharacteristicPoint]: # look into making the linspace angles instead of mach
     machArr = np.linspace(machT, machE, arraySize)
     nuT = PrandtlMeyerFunction(machT, gamma)
 
@@ -267,7 +216,7 @@ def GenerateExpansionFan(machE: float, machT: float, thetaT: float, gamma: float
 
     return expansionFanArray[-2::-1]
 
-def GenerateFlowField(expansionFanArray: np.ndarray[CharacteristicPoint], controlSurfaceArray: np.ndarray[CharacteristicPoint], gamma: float) -> np.ndarray[CharacteristicPoint]:
+def GenerateFlowField(expansionFanArray: np.ndarray[CharacteristicPoint], controlSurfaceArray: np.ndarray[CharacteristicPoint], gamma: SpHeatRatio) -> np.ndarray[CharacteristicPoint]:
     def CalculateFieldPoint(L: CharacteristicPoint, R: CharacteristicPoint, gamma: float):
         L, R = PrepBoundaryPoints(L, R, gamma)
         N = CharacteristicPoint(0, 0, 0, 0).LRCombine(L, R)
@@ -284,9 +233,9 @@ def GenerateFlowField(expansionFanArray: np.ndarray[CharacteristicPoint], contro
 
             NN = CharacteristicPoint(0,0,0,0).LRCombine(NLbar, NRbar)
 
-            print(f"percent diff: {np.abs(NN.theta - N.theta)/abs(NN.theta)}")
+            # print(f"percent diff: {np.abs(NN.theta - N.theta)/abs(NN.theta)}")
             if np.abs((NN.theta - N.theta)/(NN.theta)) < 1e-4:
-                print(f"converged in {i + 1} iterations")
+                # print(f"converged in {i + 1} iterations")
                 NN.mach = machStar2mach(NN.machStar, gamma)
                 NN.alpha = MachAngle(NN.mach)
                 return NN
@@ -294,10 +243,10 @@ def GenerateFlowField(expansionFanArray: np.ndarray[CharacteristicPoint], contro
                 N = NN.clone()
                 del NN, NL, NR, NLbar, NRbar
 
-        print("did not converge")
+        # print("did not converge")
         return N
 
-    def PrepBoundaryPoints(L: CharacteristicPoint, R: CharacteristicPoint, gamma: float) -> tuple[CharacteristicPoint, CharacteristicPoint]:
+    def PrepBoundaryPoints(L: CharacteristicPoint, R: CharacteristicPoint, gamma: SpHeatRatio) -> tuple[CharacteristicPoint, CharacteristicPoint]:
         L.machStar = mach2machStar(L.mach, gamma)
         L = L.LeftInvarient()
         R.machStar = mach2machStar(R.mach, gamma)
@@ -310,7 +259,7 @@ def GenerateFlowField(expansionFanArray: np.ndarray[CharacteristicPoint], contro
     
     for j in range(1, len(controlSurfaceArray)):
         for i in range(1, len(expansionFanArray) + 1):
-            print(f"calculating at point {i}, {j}")
+            # print(f"calculating at point {i}, {j}")
             field[i, j] = CalculateFieldPoint(field[i-1, j], field[i, j-1], gamma)
             # field[i, j] = CharacteristicPoint(0,0,0,0)
     return field
@@ -343,8 +292,8 @@ def CalculateContour(field: np.ndarray[CharacteristicPoint], Rt: float, Tt: floa
     def calcNext(pt1: CharacteristicPoint, pt2: CharacteristicPoint, L: CharacteristicPoint) -> CharacteristicPoint:
         ax2 = fsolve(lambda ax: eqn(pt1, pt2, L, ax), pt2.x)[0]
         ar2 = pt1.r - (pt1.x - ax2)*(pt1.r - pt2.r)/(pt1.x - pt2.x)
-        print(ax2, ar2)
-        return CharacteristicPoint(ax2, ar2, 0, 0)
+        # print(ax2, ar2)
+        return CharacteristicPoint(ax2, ar2, np.arctan((ar2 - L.r)/(ax2 - L.x)), 0)
 
     while m < rows - 2 and n > -(cols - 2):
         pt1 = field[0 + m, -2 + n]
@@ -368,7 +317,7 @@ def CalculateContour(field: np.ndarray[CharacteristicPoint], Rt: float, Tt: floa
 def PruneUnderContour(field: np.ndarray[CharacteristicPoint], contour: np.ndarray[CharacteristicPoint]) -> np.ndarray[CharacteristicPoint]:
     xtol = field[0,-1].x/field.shape[0]
     rtol = field[0,0].r/field.shape[1]
-    print(xtol, rtol)
+    # print(xtol, rtol)
     for i in range(1, field.shape[0]):
         for j in range(1, field.shape[1]):
             bad = False
@@ -381,6 +330,3 @@ def PruneUnderContour(field: np.ndarray[CharacteristicPoint], contour: np.ndarra
 
 def distance(p1: CharacteristicPoint, p2: CharacteristicPoint) -> float:
     return np.sqrt((p1.x - p2.x)**2 + (p1.r - p2.r)**2)
-
-def fuckinround(P0Pamb: float, Me, Te):
-    pass
