@@ -4,10 +4,10 @@ from InjectorCad import injector_cad_write
 from Drill import drill_approximation
 from scipy.optimize import fsolve
 import matplotlib.pyplot as plt
-from pint import UnitRegistry
+from fluid import Q_, LOXDensity, ureg, CD_drill, Pressure_Drop_Fuel, Pressure_Drop_Lox, PROP, PROPFLOWS
+import fluid
 import numpy as np
 import os
-import pyromat as pm
 import subprocess
 
 """
@@ -19,116 +19,21 @@ import subprocess
     Error handle the numerical solve for if the angle is bigger than 90 or less than the minimum angle possible (USE TRY CATCH)
     Make all code blocks into functions - EASIER TO READ. So david no kill me
 """
-
-pm.config['unit_pressure'] = 'psi'
-pm.config['unit_mass'] = 'lbm'
-pm.config['unit_matter'] = 'lbm'
-pm.config['unit_length'] = 'ft'
-pm.config['unit_volume'] = 'ft3'
-ureg = UnitRegistry()
-ureg.default_system = 'US'
-Q_ = ureg.Quantity
-
-N2 = pm.get('mp.N2')
-LOX = pm.get('mp.O2')
-CO2 = pm.get('mp.CO2')
-
-class PROP:
-    def __init__(self, gamma, mdot, rho):
-        """This is teh __init__ fn that will do a thing
-        Args:
-            gamma (float): Angle off axial direction with positive away from centerbody
-            mdot (float): mdot of prop
-            rho (float): density of prop
-        """        
-        self.gamma = Q_(gamma, ureg.degrees)
-        self.mdot = Q_(mdot, ureg.pound / ureg.second)
-        self.rho = Q_(rho, ureg.pound / ureg.foot**3)
-
-
-    def Velocity(self,Cd , Pressure_Diff) -> float:
-        """Velocity Function using Dr. Whites Eq 16.5
-        Args:
-            Cd (float): Coefficient of Discharge
-            Pressure_Diff (float): Pressure difference through injector (Estimated metric) in psi
-        Returns:
-            float: Velocity Out of the injector parallel to flow
-        """
-        Velocity_init = (Cd * np.sqrt(2 * Pressure_Diff/ self.rho )).to(ureg.feet / ureg.second)
-        self.Velocity_init = Velocity_init
-        return Velocity_init
-    
-    
-    def Area(self, Cd, Pressure_Diff) -> float:
-        """Calculates area from Dr. Whites Eq 16.2
-        Args:
-            Cd (float): Coefficient of Discharge
-            Pressure_Diff (float): Pressure difference through injector (Estimated metric) in psi
-        Returns:
-            float: Total Orifice Area needed for Propellant
-        """        
-        Area_init = (self.mdot / (Cd * np.sqrt(2*self.rho* Pressure_Diff ))).to(ureg.inch**2)
-        self.Area_init = Area_init
-        return Area_init
-    
-    
-    def Number(self, Hole_Diameter, Cd, Pressure_Diff) -> float:
-        """_summary_
-        Args:
-            Hole_Diameter (float): Diameter necessary for hole (MUST MATCH A DRILL SIZE)
-            Cd (float): Coefficient of Discharge
-            Pressure_Diff (float): Pressure difference through injector (Estimated metric) in psi
-        Returns:
-            float: Number of holes needed rounded up to be conservative
-        """        
-        Hole_Area = (np.pi * Hole_Diameter**2 /4).to(ureg.inch**2)
-        Tot_Area = self.Area(Cd,Pressure_Diff)
-        Hole_Number = np.ceil(Tot_Area/Hole_Area)
-        self.Hole_Number = Hole_Number
-        return Hole_Number
-    def Actual(self,Hole_Diameter, Number) -> float:
-        """_summary_
-
-        Args:
-            Hole_Diameter (float): Diameter of the holes, WIll match a drill size
-            Number (float): Calculated number of holes that matched the other impingement for core impingement points
-
-        Returns:
-            float: Returns actual Velocity and Area
-        """  
-        Area_Actual = (Number * 0.25 * Hole_Diameter**2 * np.pi).to(ureg.inch**2)
-        Velocity_Actual = (self.mdot/(self.rho * Area_Actual)).to(ureg.feet / ureg.second)
-        self.Area_Actual = Area_Actual
-        self.Velocity_Actual = Velocity_Actual
-        return Velocity_Actual, Area_Actual           
-
-
-# -------------- Design Inputs and Constants -------------- #    
-#Constants
-CD_drill = 0.7 #Constant for Sharp Edged Orifices         
-g0 = Q_(32.174, ureg.foot / ureg.second**2)
-Prescott_pressure = Q_(12.04, ureg.force_pound / ureg.inch**2)
-#Design Input
-mdots = np.array([5.29, 2.21])/4 #LOX_CORE, FUEL_CORE
-Film_Cooling = np.array([0.05, 0.05]) #Outer Film Cooling Percentage, Inner Film Cooling Percentage
+# -------------- Design Inputs -------------- #    
 di = 6.5 #Internal Diameter of Chamber
 ri = di / 2 #Internal Radius of Chamber
 Spacing = 0.55  #Spacing between center of impingement Holes
 Rgamma_lox = 1.65  #Radial distance between centerline and LOX hole
+mdots = np.array([5.29, 2.21])/4 #LOX_CORE, FUEL_CORE
+Film_Cooling = np.array([0.05, 0.05]) #Outer Film Cooling Percentage, Inner Film Cooling Percentage
 FilmCoolingSpacing = np.array([.25, .25]) #inches Inner, Outer
-Pressure_Drop_Fuel = 0.2 #Pressure drop Percentage (ROT: Always in terms of Chamber Pressure)
-Pressure_Drop_Lox = 0.2 #Pressure drop Percentage (ROT: Always in terms of Chamber Pressure)
 Pressure_Chamber = Q_(300, ureg.force_pound / ureg.inch**2) #Chamber Pressure Pretty Obvious
 Doublet_Diameter_LOX = Q_(0.125, ureg.inch)  #Design choise for DOublet Diameter size (Need to look more properly into it as 1/4 holes might make vaporization time too long)\
-Lox_Dewar_Pressure = Q_(22, ureg.force_pound / ureg.inch**2) + Prescott_pressure
+gammas = np.array([25.,0,30,-30]) #Lox, fuel, outer FC, inner FC  #All Angles from axial
+Lox_Dewar_Pressure = 22
 
 # -------------- Prop Initialization -------------- #
-LOX_Sat_Temp = LOX.Ts(p=Lox_Dewar_Pressure.magnitude )
-LOX_Sat_Dens = LOX.ds(T=LOX_Sat_Temp)
-OX_CORE = PROP(gamma=25., mdot=mdots[0], rho=LOX_Sat_Dens[0][0])
-FUEL_CORE = PROP(gamma = 0, mdot = mdots[1], rho=51.15666) #gamma zero for this one because it's the initialized guess just making the FUEL CORE class requires it ( should change when moving to data classes)
-OUT_FILM_C = PROP(gamma = 30, mdot = Film_Cooling[0]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
-IN_FILM_C = PROP(gamma = -30, mdot = Film_Cooling[1]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
+OX_CORE,FUEL_CORE,OUT_FILM_C,IN_FILM_C = PROPFLOWS(mdots,Film_Cooling,gammas,Lox_Dewar_Pressure)
 
 # -------------- Function in DOublet to make my version of the SHitty Spike Contour -------------- #
 Points = 1000 #also used in other plots if this section ends up getting deleted
