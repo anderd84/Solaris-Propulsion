@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from pint import UnitRegistry
 import numpy as np
 import pyromat as pm
+import CoolProp.CoolProp as CP
 
 
 class PROP:
@@ -121,3 +122,56 @@ def PROPFLOWS(mdots,Film_Cooling,gammas,Lox_Dewar_Pressure):
     OUT_FILM_C = PROP(gamma = gammas[2], mdot = Film_Cooling[0]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
     IN_FILM_C = PROP(gamma = gammas[3], mdot = Film_Cooling[1]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
     return OX_CORE,FUEL_CORE,OUT_FILM_C,IN_FILM_C
+
+# -------------- $ Cooling Equations -------------- #
+#def bartzConv()
+
+
+# -------------- $ Kerosene Properties -------------- #
+def get_fluid_properties(name, temperature_R, pressure_psi):
+    temperature = Q_(temperature_R, ureg.degR)
+    pressure = Q_(pressure_psi, ureg.psi)
+    temperature_SI = temperature.to(ureg.kelvin).magnitude
+    pressure_SI = pressure.to(ureg.pascal).magnitude
+    
+    # Viscosity
+    viscosity_SI = Q_(CP.PropsSI('V', 'T', temperature_SI, 'P', pressure_SI, name), ureg.pascal * ureg.second)
+    viscosity = viscosity_SI.to(ureg.pound / ureg.foot / ureg.second)
+    
+    # Specific heat at constant pressure
+    specific_heat_p_SI = Q_(CP.PropsSI('C', 'T', temperature_SI, 'P', pressure_SI, name), ureg.joule / ureg.kilogram / ureg.kelvin)
+    specific_heat_p = specific_heat_p_SI.to(ureg.BTU / ureg.pound / ureg.degR)
+    
+    # Specific heat at constant volume
+    specific_heat_v_SI = Q_(CP.PropsSI('O', 'T', temperature_SI, 'P', pressure_SI, name), ureg.joule / ureg.kilogram / ureg.kelvin)
+    
+    # Gamma (Cp/Cv)
+    gamma = specific_heat_p_SI / specific_heat_v_SI
+    
+    # Thermal conductivity
+    thermal_conductivity_SI = Q_(CP.PropsSI('L', 'T', temperature_SI, 'P', pressure_SI, name), ureg.watt / ureg.meter / ureg.kelvin)
+    thermal_conductivity = thermal_conductivity_SI.to(ureg.BTU / ureg.foot / ureg.hour / ureg.degR)
+    
+    # Density (kg/m³)
+    density_SI = Q_(CP.PropsSI('D', 'T', temperature_SI, 'P', pressure_SI, name), ureg.kilogram / ureg.meter**3)
+    density = density_SI.to(ureg.pound / ureg.foot**3)  # Convert to lbm/ft³
+    
+    # Prandtl number (dimensionless)
+    prandtl = CP.PropsSI('PRANDTL', 'T', temperature_SI, 'P', pressure_SI, name)
+    
+    # Quality (dimensionless) - vapor mass fraction (0 = saturated liquid, 1 = saturated vapor)
+    quality = CP.PropsSI('Q', 'T', temperature_SI, 'P', pressure_SI, name)
+    
+    # Phase (integer: 0 = unknown, 1 = liquid, 2 = vapor, 3 = supercritical)
+    phase = CP.PropsSI('PHASE', 'T', temperature_SI, 'P', pressure_SI, name)
+    
+    # Coefficient of thermal expansion (1/K)
+    alpha_SI = Q_(CP.PropsSI('ISOBARIC_EXPANSION_COEFFICIENT', 'T', temperature_SI, 'P', pressure_SI, name), 1 / ureg.kelvin)
+    
+    # Thermal diffusivity (m²/s)
+    thermal_diffusivity_SI = (thermal_conductivity_SI / (density_SI * specific_heat_p_SI)).to(ureg.meter**2 / ureg.second)
+    thermal_diffusivity = thermal_diffusivity_SI.to(ureg.foot**2 / ureg.second)  # Convert to ft²/s
+    
+    # Return all the properties
+    return (viscosity, specific_heat_p, gamma, thermal_conductivity, density, prandtl, 
+            quality, phase, alpha_SI, thermal_diffusivity)
