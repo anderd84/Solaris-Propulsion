@@ -12,6 +12,12 @@ import os
 
 #First step always is to update doublet.py file and run before hand to grab all mdot and density values at injector side
 
+# -------------- Design Inputs -------------- #
+NumberofChannels = 30
+ChannelShape =  np.array([.25, .25]) #inches Width,Height
+
+
+#gniliesnski
 
 
 
