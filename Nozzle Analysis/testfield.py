@@ -11,7 +11,7 @@ gamma = SpHeatRatio(1.17)
 Me = 3.128
 Te = np.deg2rad(-3.5)
 Mt = 1.15
-PbPc = 0.001
+PbPc = 0.01
 
 Pc = 300
 
@@ -40,6 +40,7 @@ print(areaRatio, Cf, lengthRatio)
 
 
 Tt = rao.CalculateThroatAngle(Me, Te, Mt, gamma)
+phit = Tt  + (np.pi/2 - MachAngle(Mt))
 # length = 1.9554
 # expansionRatio = 5
 
@@ -92,9 +93,9 @@ alpha = np.array([[p.alpha for p in row] for row in field])
 
 # nozplt.show3d(cont)
 # nozplt.WriteContourTXT(cont, "contour.txt")
-# fieldplot = nozplt.CreateNonDimPlot()
-# fieldplot = nozplt.PlotField(fieldplot, field)
-# fieldplot = nozplt.PlotContour(fieldplot, cont, Rt, Tt)
+fieldplot = nozplt.CreateNonDimPlot()
+fieldplot = nozplt.PlotField(fieldplot, field)
+fieldplot = nozplt.PlotContour(fieldplot, cont, Rt, Tt)
 # nozplt.LiveContour(field, Rt, Tt, fieldplot)
 # internal,external = nozzle.InternalPreExpansion(Me, Te, Mt, Tt, gamma, (cont[-1].x, cont[-1].r), expansionRatio)
 # fieldplot.axes[0].plot(internal[0,:], internal[1, :], 'r')
@@ -105,12 +106,11 @@ print(f"Cf: {Cf}")
 FT = Cf*Pc
 
 
-Tt2 = Tt + np.pi/2
-Rt = np.sqrt(1 - (1/expansionRatio*np.sin(Tt2)))
-# fieldplot.axes[0].plot([0, (1 - Rt)/np.tan(-Tt2)], [1, Rt], '-g', linewidth=2) # Throat
+Rt = np.sqrt(1 - (1/expansionRatio*np.cos(phit)))
+# fieldplot.axes[0].plot([0, (1 - Rt)*np.tan(phit)], [1, Rt], '-g', linewidth=2) # Throat
 plt.show()
 
 
 
 contour2 = nozzle.RaoContourFormat(cont)
-analysis.CalculateSimpleField(contour2, .0225, 0, gamma, Mt, steps=100)
+analysis.CalculateSimpleField(contour2, 0.005, 0, gamma, Mt, Tt, steps=100)

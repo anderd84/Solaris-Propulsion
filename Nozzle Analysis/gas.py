@@ -1,5 +1,6 @@
 import numpy as np
 from dataclasses import dataclass
+from scipy.optimize import fsolve
 
 @dataclass
 class SpHeatRatio:
@@ -34,6 +35,9 @@ class SpHeatRatio:
     def __pow__(self, other):
         return self.g ** other
     
+    def __rmul__(self, other):
+        return other * self.g
+    
     def __neg__(self):
         return -self.g
     
@@ -54,3 +58,10 @@ def mach2machStar(mach, gamma: SpHeatRatio):
 
 def machStar2mach(machStar, gamma: SpHeatRatio):
     return np.sqrt(abs(((2/(gamma+1))*machStar**2)/(1-((gamma-1)/(gamma+1))*machStar**2)))
+
+def obliqueShock(mach, delta, gamma: SpHeatRatio) -> tuple[float, float, float]:
+    betaWeak = fsolve(lambda b: np.tan(delta) - (2/np.tan(b)*(((mach * np.sin(b))**2 - 1)/((mach**2 * (gamma + np.cos(2*b))) + 2))), delta)[0]
+    betaStrong = fsolve(lambda b: np.tan(delta) - (2/np.tan(b)*(((mach * np.sin(b))**2 - 1)/((mach**2 * (gamma + np.cos(2*b))) + 2))), np.pi/2)[0]
+
+    mach2 = np.sqrt(((gamma - 1)*(mach*np.sin(betaWeak))**2 + 2)/(2*gamma*(mach*np.sin(betaWeak))**2 - (gamma - 1)))/np.sin(betaWeak - delta)
+    return betaWeak, betaStrong, mach2

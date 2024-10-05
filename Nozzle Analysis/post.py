@@ -38,18 +38,18 @@ def PlotField(fig: plt.Figure, field: np.ndarray, csarrows: int = 15, fanarrows:
 
     return fig
 
-def PlotContour(fig: plt.Figure, contour: np.ndarray[CharacteristicPoint], Rt, Tt) -> plt.Figure:
+def PlotContour(fig: plt.Figure, contour: np.ndarray[CharacteristicPoint], Rt, phit) -> plt.Figure:
     ax = fig.axes[0]
 
     cx = [p.x for p in contour]
     cy = [p.r for p in contour]
 
-    cx.append((1 - Rt)*np.tan(Tt))
+    cx.append((1 - Rt)*np.tan(phit))
     cx.append(cx[0])
     cy.append(0)
     cy.append(0)
 
-    ax.plot([0, (1 - Rt)*np.tan(Tt)], [1, Rt], '-r', linewidth=2) # Throat
+    ax.plot([0, (1 - Rt)*np.tan(phit)], [1, Rt], '-r', linewidth=2) # Throat
     ax.plot(cx, cy, '-k', linewidth=2) # Contour
     # ax.fill(cx, cy, 'k')
     
