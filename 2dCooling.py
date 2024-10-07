@@ -48,9 +48,11 @@ print(f"Combustion side convective heat transfer coefficient: {h_g:.2f} W/m^2/K"
 # Gniliesnski/Sieder & Tate for channel side
 # Inputs (Cooling channel)
 f = 0.000   # Friction factor
-rho = 1000  # Coolant density
-v = 10      # Coolant velocity along channel
-D_h = 4     # Hydraulic diameter of cooling channel
+rho = Q_(1000, ureg.pound / ureg.foot**3)  # Coolant density
+v = Q_(10, ureg.ft / ureg.second**2)      # Coolant velocity along channel
+A_h = Q_(10, ureg.ft**2) 
+P_h = Q_(10, ureg.ft ) 
+D_h = 4*A_h/P_h     # Hydraulic diameter of cooling channel
 Pr = 1      # Prandtl number (likely an array)
 mu = 0.01   # Dynamic viscosity (likely an array)
 k_c = 20    # Thermal conductivity of coolant
