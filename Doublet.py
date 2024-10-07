@@ -28,7 +28,7 @@ mdots = np.array([5.29, 2.21])/4 #LOX_CORE, FUEL_CORE lbm/s
 Film_Cooling = np.array([0.05, 0.05]) #Outer Film Cooling Percentage, Inner Film Cooling Percentage
 FilmCoolingSpacing = np.array([.25, .25]) #inches Inner, Outer
 Pressure_Chamber = Q_(300, ureg.force_pound / ureg.inch**2) #Chamber Pressure Pretty Obvious
-Doublet_Diameter_LOX = Q_(0.125, ureg.inch)  #Design choise for DOublet Diameter size (Need to look more properly into it as 1/4 holes might make vaporization time too long)\
+Doublet_Diameter_LOX = Q_(0.0625, ureg.inch)  #Design choise for DOublet Diameter size (Need to look more properly into it as 1/4 holes might make vaporization time too long)\
 gammas = np.array([25.,0,30,-30]) #Lox, fuel, outer FC, inner FC  #All Angles from axial
 Lox_Dewar_Pressure = 22
 
@@ -82,9 +82,9 @@ while True:
     if FUEL_CORE.Hole_Number.magnitude == OX_CORE.Hole_Number.magnitude:
         break
     elif FUEL_CORE.Hole_Number.magnitude > OX_CORE.Hole_Number.magnitude:
-        FUEL_CORE_Diameter += Q_(0.001,ureg.inch)
+        FUEL_CORE_Diameter += Q_(0.0005,ureg.inch)
     else:
-        FUEL_CORE_Diameter -= Q_(0.001,ureg.inch)
+        FUEL_CORE_Diameter -= Q_(0.0005,ureg.inch)
 print(f"Closest drill size to {FUEL_CORE_Diameter :.5f~} is a diameter of {Doublet_Diameter_Fuel} with a drill size of {drill_size} .")
 print(f'Number of Fuel Doublet holes needed based on a {Doublet_Diameter_Fuel} diameter is {FUEL_CORE.Hole_Number.magnitude} holes')
 OX_CORE.Actual(Doublet_Diameter_LOX,OX_CORE.Hole_Number) #Initializing the actual function to use actual velocities
