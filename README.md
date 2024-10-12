@@ -5,8 +5,8 @@
 ### Directory Help
 Branches contain code written for each subsystem
 
-Subsystem | Respondible Engineer
----------------------------------
-  Nozzle  |    David Anderson
- Cooling  |     Dylan Nguyen
- Injector |   Gautam Nandakumar
+| Subsystem | Respondible Engineer |
+------------|----------------------|
+|   Nozzle  |    David Anderson    |
+|  Cooling  |     Dylan Nguyen     |
+|  Injector |   Gautam Nandakumar  |
