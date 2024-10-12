@@ -1,11 +1,11 @@
 from matplotlib import pyplot as plt, patches
-from Doublet_Functions import spike_contour
-from InjectorCad import injector_cad_write
-from Drill import drill_approximation
+from Injector.Doublet_Functions import spike_contour
+from Injector.InjectorCad import injector_cad_write
+from Injector.Drill import drill_approximation
 from scipy.optimize import fsolve
 import matplotlib.pyplot as plt
-from fluid import Q_, ureg, CD_drill, Pressure_Drop_Fuel, Pressure_Drop_Lox, PROPFLOWS
-import fluid
+from Injector.fluid import Q_, ureg, CD_drill, Pressure_Drop_Fuel, Pressure_Drop_Lox, PROPFLOWS
+import Injector.fluid as fluid
 import numpy as np
 import os
 import subprocess
