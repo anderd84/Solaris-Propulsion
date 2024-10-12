@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Solaris Propulsion Code
 
 # This reposity will house all of the code/caluclations that are needed for the Aerospike CAPSTONE Team
@@ -10,3 +11,8 @@ Branches contain code written for each subsystem
 |   Nozzle  |    David Anderson    |
 |  Cooling  |     Dylan Nguyen     |
 |  Injector |   Gautam Nandakumar  |
+=======
+# FART-Code
+
+# This repository will house all of the code/calculations that are needed for the Aerospike CAPSTONE Team
+>>>>>>> origin/Cooling
