@@ -116,11 +116,17 @@ Pressure_Drop_Lox = 0.2 #Pressure drop Percentage (ROT: Always in terms of Chamb
 
 
 # -------------- $ 4 Different PROP FLOWS -------------- #
-def PROPFLOWS(mdots,Film_Cooling,gammas,Lox_Dewar_Pressure):
+def PROPFLOWS(OF,TotalMdot,Film_Cooling,gammas,Lox_Dewar_Pressure):
+    mdots = np.array([OF*TotalMdot/(1+OF), TotalMdot/(1+OF)]) #LOX_CORE, FUEL_CORE lbm/s
     OX_CORE = PROP(gamma=gammas[0], mdot=mdots[0], rho=LOXDensity(Lox_Dewar_Pressure))
-    FUEL_CORE = PROP(gamma = gammas[1], mdot = mdots[1], rho=JetADensity) #gamma zero for this one because it's the initialized guess just making the FUEL CORE class requires it ( should change when moving to data classes)
-    OUT_FILM_C = PROP(gamma = gammas[2], mdot = Film_Cooling[0]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
-    IN_FILM_C = PROP(gamma = gammas[3], mdot = Film_Cooling[1]* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
+    FUEL_CORE = PROP(gamma = gammas[1], mdot = mdots[1]*(1 - Film_Cooling[0] - Film_Cooling[1]), rho=JetADensity) #gamma zero for this one because it's the initialized guess just making the FUEL CORE class requires it ( should change when moving to data classes)
+    OUT_FILM_C = PROP(gamma = gammas[2], mdot = Film_Cooling[0]* mdots[1], rho = FUEL_CORE.rho)
+    IN_FILM_C = PROP(gamma = gammas[3], mdot = Film_Cooling[1]* mdots[1], rho = FUEL_CORE.rho)
+    print("checking that mdots were calculated right... error =", 
+          Q_(mdots[0], ureg.pound / ureg.second) + Q_(mdots[1], ureg.pound / ureg.second) - OX_CORE.mdot - FUEL_CORE.mdot - OUT_FILM_C.mdot - IN_FILM_C.mdot)
+        
+
+
     return OX_CORE,FUEL_CORE,OUT_FILM_C,IN_FILM_C
 
 # -------------- $ Cooling Equations -------------- #
