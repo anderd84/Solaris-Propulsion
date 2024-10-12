@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from scipy.optimize import fsolve
 import gas
+from gas import SpHeatRatio
 import nozzle
 
 def CalculateSimpleField(contour, PambPc, PbPc, gamma, Mt, Tt, steps = 100, reflections = 3):
@@ -102,3 +103,92 @@ def CalculateDiffArea(contour):
         theta = np.arctan((d - b)/(c - a))
         dA[i] = abs(np.pi/np.sin(theta)*(b**2 - d**2))
     return dA
+
+
+
+@dataclass
+class CharacteristicPoint:
+    x: float
+    r: float
+    mach: float
+    theta: float
+    s: float
+
+    @staticmethod
+    def CalculateNewPoint(L, R, gamma):
+        pass
+
+    @staticmethod
+    def CalculateSolidReflect(L, R, contour, PbPc, gamma):
+        pass
+
+    @staticmethod
+    def CalculateGasReflect(L, R, PambPc, gamma):
+        pass
+
+
+
+def CalculateComplexField(contour, PambPc, PbPc, gamma, Mt, Tt, Rsteps = 10, Lsteps = 0, reflections = 3):
+    Me = np.sqrt((PambPc**(-1/gamma[5]) - 1)/gamma[2])
+
+    rLines = np.empty((Rsteps, 1 + (Lsteps + Rsteps)*reflections), dtype=CharacteristicPoint)
+    lLines = np.empty((Lsteps, 1 + (Lsteps + Rsteps)*reflections), dtype=CharacteristicPoint)
+
+    rLines[:, 0] = np.transpose(GenerateExpansionFan(Me, Mt, Tt, gamma, Rsteps))
+    lLines[:, 0] = np.transpose(GenerateExpansionFan(Me, Mt, Tt, gamma, Lsteps))
+
+    for i in range(reflections):
+        PropogateRegionAll(rLines, lLines, gamma, i)
+        ReflectionRegionAll(rLines, lLines, contour, PambPc, PbPc, gamma, i)
+
+    return np.concatenate((rLines, lLines), axis=1)
+
+def GenerateExpansionFan(machE: float, machT: float, thetaT: float, gamma: SpHeatRatio, arraySize: int):
+    machs = np.linspace(machT, machE, arraySize)
+
+    thetas = thetaT + gas.PrandtlMeyerFunction(machs, gamma) - gas.PrandtlMeyerFunction(machT, gamma)
+
+    expansionFanArray = np.empty(arraySize, dtype=CharacteristicPoint)
+    for i, mach in enumerate(machs):
+        expansionFanArray[i] = CharacteristicPoint(0, 1, mach, thetas[i])
+
+    return expansionFanArray
+
+def PropogateRegionAll(rLines: np.ndarray[CharacteristicPoint], lLines: np.ndarray[CharacteristicPoint], gamma: gas.SpHeatRatio, reflection: int):
+    R0: int = np.size(rLines)[0]
+    L0: int = np.size(lLines)[0]
+
+    start = 1 + (reflection)*(R0 + L0) # reflection should start at 0
+    region = np.empty((R0+1, L0+1), dtype=CharacteristicPoint)
+    region[1:,0] = rLines[:,start-1]
+    region[0,1:] = np.transpose(lLines[:,start-1])
+    for i in range(1, R0+1):
+        for j in range(1, L0+1):
+            region[i,j] = CharacteristicPoint.CalculateNewPoint(region[i-1,j], region[i,j-1], gamma) if reflection % 2 == 0 else CharacteristicPoint.CalculateNewPoint(region[i,j-1], region[i-1,j], gamma)
+    
+    rLines[:,start:start+L0] = region[1:,1:]
+    lLines[:,start:start+R0] = np.transpose(region[1:,1:])
+
+def ReflectionRegionAll(rLines: np.ndarray[CharacteristicPoint], lLines: np.ndarray[CharacteristicPoint], contour, PambPc, PbPc, gamma: gas.SpHeatRatio, reflection: int):
+    R0: int = np.size(rLines)[0]
+    L0: int = np.size(lLines)[0]
+
+    ReflectionRegion(rLines, R0, L0, contour, PambPc, PbPc, gamma, reflection, True)
+    ReflectionRegion(lLines, L0, R0, contour, PambPc, PbPc, gamma, reflection, False)
+
+def ReflectionRegion(lines: np.ndarray[CharacteristicPoint], X0, Y0, contour, PambPc, PbPc, gamma, reflection, startAsRight: bool): # startAsRight is true if region is being calculated in rlines
+    start = 1 + Y0 + (reflection)*(X0 + Y0) # reflection should start at 0
+    region = np.empty((X0+1, X0+1), dtype=CharacteristicPoint)
+    region[1:,0] = lines[:,start-1]
+    region[0,1:] = np.transpose(lines[:,start-1])
+    for i in range(1, X0+1):
+        for j in range(1, i+1):
+            if i == j:
+                region[i,j] = CharacteristicPoint.CalculateSolidReflect(region[i-1,j], region[i,j-1], contour, PbPc, gamma) if ((reflection % 2 == 0) ^ (not startAsRight)) else CharacteristicPoint.CalculateGasReflect(region[i,j-1], region[i-1,j], PambPc, gamma)
+            else:
+                region[i,j] = CharacteristicPoint.CalculateNewPoint(region[i-1,j], region[i,j-1], gamma) if reflection % 2 == 0 else CharacteristicPoint.CalculateNewPoint(region[i,j-1], region[i-1,j], gamma)
+    
+    lines[:,start:start+X0] = region[1:,1:]
+
+
+
