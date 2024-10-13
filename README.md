@@ -10,3 +10,7 @@ Branches contain code written for each subsystem
 |   Nozzle  |    David Anderson    |
 |  Cooling  |     Dylan Nguyen     |
 |  Injector |   Gautam Nandakumar  |
+|Igniter|Matthew Mahnke|
+|Structures|Winston Price|
+|Testing|Wyatt Patterson|
+|Integration|Nick Logan|
