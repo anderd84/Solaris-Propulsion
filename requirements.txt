@@ -3,3 +3,5 @@ matplotlib
 scipy
 CoolProp
 pint
+icecream
+logging
