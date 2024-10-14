@@ -18,5 +18,4 @@ Branches contain code written for each subsystem
 | Structures|    Winston Price     |
 |Integration|      Nick Logan      |
 |  Testing  |    Wyatt Patterson   |
-|-----------|----------------------|
 
