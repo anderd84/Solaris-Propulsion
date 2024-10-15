@@ -3,8 +3,8 @@ from dataclasses import dataclass
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from scipy.optimize import fsolve
-import gas
-from gas import SpHeatRatio
+import src.fluids.gas as gas
+from src.fluids.gas import SpHeatRatio
 import nozzle
 
 def CalculateSimpleField(contour, PambPc, PbPc, gamma, Mt, Tt, steps = 100, reflections = 3):
@@ -113,10 +113,20 @@ class CharacteristicPoint:
     mach: float
     theta: float
     s: float
+    alpha: float
+    velocity: float
 
     @staticmethod
-    def CalculateNewPoint(L, R, gamma):
-        pass
+    def CalculateNewPoint(L: 'CharacteristicPoint', R: 'CharacteristicPoint', gamma):
+        Amat = [[1, -np.tan(R.theta - R.alpha)], [1, -np.tan(L.theta + L.alpha)]]
+        B = [[R.r - np.tan(R.theta - R.alpha)*R.x], [L.r - np.tan(L.theta + L.alpha)*L.x]]
+        X = np.linalg.solve(Amat, B)
+        x = X[0, 0]
+        r = X[1, 0]
+
+
+
+
 
     @staticmethod
     def CalculateSolidReflect(L, R, contour, PbPc, gamma):

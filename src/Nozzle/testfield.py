@@ -2,7 +2,7 @@ import rao
 import numpy as np
 import matplotlib.pyplot as plt
 import matrix_viewer as mv
-from gas import PrandtlMeyerFunction, SpHeatRatio, MachAngle
+from src.fluids.gas import PrandtlMeyerFunction, SpHeatRatio, MachAngle
 import post as nozplt
 import nozzle
 import analysis

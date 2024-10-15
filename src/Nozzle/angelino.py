@@ -1,5 +1,5 @@
 import numpy as np
-import gas
+import src.fluids.gas as gas
 
 def CalculateNozzleContour(expansionRatio, radiusBaseNonDim, machExit, gamma):
     # DERIVED VALUES
