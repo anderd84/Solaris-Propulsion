@@ -1,6 +1,6 @@
 # Solaris Propulsion Code
 
-# This reposity will house all of the code/caluclations that are needed for developing the Cerberus Aerospike Engine
+# This repository will house all of the code/calculations that are needed for developing the Cerberus Aerospike Engine
 Any questions should be directed to **Solaris.Propulsion@gmail.com**
 
 
@@ -9,7 +9,7 @@ Any questions should be directed to **Solaris.Propulsion@gmail.com**
 ### Directory Help
 Branches contain code written for each subsystem
 
-| Subsystem | Respondible Engineer |
+| Subsystem | Responsible Engineer |
 ------------|----------------------|
 |  Injector |   Gautam Nandakumar  |
 |  Igniter  |    Matthew Mahnke    |
