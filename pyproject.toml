@@ -1,0 +1,13 @@
+[project]
+name = "SolarisCode"
+dependencies = ["numpy",
+"matplotlib",
+"scipy",
+"CoolProp",
+"pint",
+"icecream",
+"logging",
+"matrix_viewer"
+]
+version = "0.1.0"
+description = "A package for aerospike engine calculations"
