@@ -40,7 +40,19 @@ class SpHeatRatio:
     
     def __neg__(self):
         return -self.g
-    
+
+class Gas:
+    gammaTyp: SpHeatRatio
+    Rgas: float
+    T0: float = 0
+
+    def __init__(self, gamma: float, Rgas: float):
+        self.gammaTyp = SpHeatRatio(gamma)
+        self.Rgas = Rgas
+
+    def getVariableGamma(self, mach):
+        return self.gammaTyp
+
 def PrandtlMeyerFunction(M, gamma):
     a = np.sqrt((gamma+1)/(gamma-1))
     b = np.arctan(np.sqrt((gamma-1)/(gamma+1)*(M**2-1)))
