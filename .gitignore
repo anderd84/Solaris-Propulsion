@@ -2,4 +2,4 @@
 *.SLDPRT
 .vscode/*
 logs/*
-src/SolarisCode.egg-info/*
+src/*.egg-info/*
