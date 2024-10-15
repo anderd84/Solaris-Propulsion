@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from rao import CharacteristicPoint
+from Nozzle.rao import CharacteristicPoint
 from scipy.optimize import fsolve
 import copy
 
