@@ -4,7 +4,7 @@ from src.Injector.InjectorCad import injector_cad_write
 from src.Injector.Drill import drill_approximation
 from scipy.optimize import fsolve
 import matplotlib.pyplot as plt
-from src.Injector.fluid import Q_, ureg, CD_drill, Pressure_Drop_Fuel, Pressure_Drop_Lox,  pm, get_fluid_properties, CP
+from src.fluids.fluid import Q_, ureg, CD_drill, Pressure_Drop_Fuel, Pressure_Drop_Lox,  pm, get_fluid_properties, CP
 #from Doublet import OX_CORE, FUEL_CORE
 import numpy as np
 import os
