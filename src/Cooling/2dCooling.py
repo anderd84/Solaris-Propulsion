@@ -1,54 +1,51 @@
 from matplotlib import pyplot as plt, patches
-from src.Injector.Doublet_Functions import spike_contour
-from src.Injector.InjectorCad import injector_cad_write
-from src.Injector.Drill import drill_approximation
-from scipy.optimize import fsolve
-import matplotlib.pyplot as plt
-from src.fluids.fluid import Q_, ureg, CD_drill, Pressure_Drop_Fuel, Pressure_Drop_Lox,  pm, get_fluid_properties, CP
 #from Doublet import OX_CORE, FUEL_CORE
 import numpy as np
 import os
+from scipy.optimize import fsolve
 
-#First step always is to update doublet.py file and run before hand to grab all mdot and density values at injector side
+from fluids.fluid import Q_, ureg, CD_drill, Pressure_Drop_Fuel, Pressure_Drop_Lox,  pm, get_fluid_properties, CP
+from Injector.Doublet_Functions import spike_contour
+from Injector.InjectorCad import injector_cad_write
+from Injector.Drill import drill_approximation
+
+#First step always is to update doublet.py file and run beforehand to grab all mdot and density values at injector side
 
 # -------------- Design Inputs -------------- #
 NumberofChannels = 30
 ChannelShape =  np.array([.25, .25]) #inches Width,Height
 
 
-
-
 # Code for generating convection coefficients
 
-# Bartz's Correlation for combustion side
-# Inputs (Combustion gases)
-mu = 0.0000905  # Dynamic viscosity at stagnation conditions
-c_p = 5488.9    # Specific heat at stagnation conditions
-Pr = 2.45       # Prandtl number at stagnation conditions
-P_0 = 2054600   # Stagnation pressure
-c_star = 1789.1 # Characteristic velocity
-D_star = 2      # Throat diameter (as hydraulic diameter, 4*A_c/P)
-A_star = 2      # Throat area
-A = 2           # Nozzle area at location of interest
-r_c = 0.00254   # Throat radius of curvature
-Ma = 0          # Local Mach number
-T_wg = 2900     # Hot side wall temperature
-T_0g = 3328.15  # Hot gas stagnation temperature
-omega = 0.6     # for diatomic gases
-gamma = 1.145   # Ratio of specific heats, assumed to be constant
+def combustion_convection(mu, c_p, Pr, P_0, c_star, D_star, A_star, A, r_c, Ma, T_wg, T_0g, omega, gamma):
+    # Bartz's Correlation for combustion side
+    # Inputs (Combustion gases)
+    # mu = 0.0000905  # Dynamic viscosity at stagnation conditions
+    # c_p = 5488.9    # Specific heat at stagnation conditions
+    # Pr = 2.45       # Prandtl number at stagnation conditions
+    # P_0 = 2054600   # Stagnation pressure
+    # c_star = 1789.1 # Characteristic velocity
+    # D_star = 2      # Throat diameter (as hydraulic diameter, 4*A_c/P)
+    # A_star = 2      # Throat area
+    # A = 2           # Nozzle area at location of interest
+    # r_c = 0.00254   # Throat radius of curvature
+    # Ma = 0          # Local Mach number
+    # T_wg = 2900     # Hot side wall temperature
+    # T_0g = 3328.15  # Hot gas stagnation temperature
+    # omega = 0.6     # for diatomic gases
+    # gamma = 1.145   # Ratio of specific heats, assumed to be constant
 
-# Calculations
-sigma = 1 / ((1 / 2 * T_wg / T_0g * (1 + (gamma - 1) / 2 * Ma**2) + 1 / 2)**(0.8 - 0.2 * omega) *
-              (1 + (gamma - 1) / 2 * Ma**2)**(0.2 * omega))
-h_g = 0.026 / D_star**0.2 * mu**0.2 / Pr**0.6 * c_p * (P_0 / c_star)**0.8 * (D_star / r_c)**0.1 * (A_star / A)**0.9 * sigma  # Convective heat transfer coefficient
-
-print(f"Combustion side convective heat transfer coefficient: {h_g:.2f} W/m^2/K")
+    # Calculations
+    sigma = 1 / ((1 / 2 * T_wg / T_0g * (1 + (gamma - 1) / 2 * Ma**2) + 1 / 2)**(0.8 - 0.2 * omega) *
+                (1 + (gamma - 1) / 2 * Ma**2)**(0.2 * omega))
+    return 0.026 / D_star**0.2 * mu**0.2 / Pr**0.6 * c_p * (P_0 / c_star)**0.8 * (D_star / r_c)**0.1 * (A_star / A)**0.9 * sigma  # Convective heat transfer coefficient
 
 def func(f):
     return -2*np.log10(epsilon/D_h/3.7 + 2.51/(Re_D*np.sqrt(f))) - 1/np.sqrt(f)
 
-def internalFlowConvection(epsilon, m_dot_c, NumberofChannels, rho, v, A_c, P, Pr, mu, k_c, mu_s):
-    # Gniliesnski/Sieder & Tate for channel side
+def internal_flow_convection(epsilon, m_dot_c, NumberofChannels, rho, v, A_c, P, Pr, mu, k_c, mu_s):
+    # Gnielinski/Sieder & Tate for channel side
     # Inputs (Cooling channel)
     epsilon = epsilon.to(ureg.inch)     # Surface roughness
     m_dot_c = m_dot_c.to(ureg.pound / ureg.second) / NumberofChannels     # Coolant mass flow rate through one channel
@@ -76,17 +73,31 @@ def internalFlowConvection(epsilon, m_dot_c, NumberofChannels, rho, v, A_c, P, P
         Nu_D = 0.027*Re_D**0.8*Pr**(1/3)*(mu/mu_s)**0.14 # Nusselt number of fully developed flow
     return Nu_D*k_c/D_h      # Convective heat transfer coefficient
 
-# TEsting SHit
+def free_convection(beta, T_s, T_infinity, D_outer, L):
+    # Properties
+    g = 9.81
+    nu = 3  # Dynamic viscosity, air property lookup
+    Pr = 3  # Prandtl number, air property lookup
+    k_f = 3 # Thermal conductivity, air property lookup
+    # Calculations
+    Gr_D = g*beta*(T_s - T_infinity)*D_outer**3/nu^2
+    Ra_D = Gr_D*Pr
+    if Ra_D < 10^12:
+        Nu_D = (0.60 + 0.387*Ra_D^(1/6)/(1 + (0.559/Pr)^(9/16))^(8/27))^2
+    else:
+        Nu_D = -100000000
+        printf("You're cooked buddy")
+    return Nu_D*k_f/D_outer
+
+# Testing
 #fluids = CP.get_global_param_string('fluids_list')
 #print(f"Available fluids in CoolProp: {fluids}")
-
-
 
 temperature_R = 700 * ureg.degR  # Temperature in Rankine (~80°F)
 pressure_psi = 14.7 * ureg.psi  # Pressure in psi (1 atmosphere)
 
 # Call the function to get properties
-properties = get_fluid_properties('n-Dodecane',temperature_R.magnitude, pressure_psi.magnitude)
+properties = get_fluid_properties('n-Dodecane', temperature_R.magnitude, pressure_psi.magnitude)
 
 # Output the results
 (viscosity, specific_heat_p, gamma, thermal_conductivity, density, prandtl, 
