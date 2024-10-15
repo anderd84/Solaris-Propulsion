@@ -4,8 +4,8 @@ from InjectorCad import injector_cad_write
 from Drill import drill_approximation
 from scipy.optimize import fsolve
 import matplotlib.pyplot as plt
-from src.fluids.fluid import Q_, ureg, CD_drill, Pressure_Drop_Fuel, Pressure_Drop_Lox, PROPFLOWS
-import src.fluids.fluid as fluid
+from fluids.fluid import Q_, ureg, CD_drill, Pressure_Drop_Fuel, Pressure_Drop_Lox, PROPFLOWS
+import fluids.fluid as fluid
 import numpy as np
 import os
 import subprocess
@@ -25,8 +25,6 @@ di = 5.5 #Internal Diameter of Chamber
 ri = di / 2 #Internal Radius of Chamber
 Spacing = 0.55  #Spacing between center of impingement Holes
 Rgamma_lox = 1.25  #Radial distance between centerline and LOX hole
-OF = 2.4
-TotalMdot = 9
 Film_Cooling = np.array([0.15, 0.00]) #Outer Film Cooling Percentage, Inner Film Cooling Percentage
 FilmCoolingSpacing = np.array([.60, .25]) #inches Inner, Outer
 Pressure_Chamber = Q_(300, ureg.force_pound / ureg.inch**2) #Chamber Pressure Pretty Obvious
@@ -35,7 +33,7 @@ gammas = np.array([25.,0,25,-25]) #Lox, fuel, outer FC, inner FC  #All Angles fr
 Lox_Dewar_Pressure = 22
 
 # -------------- Prop Initialization -------------- #
-OX_CORE,FUEL_CORE,OUT_FILM_C,IN_FILM_C = PROPFLOWS(OF,TotalMdot,Film_Cooling,gammas,Lox_Dewar_Pressure)
+OX_CORE,FUEL_CORE,OUT_FILM_C,IN_FILM_C = PROPFLOWS(Film_Cooling,gammas,Lox_Dewar_Pressure)
 
 # -------------- Function in DOublet to make my version of the SHitty Spike Contour -------------- #
 Points = 1000 #also used in other plots if this section ends up getting deleted
