@@ -5,7 +5,7 @@ from matplotlib.collections import LineCollection
 from scipy.optimize import fsolve
 import src.fluids.gas as gas
 from src.fluids.gas import MachAngle, SpHeatRatio, machStar2mach
-import nozzle
+import Nozzle.nozzle as nozzle
 
 def CalculateSimpleField(contour, PambPc, PbPc, gamma, Mt, Tt, steps = 100, reflections = 3):
     phit = np.pi/2 + Tt
@@ -124,21 +124,21 @@ class CharacteristicPoint:
     def clone(self):
         return CharacteristicPoint(self.x, self.r, self.theta, self.machStar, self.s, self.mach, self.alpha)
 
-    def CalculateLeftVariant(self, gamma, Rgas):
-        LV = self.clone()
-        LV.F = np.tan(LV.theta + LV.alpha)
-        LV.G = 1/np.tan(LV.alpha)/LV.machStar
-        LV.H = -np.sin(LV.theta)*np.sin(LV.alpha)/(LV.r*np.cos(LV.theta + LV.alpha))
-        LV.J = np.sin(LV.alpha)*np.cos(LV.alpha)/(Rgas * gamma)
-        return LV
-
-    def CalculateRightVariant(self, gamma, Rgas):
+    def CalculateRightVariant(self, gamma, Rgas): # I characteristic
         RV = self.clone()
         RV.F = np.tan(RV.theta - RV.alpha)
         RV.G = -1/np.tan(RV.alpha)/RV.machStar
         RV.H = np.sin(RV.theta)*np.sin(RV.alpha)/(RV.r*np.sin(RV.theta - RV.alpha))
         RV.J = -np.sin(RV.alpha)*np.cos(RV.alpha)/(Rgas * gamma)
         return RV
+
+    def CalculateLeftVariant(self, gamma, Rgas): # II characteristic
+        LV = self.clone()
+        LV.F = np.tan(LV.theta + LV.alpha)
+        LV.G = 1/np.tan(LV.alpha)/LV.machStar
+        LV.H = -np.sin(LV.theta)*np.sin(LV.alpha)/(LV.r*np.cos(LV.theta + LV.alpha))
+        LV.J = np.sin(LV.alpha)*np.cos(LV.alpha)/(Rgas * gamma)
+        return LV
     
     def setCoefficients(self, F, G, H, J):
         self.F = F
@@ -157,38 +157,31 @@ class CharacteristicPoint:
         return nextPoint
 
     @staticmethod
-    def CalculateNewPoint(L: 'CharacteristicPoint', R: 'CharacteristicPoint', gamma): # TODO overhaul for new coefficient calcs
-        Amat = [[1, -np.tan(R.theta - R.alpha)], [1, -np.tan(L.theta + L.alpha)]]
-        B = [[R.r - np.tan(R.theta - R.alpha)*R.x], [L.r - np.tan(L.theta + L.alpha)*L.x]]
-        X = np.linalg.solve(Amat, B)
-        x = X[0, 0]
-        r = X[1, 0]
+    def CalculateFieldPoint(L: 'CharacteristicPoint', R: 'CharacteristicPoint', gamma): # TODO overhaul for new coefficient calcs
+        Amat = np.array([[1, -R.F], [1, -L.F]])
+        b = np.array([[R.r - R.F*R.x], [L.r - L.F*L.x]])
+        X = np.linalg.solve(Amat, b)
+        r = X[0, 0]
+        x = X[1, 0]
 
         nr = (x - R.x)*np.sin(R.alpha)/np.cos(R.theta - R.alpha)
         nl = (x - L.x)*np.sin(L.alpha)/np.cos(L.theta + L.alpha)
         s = (R.s - L.s) / (nl + nr)
         s = R.s + s*nr
 
-        Amat = [[1, 1/(R.machStar * np.tan(R.alpha))], [1, -1/(L.machStar * np.tan(L.alpha))]]
-        F = np.sin(R.theta)*np.sin(R.alpha)/np.sin(R.theta - R.alpha)*(r - R.r)/R.r
-        G = -np.sin(R.alpha)*np.cos(R.alpha)/(R*gamma)*(s - R.s)
-        H = -np.sin(L.theta)*np.sin(L.alpha)/np.sin(L.theta + L.alpha)*(r - L.r)/L.r
-        I = np.sin(L.alpha)*np.cos(L.alpha)/(R*gamma)*(s - L.s)
-
-        B = [[F+G+R.theta+1/np.tan(R.alpha)], [H+I+L.theta-1/np.tan(L.alpha)]]
-        X = np.linalg.solve(Amat, B)
+        Amat = np.array([[1, R.G], [1, L.G]])
+        b = np.array([[R.theta + R.G*R.machStar - R.H*(r - R.r) + R.J*(s - R.s)], [L.theta + L.G*L.machStar - L.H*(x - L.x) + L.J*(s - L.s)]])
+        X = np.linalg.solve(Amat, b)
         theta = X[0, 0]
         machStar = X[1, 0]
         mach = machStar2mach(machStar, gamma)
         alpha = MachAngle(mach)
 
-        newPoint = CharacteristicPoint(x, r, mach, theta, s, alpha, machStar)
-
-
+        return CharacteristicPoint(x, r, theta, machStar, s, mach, alpha)
 
     @staticmethod
-    def CalculateSolidReflect(L, R, contour, PbPc, gamma):
-        pass
+    def CalculateSolidReflect(point: 'CharacteristicPoint', isRight: bool, contour: np.ndarray[nozzle.ContourPoint], PbPc: float, gamma: float):
+        PV = point.CalculateRightVariant(gamma, Rgas) if isRight else point.CalculateLeftVariant(gamma, Rgas)
 
     @staticmethod
     def CalculateGasReflect(L, R, PambPc, gamma):
