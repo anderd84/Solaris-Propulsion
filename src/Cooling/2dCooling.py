@@ -44,29 +44,37 @@ h_g = 0.026 / D_star**0.2 * mu**0.2 / Pr**0.6 * c_p * (P_0 / c_star)**0.8 * (D_s
 
 print(f"Combustion side convective heat transfer coefficient: {h_g:.2f} W/m^2/K")
 
+def func(f):
+    return -2*np.log10(epsilon/D_h/3.7 + 2.51/(Re_D*np.sqrt(f))) - 1/np.sqrt(f)
 
-# Gniliesnski/Sieder & Tate for channel side
-# Inputs (Cooling channel)
-f = 0.000   # Friction factor
-rho = Q_(1000, ureg.pound / ureg.foot**3)  # Coolant density
-v = Q_(10, ureg.ft / ureg.second**2)      # Coolant velocity along channel
-A_h = Q_(10, ureg.ft**2) 
-P_h = Q_(10, ureg.ft ) 
-D_h = 4*A_h/P_h     # Hydraulic diameter of cooling channel
-Pr = 1      # Prandtl number (likely an array)
-mu = 0.01   # Dynamic viscosity (likely an array)
-k_c = 20    # Thermal conductivity of coolant
-mu_s = 1    # Dynamic viscosity at the heat tranfer boundary surface temperature
+def internalFlowConvection(epsilon, m_dot_c, NumberofChannels, rho, v, A_c, P, Pr, mu, k_c, mu_s):
+    # Gniliesnski/Sieder & Tate for channel side
+    # Inputs (Cooling channel)
+    epsilon = epsilon.to(ureg.inch)     # Surface roughness
+    m_dot_c = m_dot_c.to(ureg.pound / ureg.second) / NumberofChannels     # Coolant mass flow rate through one channel
+    rho = rho.to(ureg.pound / ureg.inch**3)  # Coolant density
+    v = v.to(ureg.feet / ureg.s)      # Coolant velocity along channel
+    D_h = D_h.to(ureg.inch)     # Hydraulic diameter of cooling channel
+    # Pr = 1      # Prandtl number (likely an array)
+    mu = mu.to(ureg.pound / ureg.foot / ureg.second)   # Dynamic viscosity (likely an array)
+    k_c = k_c.to(ureg.BTU / ureg.foot / ureg.hour / ureg.degR)    # Thermal conductivity of coolant
+    mu_s = mu_s.to(ureg.pound / ureg.foot / ureg.second)    # Dynamic viscosity at the heat tranfer boundary surface temperature
 
-# Calculations
-Re_D = rho*v*D_h/mu     # Reynold's number
-# Re_D = 4*m_dot_c/numpy.pi/D_h/mu      # Alternate formula
-if Pr >= 0.7 and Pr <= 16700 and Re_D >= 3000 and Re_D <= 5000000:   # Check that properties fit restrictions for Gnielinski
-    Nu_D = f/8*(Re_D - 1000)*Pr / (1 + 12.7*(f/8)**0.5 * (Pr**(2/3) - 1))   # Nusselt number of fully developed flow
-    h_c = Nu_D*k_c/D_h      # Convective heat transfer coefficient
-else:    # Use Sieder & Tate otherwise
-    Nu_D = 0.027*Re_D**0.8*Pr**(1/3)*(mu/mu_s)**0.14 # Nusselt number of fully developed flow
-    h_c = Nu_D*k_c/D_h      # Convective heat transfer coefficient
+    # Calculations
+    D_h = 4*A_c/P
+    Re_D = 4*m_dot_c/np.pi/D_h/mu      # Alternate formula     # Reynold's number
+    Re_D = Re_D.to(ureg.inch / ureg.inch)
+    # Darcy Friction Factor
+    if Re_D < 2300:
+        f = 64/Re_D
+    else:
+        f = fsolve(func, 0.05)
+    # Convection coefficient
+    if Pr >= 0.7 and Pr <= 16700 and Re_D >= 3000 and Re_D <= 5000000:   # Check that properties fit restrictions for Gnielinski
+        Nu_D = f/8*(Re_D - 1000)*Pr / (1 + 12.7*(f/8)**0.5 * (Pr**(2/3) - 1))   # Nusselt number of fully developed flow
+    else:    # Use Sieder & Tate otherwise
+        Nu_D = 0.027*Re_D**0.8*Pr**(1/3)*(mu/mu_s)**0.14 # Nusselt number of fully developed flow
+    return Nu_D*k_c/D_h      # Convective heat transfer coefficient
 
 # TEsting SHit
 #fluids = CP.get_global_param_string('fluids_list')
