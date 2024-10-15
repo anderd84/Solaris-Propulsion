@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from scipy.optimize import fsolve
 import src.fluids.gas as gas
-from src.fluids.gas import SpHeatRatio
+from src.fluids.gas import MachAngle, SpHeatRatio, machStar2mach
 import nozzle
 
 def CalculateSimpleField(contour, PambPc, PbPc, gamma, Mt, Tt, steps = 100, reflections = 3):
@@ -110,14 +110,54 @@ def CalculateDiffArea(contour):
 class CharacteristicPoint:
     x: float
     r: float
-    mach: float
     theta: float
-    s: float
-    alpha: float
-    velocity: float
+    machStar: float
+    s: float = 0
+    mach: float = 0
+    alpha: float = 0
+
+    F: float = 0
+    G: float = 0
+    H: float = 0
+    J: float = 0
+
+    def clone(self):
+        return CharacteristicPoint(self.x, self.r, self.theta, self.machStar, self.s, self.mach, self.alpha)
+
+    def CalculateLeftVariant(self, gamma, Rgas):
+        LV = self.clone()
+        LV.F = np.tan(LV.theta + LV.alpha)
+        LV.G = 1/np.tan(LV.alpha)/LV.machStar
+        LV.H = -np.sin(LV.theta)*np.sin(LV.alpha)/(LV.r*np.cos(LV.theta + LV.alpha))
+        LV.J = np.sin(LV.alpha)*np.cos(LV.alpha)/(Rgas * gamma)
+        return LV
+
+    def CalculateRightVariant(self, gamma, Rgas):
+        RV = self.clone()
+        RV.F = np.tan(RV.theta - RV.alpha)
+        RV.G = -1/np.tan(RV.alpha)/RV.machStar
+        RV.H = np.sin(RV.theta)*np.sin(RV.alpha)/(RV.r*np.sin(RV.theta - RV.alpha))
+        RV.J = -np.sin(RV.alpha)*np.cos(RV.alpha)/(Rgas * gamma)
+        return RV
+    
+    def setCoefficients(self, F, G, H, J):
+        self.F = F
+        self.G = G
+        self.H = H
+        self.J = J
+
+    def NextIterationPoint(self, N: 'CharacteristicPoint'):
+        newF = (self.F + N.F)/2
+        newG = (self.G + N.G)/2
+        newH = (self.H + N.H)/2
+        newJ = (self.J + N.J)/2
+        nextPoint = self.clone()
+        nextPoint.setCoefficients(newF, newG, newH, newJ)
+
+        return nextPoint
 
     @staticmethod
-    def CalculateNewPoint(L: 'CharacteristicPoint', R: 'CharacteristicPoint', gamma):
+    def CalculateNewPoint(L: 'CharacteristicPoint', R: 'CharacteristicPoint', gamma): # TODO overhaul for new coefficient calcs
         Amat = [[1, -np.tan(R.theta - R.alpha)], [1, -np.tan(L.theta + L.alpha)]]
         B = [[R.r - np.tan(R.theta - R.alpha)*R.x], [L.r - np.tan(L.theta + L.alpha)*L.x]]
         X = np.linalg.solve(Amat, B)
@@ -129,8 +169,20 @@ class CharacteristicPoint:
         s = (R.s - L.s) / (nl + nr)
         s = R.s + s*nr
 
-        
+        Amat = [[1, 1/(R.machStar * np.tan(R.alpha))], [1, -1/(L.machStar * np.tan(L.alpha))]]
+        F = np.sin(R.theta)*np.sin(R.alpha)/np.sin(R.theta - R.alpha)*(r - R.r)/R.r
+        G = -np.sin(R.alpha)*np.cos(R.alpha)/(R*gamma)*(s - R.s)
+        H = -np.sin(L.theta)*np.sin(L.alpha)/np.sin(L.theta + L.alpha)*(r - L.r)/L.r
+        I = np.sin(L.alpha)*np.cos(L.alpha)/(R*gamma)*(s - L.s)
 
+        B = [[F+G+R.theta+1/np.tan(R.alpha)], [H+I+L.theta-1/np.tan(L.alpha)]]
+        X = np.linalg.solve(Amat, B)
+        theta = X[0, 0]
+        machStar = X[1, 0]
+        mach = machStar2mach(machStar, gamma)
+        alpha = MachAngle(mach)
+
+        newPoint = CharacteristicPoint(x, r, mach, theta, s, alpha, machStar)
 
 
 
