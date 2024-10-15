@@ -2,4 +2,4 @@
 *.SLDPRT
 .vscode/*
 logs/*
-aerospike.egg-info/*
+src/SolarisCode.egg-info/*
