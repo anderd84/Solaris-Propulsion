@@ -124,6 +124,12 @@ class CharacteristicPoint:
         x = X[0, 0]
         r = X[1, 0]
 
+        nr = (x - R.x)*np.sin(R.alpha)/np.cos(R.theta - R.alpha)
+        nl = (x - L.x)*np.sin(L.alpha)/np.cos(L.theta + L.alpha)
+        s = (R.s - L.s) / (nl + nr)
+        s = R.s + s*nr
+
+        
 
 
 

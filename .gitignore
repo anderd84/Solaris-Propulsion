@@ -2,3 +2,4 @@
 *.SLDPRT
 .vscode/*
 logs/*
+aerospike.egg-info/*
