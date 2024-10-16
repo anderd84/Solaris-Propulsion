@@ -13,9 +13,22 @@ from icecream import ic
 # Function to send email
 @dataclass
 class AutoEmail():
-    '''Class to send email'''   
+    '''Class to send email''' 
 
-    def read_excel(self, file):  
+    def __init__(self, file: str):
+
+        self.from_email = 'solaris.propulsion@gmail.com'
+        self.from_password = 'SolarisProp123!!'
+        self.smtp_server = 'smtp.gmail.com'
+        self.smtp_port = 587
+
+
+        self.read_excel()
+        self.email_body()
+        self.send_email()
+
+    
+    def read_excel(self):  
         """
         Reads an Excel file and removes rows with missing or invalid data.
 
@@ -62,9 +75,47 @@ class AutoEmail():
         
 
     def send_email(self):
-        
-        self.full_msg = f'''Dear {self.first_name} {self.last_name}, \n\n{self.msg} \n\nKindly, '''
+        """
+        Sends an email to each valid contact in the filtered self.data DataFrame.
+        The email body is dynamically generated based on the contact's details.
+        """
 
+        for index, row in self.data.iterrows():
+            self.first_name = row['First Name']
+            self.last_name = row['Last Name']
+            self.company = row['Company']
+            recipient_email = row['Email']
+            self.msg = f"Regarding your company, {self.company}, we would like to follow up on our previous communication."
+
+            # Composing the message
+            self.full_msg = f'''Dear {self.first_name} {self.last_name},\n\n{self.msg}\n\nKindly,\nYour Name'''
+
+            # Create the email object
+            msg = MIMEMultipart()
+            msg['From'] = self.from_email
+            msg['To'] = recipient_email
+            msg['Subject'] = f"Follow-up Regarding {self.company}"
+
+            # Attach the body text to the email
+            msg.attach(MIMEText(self.full_msg, 'plain'))
+
+            try:
+                # Set up the SMTP server
+                server = smtplib.SMTP(self.smtp_server, self.smtp_port)
+                server.starttls()  # Secure the connection
+                server.login(self.from_email, self.from_password)
+
+                # Send the email
+                server.send_message(msg)
+                print(f"Email successfully sent to {recipient_email}.")
+
+            except Exception as e:
+                print(f"Failed to send email to {recipient_email}. Error: {str(e)}")
+
+            finally:
+                server.quit()
+
+    
     def email_body(self):
         
         self.msg = f"""
@@ -82,8 +133,14 @@ Thank you for your consideration."""
         pass
 
 if __name__ == '__main__':
-    email = AutoEmail()
-    email.read_excel('/Users/winston/Desktop/School/Classes/Senior 1/Capstone/Solaris-Propulsion/resources/Test Companies.xlsx')
+
+    SMTP_SERVER = 'ssmtp.gmail.com'
+    SMTP_PORT = 587
+    FROM_EMAIL = 'Salaris.Propulsion@gmail.com'
+    FROM_PASSWORD = 'SolarisProp123!!'
+
+    file = '/Users/winston/Desktop/School/Classes/Senior 1/Capstone/Solaris-Propulsion/resources/Test Companies.xlsx'
+    email = AutoEmail(file)
 
     
 
