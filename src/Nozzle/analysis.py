@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from scipy.optimize import fsolve
 import src.fluids.gas as gas
-from src.fluids.gas import MachAngle, SpHeatRatio, machStar2mach
+from src.fluids.gas import MachAngle, SpHeatRatio, machStar2mach, Gas
 import Nozzle.nozzle as nozzle
 
 def CalculateSimpleField(contour, PambPc, PbPc, gamma, Mt, Tt, steps = 100, reflections = 3):
@@ -51,7 +51,6 @@ def CalculateSimpleField(contour, PambPc, PbPc, gamma, Mt, Tt, steps = 100, refl
     plt.ylim(0, 2)
     plt.gca().set_aspect('equal')
     plt.show()
-
 
 def CalculateEndpoints(contour, angles):
     rayLength = np.sqrt((0 - contour[-1].x)**2 + (1 - contour[-1].r)**2)
@@ -106,6 +105,8 @@ def CalculateDiffArea(contour):
 
 
 
+
+
 @dataclass
 class CharacteristicPoint:
     x: float
@@ -124,20 +125,24 @@ class CharacteristicPoint:
     def clone(self):
         return CharacteristicPoint(self.x, self.r, self.theta, self.machStar, self.s, self.mach, self.alpha)
 
-    def CalculateRightVariant(self, gamma, Rgas): # I characteristic
+    def CalculateRightVariant(self, gas: Gas): # I characteristic
+        Rgas = gas.Rgas
+        gamma = gas.gammaTyp
         RV = self.clone()
         RV.F = np.tan(RV.theta - RV.alpha)
-        RV.G = -1/np.tan(RV.alpha)/RV.machStar
-        RV.H = np.sin(RV.theta)*np.sin(RV.alpha)/(RV.r*np.sin(RV.theta - RV.alpha))
-        RV.J = -np.sin(RV.alpha)*np.cos(RV.alpha)/(Rgas * gamma)
+        RV.G = 1/np.tan(RV.alpha)/RV.machStar
+        RV.H = -np.sin(RV.theta)*np.sin(RV.alpha)/(RV.r*np.sin(RV.theta - RV.alpha))
+        RV.J = np.sin(RV.alpha)*np.cos(RV.alpha)/(Rgas * gamma)
         return RV
 
-    def CalculateLeftVariant(self, gamma, Rgas): # II characteristic
+    def CalculateLeftVariant(self, gas: Gas): # II characteristic
+        Rgas = gas.Rgas
+        gamma = gas.gammaTyp
         LV = self.clone()
         LV.F = np.tan(LV.theta + LV.alpha)
-        LV.G = 1/np.tan(LV.alpha)/LV.machStar
-        LV.H = -np.sin(LV.theta)*np.sin(LV.alpha)/(LV.r*np.cos(LV.theta + LV.alpha))
-        LV.J = np.sin(LV.alpha)*np.cos(LV.alpha)/(Rgas * gamma)
+        LV.G = -1/np.tan(LV.alpha)/LV.machStar
+        LV.H = np.sin(LV.theta)*np.sin(LV.alpha)/(LV.r*np.cos(LV.theta + LV.alpha))
+        LV.J = -np.sin(LV.alpha)*np.cos(LV.alpha)/(Rgas * gamma)
         return LV
     
     def setCoefficients(self, F, G, H, J):
@@ -157,7 +162,7 @@ class CharacteristicPoint:
         return nextPoint
 
     @staticmethod
-    def CalculateFieldPoint(L: 'CharacteristicPoint', R: 'CharacteristicPoint', gamma): # TODO overhaul for new coefficient calcs
+    def CalculateFieldPoint(L: 'CharacteristicPoint', R: 'CharacteristicPoint', gas: Gas): # TODO overhaul for new coefficient calcs
         Amat = np.array([[1, -R.F], [1, -L.F]])
         b = np.array([[R.r - R.F*R.x], [L.r - L.F*L.x]])
         X = np.linalg.solve(Amat, b)
@@ -170,23 +175,50 @@ class CharacteristicPoint:
         s = R.s + s*nr
 
         Amat = np.array([[1, R.G], [1, L.G]])
-        b = np.array([[R.theta + R.G*R.machStar - R.H*(r - R.r) + R.J*(s - R.s)], [L.theta + L.G*L.machStar - L.H*(x - L.x) + L.J*(s - L.s)]])
+        b = np.array([[R.theta + R.G*R.machStar - R.H*(r - R.r) - R.J*(s - R.s)], [L.theta + L.G*L.machStar - L.H*(x - L.x) - L.J*(s - L.s)]])
         X = np.linalg.solve(Amat, b)
         theta = X[0, 0]
         machStar = X[1, 0]
-        mach = machStar2mach(machStar, gamma)
+        mach = machStar2mach(machStar, gas.gammaTyp)
         alpha = MachAngle(mach)
 
         return CharacteristicPoint(x, r, theta, machStar, s, mach, alpha)
 
     @staticmethod
-    def CalculateSolidReflect(point: 'CharacteristicPoint', isRight: bool, contour: np.ndarray[nozzle.ContourPoint], PbPc: float, gamma: float):
-        PV = point.CalculateRightVariant(gamma, Rgas) if isRight else point.CalculateLeftVariant(gamma, Rgas)
+    def CalculateSolidReflect(point: 'CharacteristicPoint', isRight: bool, contour: np.ndarray[nozzle.ContourPoint], PbPc: float, gas: Gas):
+        PV = point.CalculateRightVariant(gas) if isRight else point.CalculateLeftVariant(gas)
+        intersect, theta = CharacteristicPoint.CalculateSolidBoundaryIntersect(point, contour)
+        if intersect is None:
+            return CharacteristicPoint.CalculateGasReflect(point, isRight, PbPc, gas)
+        
+        x = intersect[0]
+        r = intersect[1]
+        s = 0
+        machStar = PV.machStar + (-(theta - PV.theta) - PV.H*(r - PV.r) - PV.J*(s - PV.s))/PV.G
+
+        return CharacteristicPoint(x, r, theta, machStar, s, machStar2mach(machStar, gas.gammaTyp), MachAngle(machStar2mach(machStar)))
 
     @staticmethod
-    def CalculateGasReflect(L, R, PambPc, gamma):
+    def CalculateGasReflect(point, isRight, PambPc, gas):
         pass
 
+    @staticmethod
+    def CalculateSolidBoundaryIntersect(point: 'CharacteristicPoint', contour: np.ndarray[nozzle.ContourPoint]) -> tuple[float, float] | None:
+        rayLength = np.sqrt((0 - contour[-1].x)**2 + (1 - contour[-1].r)**2)
+        
+        Bx, By = 0, 0
+        angle = np.atan(point.F)
+
+        for j in range(len(contour) - 1):
+            a, b, c, d = contour[j].x, contour[j].r, contour[j+1].x, contour[j+1].r
+            rayEndx = 0 + rayLength * np.cos(angle)
+            rayEndr = 1 + rayLength * np.sin(angle)
+            x = ((d - (b - d)/(a - c)*c) - 1)/((rayEndr - 1)/(rayEndx) - (b - d)/(a - c))
+            if a <= x <= c:
+                Bx = x
+                By = (rayEndr - 1)/(rayEndx)*x + 1
+                return (Bx, By), np.tan((c - a)/(d - b))
+        return None
 
 
 def CalculateComplexField(contour, PambPc, PbPc, gamma, Mt, Tt, Rsteps = 10, Lsteps = 0, reflections = 3):
