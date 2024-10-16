@@ -1,1 +1,0 @@
-# create a scipt that sends an email to a list of recipients
