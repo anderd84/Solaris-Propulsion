@@ -18,7 +18,7 @@ class AutoEmail():
     def __init__(self, file: str):
 
         self.from_email = 'solaris.propulsion@gmail.com'
-        self.from_password = 'SolarisProp123!!'
+        self.from_password = 'tjql josh ykvm ohev' # App password do not change
         self.smtp_server = 'smtp.gmail.com'
         self.smtp_port = 587
 
@@ -26,6 +26,7 @@ class AutoEmail():
         self.read_excel()
         self.email_body()
         self.send_email()
+        self.update_excel()
 
     
     def read_excel(self):  
@@ -53,28 +54,29 @@ class AutoEmail():
             
             # if we have already reached out to the company, skip them
             if pd.notna(row['Status']):
-                ic(f"Already reached out to: {row['Company']}")
+                print(f"Already reached out to: {row['Company']}")
                 dropped_rows.append(index)
             
             # If we are missing a name for the contact, skip them
             if pd.isna(row['First Name']) and pd.isna(row['Last Name']):
-                ic(f"Missing full name for: {row['Company']}")
+                print(f"Missing full name for: {row['Company']}")
                 dropped_rows.append(index)
             
             # If we are missing the email, skip them
             if pd.isna(row['Email']):
-                ic(f"Missing email for: {row['Company']}")
+                print(f"Missing email for: {row['Company']}")
                 dropped_rows.append(index)
 
             # If we are missing the company name, skip them
             if pd.isna(row['Company']):
-                ic(f"Missing company name at Row: {index + 2}")
+                print(f"Missing company name at Row: {index + 2}")
                 dropped_rows.append(index)
 
         self.data.drop(dropped_rows, inplace=True)
         
 
     def send_email(self):
+
         """
         Sends an email to each valid contact in the filtered self.data DataFrame.
         The email body is dynamically generated based on the contact's details.
@@ -85,16 +87,15 @@ class AutoEmail():
             self.last_name = row['Last Name']
             self.company = row['Company']
             recipient_email = row['Email']
-            self.msg = f"Regarding your company, {self.company}, we would like to follow up on our previous communication."
-
+            
             # Composing the message
-            self.full_msg = f'''Dear {self.first_name} {self.last_name},\n\n{self.msg}\n\nKindly,\nYour Name'''
+            self.full_msg = f'''Dear {self.first_name} {self.last_name}, \n\n{self.msg} \n\nKindly,\nWinston Price \nTeam Lead, Solaris Propulsion\nEmbry-Riddle Aeronautical University'''
 
             # Create the email object
             msg = MIMEMultipart()
             msg['From'] = self.from_email
             msg['To'] = recipient_email
-            msg['Subject'] = f"Follow-up Regarding {self.company}"
+            msg['Subject'] = 'Outreach and Sponsorship Request'
 
             # Attach the body text to the email
             msg.attach(MIMEText(self.full_msg, 'plain'))
@@ -118,8 +119,7 @@ class AutoEmail():
     
     def email_body(self):
         
-        self.msg = f"""
-                    I hope you're well. My name is Winston Price, Team Lead for Solaris Propulsion at Embry-Riddle Aeronautical University. Our team is developing an aerospike engine designed to optimize performance across varying altitudes. Our goal is to successfully conduct two hot fire tests, achieving 1,800 pounds of force for 10 seconds, and to aid future teams in their efforts to surpass the Kármán line.
+        self.msg = f"""My name is Winston Price, Team Lead for Solaris Propulsion at Embry-Riddle Aeronautical University. Our team is developing an aerospike engine designed to optimize performance across varying altitudes. Our goal is to successfully conduct two hot fire tests, achieving 1,800 pounds of force for 10 seconds, and to aid future teams in their efforts to surpass the Kármán line.
 
 In addition to the engine, we are developing software tools to support the design and optimization of future aerospike engines, providing valuable resources for the aerospace community.
 
@@ -129,15 +129,29 @@ I would be happy to discuss potential collaboration in more detail. Please let m
 
 Thank you for your consideration."""
 
-    def process_email(self):
-        pass
+    
+    def update_excel(self):
+        """
+        Updates the 'Status' column in the Excel file to 'Sent' for successfully contacted recipients.
+        This will only modify the 'Status' column and leave the rest of the file intact.
+        """
+        
+        # Load the original Excel file
+        original_data = pd.read_excel(file)
+
+        # Iterate through the data to update the 'Status' column where the email was successfully sent
+        for index, row in self.data.iterrows():
+            # Find the row in the original Excel that matches the email in the current DataFrame
+            if pd.notna(row['Email']) and row['Email'] in original_data['Email'].values:
+                original_data.loc[original_data['Email'] == row['Email'], 'Status'] = 'Sent'
+        
+        # Save the updated DataFrame back to the Excel file, ensuring it doesn't overwrite other data
+        original_data.to_excel(file, index=False)
+        print(f"Excel file {file} updated with 'Sent' status for applicable rows.")
+
+
 
 if __name__ == '__main__':
-
-    SMTP_SERVER = 'ssmtp.gmail.com'
-    SMTP_PORT = 587
-    FROM_EMAIL = 'Salaris.Propulsion@gmail.com'
-    FROM_PASSWORD = 'SolarisProp123!!'
 
     file = '/Users/winston/Desktop/School/Classes/Senior 1/Capstone/Solaris-Propulsion/resources/Test Companies.xlsx'
     email = AutoEmail(file)
