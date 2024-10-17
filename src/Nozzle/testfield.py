@@ -109,7 +109,7 @@ print(f"Cf: {Cf}")
 FT = Cf*Pc
 
 
-Rt = np.sqrt(1 - (1/expansionRatio*np.cos(phit)))
+# Rt = np.sqrt(1 - (1/expansionRatio*np.cos(phit)))
 # fieldplot.axes[0].plot([0, (1 - Rt)*np.tan(phit)], [1, Rt], '-g', linewidth=2) # Throat
 plt.show()
 
@@ -118,7 +118,8 @@ plt.show()
 contour2 = nozzle.RaoContourFormat(cont)
 # analysis.CalculateSimpleField(contour2, 0.005, 0, gamma, Mt, Tt, steps=100)
 
-mat = analysis.CalculateComplexField(contour2, PambPc, PbPc, gas.Gas(gamma+0, 287), Mt, Tt)
+mat = analysis.CalculateComplexField(contour2, PambPc, PbPc, gas.Gas(gamma+0, 287), Mt, Tt, 20)
 fieldplot2 = nozplt.CreateNonDimPlot()
+fieldplot2 = nozplt.PlotContour(fieldplot2, cont, Rt, Tt)
 analysis.PlotComplexField(fieldplot2, mat)
 plt.show()
