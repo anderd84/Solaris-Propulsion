@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matrix_viewer as mv
 from src.fluids.gas import PrandtlMeyerFunction, SpHeatRatio, MachAngle
+import src.fluids.gas as gas
 import src.Nozzle.post as nozplt
 import src.Nozzle.nozzle as nozzle
 import src.Nozzle.analysis as analysis
@@ -13,8 +14,9 @@ Te = np.deg2rad(-3.5)
 Mt = 1.15
 PbPc = 0.01
 
-Pc = 300
 
+Pc = 300
+PambPc = 4/Pc
 
 data = rao.GenerateInputMatrix(np.linspace(2.5,3.5,10), np.deg2rad(np.linspace(-6, -1, 10)), SpHeatRatio(1.17), .002)
 # rao.GenerateInputChart(data)
@@ -93,9 +95,10 @@ alpha = np.array([[p.alpha for p in row] for row in field])
 
 # nozplt.show3d(cont)
 # nozplt.WriteContourTXT(cont, "contour.txt")
-fieldplot = nozplt.CreateNonDimPlot()
-fieldplot = nozplt.PlotField(fieldplot, field)
-fieldplot = nozplt.PlotContour(fieldplot, cont, Rt, Tt)
+# fieldplot = nozplt.CreateNonDimPlot()
+# fieldplot = nozplt.PlotField(fieldplot, field)
+# fieldplot = nozplt.PlotContour(fieldplot, cont, Rt, Tt)
+# fieldplot.axes[0].set_xlim(cont[-1].x, cont[0].x)
 # nozplt.LiveContour(field, Rt, Tt, fieldplot)
 # internal,external = nozzle.InternalPreExpansion(Me, Te, Mt, Tt, gamma, (cont[-1].x, cont[-1].r), expansionRatio)
 # fieldplot.axes[0].plot(internal[0,:], internal[1, :], 'r')
@@ -113,4 +116,9 @@ plt.show()
 
 
 contour2 = nozzle.RaoContourFormat(cont)
-analysis.CalculateSimpleField(contour2, 0.005, 0, gamma, Mt, Tt, steps=100)
+# analysis.CalculateSimpleField(contour2, 0.005, 0, gamma, Mt, Tt, steps=100)
+
+mat = analysis.CalculateComplexField(contour2, PambPc, PbPc, gas.Gas(gamma+0, 287), Mt, Tt)
+fieldplot2 = nozplt.CreateNonDimPlot()
+analysis.PlotComplexField(fieldplot2, mat)
+plt.show()
