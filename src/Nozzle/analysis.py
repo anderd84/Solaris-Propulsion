@@ -125,6 +125,9 @@ class CharacteristicPoint:
     H: float = 0
     J: float = 0
 
+    def __repr__(self) -> str:
+        return f"CP @ ({self.x:.3f}, {self.r:.3f}), theta: {np.rad2deg(self.theta):.3f}, s: {self.s:.3f}, mach: {self.mach:.3f}"
+
     def clone(self):
         return CharacteristicPoint(self.x, self.r, self.theta, self.machStar, self.s, self.mach, self.alpha)
 
@@ -165,9 +168,31 @@ class CharacteristicPoint:
         return nextPoint
 
     @staticmethod
-    def CalculateFieldPoint(L: 'CharacteristicPoint', R: 'CharacteristicPoint', gas: Gas): # TODO make iterative
-        L = L.CalculateLeftVariant(gas)
-        R = R.CalculateRightVariant(gas)
+    def CalculateFieldPoint(L: 'CharacteristicPoint', R: 'CharacteristicPoint', workingGas: Gas):
+        L = L.CalculateLeftVariant(workingGas)
+        R = R.CalculateRightVariant(workingGas)
+        N = CharacteristicPoint.ApproxCharacteristicEqn(L, R, workingGas)
+
+        for i in range(30):
+            NR = N.CalculateRightVariant(workingGas)
+            NL = N.CalculateLeftVariant(workingGas)
+
+            L2 = L.NextIterationPoint(NL)
+            R2 = R.NextIterationPoint(NR)
+
+            NN = CharacteristicPoint.ApproxCharacteristicEqn(L2, R2, workingGas)
+            if np.abs((NN.theta - N.theta)/(NN.theta)) < 1e-4:
+                ic(f"Converged in {i} iterations")
+                return NN
+            else:
+                N = NN.clone()
+                del NN, NL, NR, L2, R2
+
+        ic("Failed to converge")
+        return N
+
+    @staticmethod
+    def ApproxCharacteristicEqn(L: 'CharacteristicPoint', R: 'CharacteristicPoint', workingGas: Gas):
         Amat = np.array([[1, -R.F], [1, -L.F]])
         b = np.array([[R.r - R.F*R.x], [L.r - L.F*L.x]])
         X = np.linalg.solve(Amat, b)
@@ -184,7 +209,7 @@ class CharacteristicPoint:
         X = np.linalg.solve(Amat, b)
         theta = X[0, 0]
         machStar = X[1, 0]
-        mach = machStar2mach(machStar, gas.gammaTyp)
+        mach = machStar2mach(machStar, workingGas.gammaTyp)
         alpha = MachAngle(mach)
 
         return CharacteristicPoint(x, r, theta, machStar, s, mach, alpha)
@@ -275,7 +300,7 @@ def ReflectionRegionAll(rLines: np.ndarray[CharacteristicPoint], lLines: np.ndar
     R0: int = rLines.shape[0]
     L0: int = lLines.shape[0]
     
-    ReflectionRegion(rLines, R0, L0, contour, PambPc, PbPc, workingGas, reflection, True)
+    ic(ReflectionRegion(rLines, R0, L0, contour, PambPc, PbPc, workingGas, reflection, True))
     ReflectionRegion(lLines, L0, R0, contour, PambPc, PbPc, workingGas, reflection, False)
 
 def ReflectionRegion(lines: np.ndarray[CharacteristicPoint], X0, Y0, contour, PambPc, PbPc, workingGas: Gas, reflection, startAsRight: bool): # startAsRight is true if region is being calculated in rlines
@@ -284,8 +309,9 @@ def ReflectionRegion(lines: np.ndarray[CharacteristicPoint], X0, Y0, contour, Pa
     region[1:,0] = lines[:,start-1]
     region[0,1:] = np.transpose(lines[:,start-1])
 
-    plt.ion()
-    fig = post.CreateNonDimPlot()
+    # plt.ion()
+    # fig = post.CreateNonDimPlot()
+    # post.PlotContour(fig, contour, 0, 0)
 
     for i in range(1, X0+1):
         for j in range(1, i+1):
@@ -296,27 +322,25 @@ def ReflectionRegion(lines: np.ndarray[CharacteristicPoint], X0, Y0, contour, Pa
                 region[i,j] = CharacteristicPoint.CalculateSolidReflect(reflectOrigin, isRight, contour, PbPc, workingGas) if isRight else CharacteristicPoint.CalculateGasReflect(reflectOrigin, isRight, PambPc, workingGas)
             else:
                 region[i,j] = CharacteristicPoint.CalculateFieldPoint(region[i-1,j], region[i,j-1], workingGas) if isRight else CharacteristicPoint.CalculateFieldPoint(region[i,j-1], region[i-1,j], workingGas)
-                        
-            x = np.array([[p.x if p is not None else 0 for p in row] for row in region])
-            r = np.array([[p.r if p is not None else 0 for p in row] for row in region])
-            mach = np.array([[p.mach if p is not None else 0 for p in row] for row in region])
-            theta = np.array([[p.theta if p is not None else 0 for p in row] for row in region])
-            alpha = np.array([[p.alpha if p is not None else 0 for p in row] for row in region])
+                region[j, i] = region[i, j].clone()
 
-            ic(x)
-            ic(r)
-            ic(mach)
-            ic(theta)
-            ic(alpha)
+            # if i != j:
+            #     fig.axes[0].plot(region[i-1, j].x, region[i-1, j].r, 'or')
+            #     fig.axes[0].plot(region[i, j-1].x, region[i, j-1].r, 'ob')
+            #     fig.axes[0].plot(region[i, j].x, region[i, j].r, 'og')
+            #     fig.axes[0].legend(['', 'Nozzle', 'Left', 'Right', 'Current'])
+            # else:
+            #     fig.axes[0].plot(region[i, j-1].x, region[i, j-1].r, 'ob')
+            #     fig.axes[0].plot(region[i, j].x, region[i, j].r, 'og')
+            #     fig.axes[0].legend(['', 'Nozzle', 'Previous', 'Current'])
 
-            fig.axes[0].clear()
-            post.PlotContour(fig, contour, 0, 0)
-            PlotComplexField(fig, region)
-            fig.canvas.draw()
-            fig.canvas.flush_events()
-            plt.waitforbuttonpress()
-
-    lines[:,start:start+X0] = region[1:,1:]
+            # PlotComplexField(fig, region)
+            # fig.canvas.draw()
+            # fig.canvas.flush_events()
+            # plt.waitforbuttonpress()
+            # fig.axes[0].clear()
+            # post.PlotContour(fig, contour, 0, 0)
+    return region[1:, 1:]
 
 def PlotComplexField(fig: plt.Figure, field: np.ndarray, csarrows: int = 15, fanarrows: int = 5) -> plt.Figure:
     x = np.array([[p.x if p is not None else 0 for p in row] for row in field])

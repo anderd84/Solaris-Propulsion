@@ -16,7 +16,7 @@ PbPc = 0.01
 
 
 Pc = 300
-PambPc = 4/Pc
+PambPc = 8/Pc
 
 data = rao.GenerateInputMatrix(np.linspace(2.5,3.5,10), np.deg2rad(np.linspace(-6, -1, 10)), SpHeatRatio(1.17), .002)
 # rao.GenerateInputChart(data)
