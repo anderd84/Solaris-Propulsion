@@ -7,6 +7,7 @@ import src.fluids.gas as gas
 import src.Nozzle.post as nozplt
 import src.Nozzle.nozzle as nozzle
 import src.Nozzle.analysis as analysis
+from icecream import ic
 
 gamma = SpHeatRatio(1.17)
 Me = 3.128
@@ -16,7 +17,7 @@ PbPc = 0.01
 
 
 Pc = 300
-PambPc = 8/Pc
+PambPc = 1/Pc
 
 data = rao.GenerateInputMatrix(np.linspace(2.5,3.5,10), np.deg2rad(np.linspace(-6, -1, 10)), SpHeatRatio(1.17), .002)
 # rao.GenerateInputChart(data)
@@ -118,8 +119,15 @@ plt.show()
 contour2 = nozzle.RaoContourFormat(cont)
 # analysis.CalculateSimpleField(contour2, 0.005, 0, gamma, Mt, Tt, steps=100)
 
-mat = analysis.CalculateComplexField(contour2, PambPc, PbPc, gas.Gas(gamma+0, 287), Mt, Tt, 20)
-fieldplot2 = nozplt.CreateNonDimPlot()
-fieldplot2 = nozplt.PlotContour(fieldplot2, cont, Rt, Tt)
-analysis.PlotComplexField(fieldplot2, mat)
+mat, stream = analysis.CalculateComplexField(contour2, PambPc, PbPc, gas.Gas(gamma+0, 287), Mt, Tt, 4)
+# fieldplot2 = nozplt.CreateNonDimPlot()
+# fieldplot2 = nozplt.PlotContour(fieldplot2, cont, Rt, Tt)
+# analysis.PlotComplexField(fieldplot2, mat)
+# ic(stream)
+# fieldplot2.axes[0].plot([p.x for p in stream], [p.r for p in stream], 'r', linewidth=1)
+Me = np.sqrt((PambPc**(-1/gamma[5]) - 1)/gamma[2])
+thetaExit = Tt + gas.PrandtlMeyerFunction(Me, gamma) - gas.PrandtlMeyerFunction(Mt, gamma)
+ic(analysis.GridifyComplexField(mat, np.array([])))
+
+# fieldplot2.axes[0].plot([0, 2*np.cos(thetaExit)], [1, 1+2*np.sin(thetaExit)], 'g')
 plt.show()
