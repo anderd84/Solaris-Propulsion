@@ -375,34 +375,37 @@ def ReflectionRegion(lines: np.ndarray[CharacteristicPoint], X0, Y0, contour, Pa
     lines[:, start:start+X0] = region[1:,1:]
     return lines, streamline
 
-def PlotCharacteristicLines(fig: plt.Figure, field: np.ndarray, lines: int = 5, stations: int = 20) -> plt.Figure:
+def PlotCharacteristicLines(fig: plt.Figure, field: np.ndarray) -> plt.Figure:
     field = np.transpose(field)
     x = np.array([[p.x if p is not None else 0 for p in row] for row in field])
     r = np.array([[p.r if p is not None else 0 for p in row] for row in field])
-    mach = np.array([[p.mach if p is not None else 0 for p in row] for row in field])
-    theta = np.array([[p.theta if p is not None else 0 for p in row] for row in field])
-
-    qx = x[::field.shape[0]//lines, ::field.shape[1]//stations]
-    qy = r[::field.shape[0]//lines, ::field.shape[1]//stations]
-
-    thetaVx = np.cos(theta[::field.shape[0]//lines, ::field.shape[1]//stations])
-    thetaVy = np.sin(theta[::field.shape[0]//lines, ::field.shape[1]//stations])
 
     ax = fig.axes[0]
 
-    # machContours = ax.contourf(xm, rm, machm, levels=100, cmap='jet')
-    # fig.colorbar(machContours, orientation='vertical')
-    ax.quiver(qx, qy, thetaVx, thetaVy, scale=25, scale_units='xy', angles='xy', headwidth=3, headlength=5, width=.002, color='black')
-
     ax.plot(x, r, '-k', linewidth=.5) # L
-    # ax.plot(np.transpose(x), np.transpose(r), '-k', linewidth=.5) # R
-    # ax.plot(x[0,:], r[0,:], '-b', linewidth=2) # CS
     ax.grid('on', linestyle='--')
 
     return fig
 
-def PlotFieldData(fig: plt.Figure, fieldGrid, lines: int = 5, stations: int = 20):
-    
+def PlotFieldData(fig: plt.Figure, fieldGrid: np.ndarray[CharacteristicPoint], lines: int = 2, stations: int = 5):
+    x = np.array([[p.x if p is not None else 0 for p in row] for row in fieldGrid])
+    r = np.array([[p.r if p is not None else 0 for p in row] for row in fieldGrid])
+    mach = np.array([[p.mach if p is not None else np.nan for p in row] for row in fieldGrid])
+    theta = np.array([[p.theta if p is not None else np.nan for p in row] for row in fieldGrid])
+
+    ax = fig.axes[0]
+
+    qx = x[::fieldGrid.shape[0]//stations, ::fieldGrid.shape[1]//lines]
+    qy = r[::fieldGrid.shape[0]//stations, ::fieldGrid.shape[1]//lines]
+
+    thetaVx = np.cos(theta[::fieldGrid.shape[0]//stations, ::fieldGrid.shape[1]//lines])
+    thetaVy = np.sin(theta[::fieldGrid.shape[0]//stations, ::fieldGrid.shape[1]//lines])
+
+    machContours = ax.contourf(x, r, mach, levels=100, cmap='jet')
+    fig.colorbar(machContours, orientation='vertical')
+
+    # ax.quiver(qx, qy, thetaVx, thetaVy, scale=25, scale_units='xy', angles='xy', headwidth=3, headlength=5, width=.002, color='black')
+
 
 def GridifyComplexField(rlines: np.ndarray, llines: np.ndarray) -> np.ndarray:
     R0 = rlines.shape[0]
