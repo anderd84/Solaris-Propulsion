@@ -11,7 +11,7 @@ def CreateNonDimPlot() -> plt.Figure:
     ax.set_ylabel('R/Re')
     return fig
 
-def PlotField(fig: plt.Figure, field: np.ndarray, csarrows: int = 15, fanarrows: int = 5) -> plt.Figure:
+def PlotField(fig: plt.Figure, field: np.ndarray, csarrows: int = 15, fanarrows: int = 10) -> plt.Figure:
     x = np.array([[p.x for p in row] for row in field])
     r = np.array([[p.r for p in row] for row in field])
     mach = np.array([[p.mach for p in row] for row in field])
@@ -27,8 +27,8 @@ def PlotField(fig: plt.Figure, field: np.ndarray, csarrows: int = 15, fanarrows:
 
     ax = fig.axes[0]
 
-    machContours = ax.contourf(x, r, mach, levels=100, cmap='jet')
-    fig.colorbar(machContours, orientation='vertical')
+    # machContours = ax.contourf(x, r, mach, levels=100, cmap='jet')
+    # fig.colorbar(machContours, orientation='vertical')
     ax.quiver(qx, qy, thetaVx, thetaVy, scale=25, scale_units='xy', angles='xy', headwidth=3, headlength=5, width=.002, color='black')
 
     ax.plot(x, r, '-k', linewidth=.5) # L
@@ -48,6 +48,8 @@ def PlotContour(fig: plt.Figure, contour: np.ndarray[CharacteristicPoint], Rt, p
     cx.append(cx[0])
     cy.append(0)
     cy.append(0)
+    cx.append(cx[0])
+    cy.append(cy[0])
 
     ax.plot([0, (1 - Rt)*np.tan(phit)], [1, Rt], '-r', linewidth=2) # Throat
     ax.plot(cx, cy, '-k', linewidth=2) # Contour
