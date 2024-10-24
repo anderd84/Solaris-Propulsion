@@ -1,11 +1,11 @@
-import src.Nozzle.rao as rao
+import Nozzle.rao as rao
 import numpy as np
 import matplotlib.pyplot as plt
 import matrix_viewer as mv
-from src.fluids.gas import PrandtlMeyerFunction, SpHeatRatio, MachAngle
-import src.Nozzle.post as nozplt
-import src.Nozzle.nozzle as nozzle
-import src.Nozzle.analysis as analysis
+from fluids.gas import PrandtlMeyerFunction, SpHeatRatio, MachAngle
+import Nozzle.post as nozplt
+import Nozzle.nozzle as nozzle
+import Nozzle.analysis as analysis
 
 gamma = SpHeatRatio(1.17)
 Me = 3.128
