@@ -104,3 +104,7 @@ def obliqueShock(mach, delta, gamma: SpHeatRatio) -> tuple[float, float, float]:
 
     mach2 = np.sqrt(((gamma - 1)*(mach*np.sin(betaWeak))**2 + 2)/(2*gamma*(mach*np.sin(betaWeak))**2 - (gamma - 1)))/np.sin(betaWeak - delta)
     return betaWeak, betaStrong, mach2
+
+def StagPressRatio(mach, gas: Gas):
+    gamma = gas.getVariableGamma(mach)
+    return (1 + (gamma[1]*mach**2))**(gamma[3])
