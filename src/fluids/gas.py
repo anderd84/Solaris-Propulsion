@@ -40,7 +40,46 @@ class SpHeatRatio:
     
     def __neg__(self):
         return -self.g
+
+class Gas:
+    gammaTyp: SpHeatRatio
+    Rgas: float
+    T0: float = 0
+    P0: float = 0
+
+    def __init__(self, gamma: float, Rgas: float, **kwargs):
+        self.gammaTyp = SpHeatRatio(gamma)
+        self.Rgas = Rgas
+
+        if 'T0' in kwargs:
+            self.T0 = kwargs['T0']
+        if 'P0' in kwargs:
+            self.P0 = kwargs['P0']
+        if 'Tt' in kwargs:
+            self.T0 = kwargs['Tt']
+        if 'Pt' in kwargs:
+            self.P0 = kwargs['Pt']
+
+    def getVariableGamma(self, mach) -> SpHeatRatio:
+        T = self.T0 * (1 + self.gammaTyp[2] * mach**2)
+        gammaNext = self.SimpleHarmonicGamma(self.gammaTyp, T)
+        while (abs(gammaNext - self.gammaTyp) > 1e-6):
+            T = self.T0 * (1 + gammaNext[2] * mach**2)
+            gammaNext = self.SimpleHarmonicGamma(self.gammaTyp, T)
+        return gammaNext
     
+    def getChokedArea(self, mdot):
+        gamma1 = self.getVariableGamma(1)
+        a = mdot*np.sqrt(self.T0)/self.P0
+        b = np.sqrt(gamma1/self.Rgas)*gamma1[1]**(-gamma1[1]*gamma1[3])
+        return a/b
+
+    @staticmethod
+    def SimpleHarmonicGamma(gammaTyp: SpHeatRatio, temp: float):
+        THETA = 5500 # R
+        tr = THETA/temp
+        return SpHeatRatio(1 + (gammaTyp - 1)/(1 + (gammaTyp - 1)*((tr)**2)*(np.exp(tr))/(np.exp(tr) - 1)**2))
+
 def PrandtlMeyerFunction(M, gamma):
     a = np.sqrt((gamma+1)/(gamma-1))
     b = np.arctan(np.sqrt((gamma-1)/(gamma+1)*(M**2-1)))

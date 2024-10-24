@@ -8,7 +8,7 @@ import CoolProp.CoolProp as CP
 
 OF = 2.4
 TotalMdot = 9
-
+mdots = np.array([OF*TotalMdot/(1+OF), TotalMdot/(1+OF)]) #LOX_CORE, FUEL_CORE lbm/s
 
 class PROP:
     def __init__(self, gamma, mdot, rho):
@@ -120,7 +120,6 @@ Pressure_Drop_Lox = 0.2 #Pressure drop Percentage (ROT: Always in terms of Chamb
 
 # -------------- $ 4 Different PROP FLOWS -------------- #
 def PROPFLOWS(Film_Cooling,gammas,Lox_Dewar_Pressure):
-    mdots = np.array([OF*TotalMdot/(1+OF), TotalMdot/(1+OF)]) #LOX_CORE, FUEL_CORE lbm/s
     OX_CORE = PROP(gamma=gammas[0], mdot=mdots[0], rho=LOXDensity(Lox_Dewar_Pressure))
     FUEL_CORE = PROP(gamma = gammas[1], mdot = mdots[1]*(1 - Film_Cooling[0] - Film_Cooling[1]), rho=JetADensity) #gamma zero for this one because it's the initialized guess just making the FUEL CORE class requires it ( should change when moving to data classes)
     OUT_FILM_C = PROP(gamma = gammas[2], mdot = Film_Cooling[0]* mdots[1], rho = FUEL_CORE.rho)
