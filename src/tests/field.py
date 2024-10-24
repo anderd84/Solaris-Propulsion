@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matrix_viewer as mv
 from fluids.gas import PrandtlMeyerFunction, SpHeatRatio, MachAngle
+import fluids.gas as gas
 import Nozzle.post as nozplt
 import Nozzle.nozzle as nozzle
 import Nozzle.analysis as analysis
@@ -10,7 +11,7 @@ import Nozzle.analysis as analysis
 gamma = SpHeatRatio(1.17)
 Me = 3.128
 Te = np.deg2rad(-3.5)
-Mt = 1.15
+Mt = 1
 PbPc = 0.01
 
 
@@ -94,9 +95,9 @@ alpha = np.array([[p.alpha for p in row] for row in field])
 
 # nozplt.show3d(cont)
 # nozplt.WriteContourTXT(cont, "contour.txt")
-# fieldplot = nozplt.CreateNonDimPlot()
-# fieldplot = nozplt.PlotField(fieldplot, field)
-# fieldplot = nozplt.PlotContour(fieldplot, cont, Rt, Tt)
+fieldplot = nozplt.CreateNonDimPlot()
+fieldplot = nozplt.PlotField(fieldplot, field)
+fieldplot = nozplt.PlotContour(fieldplot, cont, Rt, Tt)
 # fieldplot.axes[0].legend(['Control Surface', 'Throat', 'Nozzle'], prop={'size': 12})
 # fieldplot.axes[0].set_xlim(cont[-1].x, cont[0].x)
 # nozplt.LiveContour(field, Rt, Tt, fieldplot)

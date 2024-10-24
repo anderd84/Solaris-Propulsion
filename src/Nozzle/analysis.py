@@ -9,6 +9,7 @@ import Nozzle.nozzle as nozzle
 import matrix_viewer as mv
 from icecream import ic
 import Nozzle.post as post
+import Nozzle.config as config
 
 def CalculateSimpleField(contour, PambPc, PbPc, gamma, Mt, Tt, steps = 100, reflections = 2):
     phit = np.pi/2 + Tt
@@ -297,7 +298,7 @@ def CalculateComplexField(contour, PambPc, PbPc, workingGas: Gas, Mt, Tt, Rsteps
 
 def GenerateExpansionFan(machE: float, machT: float, thetaT: float, workingGas: Gas, arraySize: int):
     gamma = workingGas.gammaTyp
-    machs = np.linspace(machT, machE, arraySize)
+    machs = np.linspace(machT, machE, arraySize) if machT > config.MIN_MOC_MACH else np.linspace(config.MIN_MOC_MACH, machE, arraySize)
 
     thetas = thetaT + gas.PrandtlMeyerFunction(machs, gamma) - gas.PrandtlMeyerFunction(machT, gamma)
 
