@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import pandas as pd
 import smtplib
 
-#! Remoove before deployment 
+#! Remove before deployment 
 from icecream import ic
 
 # Function to send email
@@ -23,7 +23,6 @@ class AutoEmail():
         self.signature_file_path = 'resources/signature.html'
 
         self.read_excel()
-        self.email_body()
         self.send_email()
         self.update_excel()
 
@@ -57,9 +56,10 @@ class AutoEmail():
                 dropped_rows.append(index)
             
             # If we are missing a name for the contact, skip them
-            if pd.isna(row['First Name']) and pd.isna(row['Last Name']):
+            if pd.isna(row['First Name']) or pd.isna(row['Last Name']):
                 print(f"Missing full name for: {row['Company']}")
-                dropped_rows.append(index)
+                self.data.at[index, 'First Name'] = None
+                self.data.at[index, 'Last Name'] = None
             
             # If we are missing the email, skip them
             if pd.isna(row['Email']):
@@ -106,8 +106,7 @@ class AutoEmail():
             recipient_email = row['Email']
 
             # Composing the message (with the manually appended signature)
-            self.full_msg = f'''<p>Dear {self.first_name} {self.last_name},</p>
-                                <p>{self.msg}</p> {self.signature_html}'''
+            self.full_msg = self.email_body(self.first_name, self.last_name, self.signature_html)
 
             # Create the email object
             msg = MIMEMultipart('related')
@@ -120,8 +119,8 @@ class AutoEmail():
             msg.attach(msg_alternative)
 
             # Add the plain text version (for email clients that don't support HTML)
-            msg_text = MIMEText(f'Dear {self.first_name} {self.last_name},\n\n{self.msg}\n\nKindly,\nWinston Price', 'plain')
-            msg_alternative.attach(msg_text)
+            # msg_text = MIMEText(f'Dear {self.first_name} {self.last_name},\n\n{self.msg}\n\nKindly,\nWinston Price', 'plain')
+            #msg_alternative.attach(msg_text)
 
             # Add the HTML version
             msg_html = MIMEText(self.full_msg, 'html')
@@ -154,9 +153,9 @@ class AutoEmail():
 
 
     
-    def email_body(self):
+    def email_body(self, first_name: str, last_name: str, signature_html: str):
         
-        self.msg = f"""
+        msg = f"""
 <p>My name is Winston Price, and I am the Team Lead for Solaris Propulsion, a Capstone team at Embry-Riddle Aeronautical University. We are currently developing an aerospike engine designed to optimize performance across varying altitudes. Our objective is to successfully complete two hot fire tests, achieving 1,800 pounds of thrust for 10 seconds, which will push the boundaries of current propulsion technology. Additionally, we aim to set the foundation for future teams to surpass the Kármán line at 330,000 feet.</p>
 
 <p>Alongside our engine development, we are also creating software tools to assist with the design and optimization of future aerospike engines. These tools will provide valuable resources to the broader aerospace community, enabling more efficient and informed propulsion system design.</p>
@@ -171,6 +170,15 @@ class AutoEmail():
 
 <p>Kindly,</p>
 """
+        
+        if first_name is None and last_name is None:
+            full_msg = f'''<p>Hello,</p>
+                                    <p>{msg}</p> {signature_html}'''
+        else:
+            full_msg = f'''<p>Dear {first_name},</p>
+                                    <p>{msg}</p> {signature_html}'''
+
+        return full_msg
 
 
 
@@ -197,5 +205,5 @@ class AutoEmail():
 
 if __name__ == '__main__':
 
-    file = '/Users/winston/Desktop/School/Classes/Senior 1/Capstone/Solaris-Propulsion/resources/Test Companies.xlsx'
+    file = 'resources/Companies to contact.xlsx'
     email = AutoEmail(file)
