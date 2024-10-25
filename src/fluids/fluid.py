@@ -5,9 +5,13 @@ from pint import UnitRegistry
 import numpy as np
 import pyromat as pm
 import CoolProp.CoolProp as CP
+from icecream import ic
+
 
 OF = 2.4
 TotalMdot = 9
+from rocketcea.cea_obj import CEA_Obj; C=CEA_Obj(oxName='LOX', fuelName='RP-1');
+ic(C.get_Tcomb(Pc=300.0, MR=OF))
 
 
 class PROP:
@@ -131,6 +135,10 @@ def PROPFLOWS(Film_Cooling,gammas,Lox_Dewar_Pressure):
 
 
     return OX_CORE,FUEL_CORE,OUT_FILM_C,IN_FILM_C
+
+
+
+
 
 # -------------- $ Cooling Equations -------------- #
 #def bartzConv()
