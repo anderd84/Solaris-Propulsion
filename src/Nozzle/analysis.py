@@ -8,7 +8,7 @@ from fluids.gas import MachAngle, SpHeatRatio, mach2machStar, machStar2mach, Gas
 import Nozzle.nozzle as nozzle
 import matrix_viewer as mv
 from icecream import ic
-import Nozzle.post as post
+import Nozzle.plots as plots
 import Nozzle.config as config
 
 def CalculateSimpleField(contour, PambPc, PbPc, gamma, Mt, Tt, steps = 100, reflections = 2):
