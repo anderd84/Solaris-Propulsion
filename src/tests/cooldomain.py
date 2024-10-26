@@ -18,8 +18,10 @@ Tt = outputData["thetaThroat"]
 
 fig = plots.CreateNonDimPlot()
 plots.PlotContour(fig, cont, Rt, Tt, Re)
-plots.PlotField(fig, field, Re)
-plt.show()
+# plots.PlotField(fig, field, Re)
+# plt.show()
 
-cooling = domain.Domain(0, 4, 10, 4, 10, 10)
-cooling.
+cooling = domain.Domain(-.5, 3.5, 6, 3.5, 100, 100)
+cooling.DefineMaterials(np.array([]), np.array([]), np.array([]), cont)
+cooling.ShowMaterialPlot(fig)
+plt.show()
