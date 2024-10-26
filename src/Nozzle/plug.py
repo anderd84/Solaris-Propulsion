@@ -22,8 +22,10 @@ def CreateRaoContour(exhaustGas: Gas, chamberPressure: float, chamberTemp: float
 
     machLip = fsolve(lambda m: gas.StagPressRatio(m, exhaustGas) - PambPc, 2)[0]
     
-    GUESS_T = -1
+    GUESS_T = -.05
     length = CalcPlugLength(machLip, np.deg2rad(GUESS_T), exhaustGas, PbPc)
+
+    ic(length*lipRadius)
 
     if length*lipRadius > maxSpikeLength:
         thetaLip = fsolve(lambda t: CalcPlugLength(machLip, np.deg2rad(t), exhaustGas, PbPc) - maxSpikeLength/lipRadius, -5)[0]
@@ -50,7 +52,9 @@ def CreateRaoContour(exhaustGas: Gas, chamberPressure: float, chamberTemp: float
 
     formatContour = nozzle.RaoContourFormat(cont, lipRadius)
 
-    return formatContour, radiusThroat*lipRadius, thetaThroat, field
+    outputData = {"radiusThroat": radiusThroat*lipRadius, "thetaThroat": thetaThroat, "machLip": machLip, "thetaLip": thetaLip, "areaRatio": areaRatio, "Cf": Cf, "lengthRatio": lengthRatio}
+
+    return formatContour, field, outputData
 
 
     
