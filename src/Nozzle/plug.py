@@ -18,6 +18,7 @@ def CreateRaoContour(exhaustGas: Gas, chamberPressure: float, chamberTemp: float
     exhaustGas.stagTemp = chamberTemp
 
     PbPc = basePress / chamberPressure
+    ic(PbPc)
     PambPc = designAmbient / chamberPressure
 
     machLip = fsolve(lambda m: gas.StagPressRatio(m, exhaustGas) - PambPc, 2)[0]

@@ -74,7 +74,7 @@ class Gas:
         return gammaNext
     
     def getChokedArea(self, mdot):
-        gamma1 = self.getVariableGamma(1)
+        gamma1 = self.gammaTyp #self.getVariableGamma(1)
         a = mdot*np.sqrt(self.stagTemp)/self.stagPress
         b = np.sqrt(gamma1/self.Rgas)*gamma1[1]**(-gamma1[1]*gamma1[3])
         return a/b
