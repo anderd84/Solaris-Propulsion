@@ -1,10 +1,10 @@
 from matplotlib import pyplot as plt, patches
-from src.Injector.Doublet_Functions import spike_contour
-from src.Injector.InjectorCad import injector_cad_write
-from src.Injector.Drill import drill_approximation
+from Injector.Doublet_Functions import spike_contour
+from Injector.InjectorCad import injector_cad_write
+from Injector.Drill import drill_approximation
 from scipy.optimize import fsolve
 import matplotlib.pyplot as plt
-from src.fluids.fluid import Q_, ureg, CD_drill, Pressure_Drop_Fuel, Pressure_Drop_Lox,  pm, get_fluid_properties, CP
+from fluids.fluid import Q_, ureg, CD_drill, Pressure_Drop_Fuel, Pressure_Drop_Lox,  pm, get_fluid_properties, CP
 #from Doublet import OX_CORE, FUEL_CORE
 import numpy as np
 import os
@@ -85,12 +85,12 @@ def internalFlowConvection(epsilon, m_dot_c, NumberofChannels, rho, v, A_c, P, P
 temperature_R = 700 * ureg.degR  # Temperature in Rankine (~80°F)
 pressure_psi = 14.7 * ureg.psi  # Pressure in psi (1 atmosphere)
 
-# Call the function to get properties
-properties = get_fluid_properties('n-Dodecane',temperature_R.magnitude, pressure_psi.magnitude)
+(viscosity, specific_heat_p, gamma, thermal_conductivity, density, prandtl, alpha, thermal_diffusivity, SurfaceTens) = get_fluid_properties("RP-1",temperature_R, pressure_psi)
+(viscosity, specific_heat_p, gamma, thermal_conductivity, density, prandtl, alpha, thermal_diffusivity, SurfaceTens) = get_fluid_properties("Water",temperature_R, pressure_psi)
 
-# Output the results
-(viscosity, specific_heat_p, gamma, thermal_conductivity, density, prandtl, 
- quality, phase, alpha_SI, thermal_diffusivity) = properties
+
+
+
 
 print(f"Viscosity: {viscosity:.6f}")
 print(f"Specific Heat (Cp): {specific_heat_p:.6f}")
@@ -98,7 +98,5 @@ print(f"Gamma (Cp/Cv): {gamma:.6f}")
 print(f"Thermal Conductivity: {thermal_conductivity:.6f}")
 print(f"Density: {density:.6f}")
 print(f"Prandtl Number: {prandtl:.6f}")
-print(f"Quality: {quality:.6f}")
-print(f"Phase: {phase:.6f}")
-print(f"Coefficient of Thermal Expansion (1/K): {alpha_SI:.6f}")
+print(f"Thermal Expansion Coefficient (1/K): {alpha:.6f}")
 print(f"Thermal Diffusivity: {thermal_diffusivity:.6f}")
