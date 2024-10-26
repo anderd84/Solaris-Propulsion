@@ -12,14 +12,6 @@ class DomainMaterial(Enum):
     CHAMBER = 3
     PLUG = 4
 
-Points = 1000
-
-Chamber_x = np.concatenate([np.linspace(0, 5, Points),np.linspace(5, 5, Points),np.linspace(5, 0, Points),np.linspace(0, 0, Points)])
-Chamber_r = np.concatenate([np.linspace(0, 0, Points),np.linspace(0, 5, Points),np.linspace(5, 5, Points),np.linspace(5, 0, Points)])
-
-Chamber = [ContourPoint(row[0],row[1]) for row in np.transpose([Chamber_x,Chamber_r])]
-Point = (2.0,-5.1)
-
 def Intersect(Point, Chamber, MatrixSize):
     OnTheLine = 0
     A = Point
@@ -49,5 +41,23 @@ def is_point_on_segment(Point, C, D):
 def ccw(A,B,C):
     return (C[1]-A[1]) * (B[0]-A[0]) > (B[1]-A[1]) * (C[0]-A[0])
 
-Check, OnTheLine, InsideOutside  = Intersect(Point, Chamber, np.array([10000,10000]))
-ic(Check, OnTheLine, InsideOutside)
+def main():
+    Points = 1000
+
+    Chamber_x = np.concatenate([np.linspace(0, 5, Points),np.linspace(5, 5, Points),np.linspace(5, 0, Points),np.linspace(0, 0, Points)])
+    Chamber_r = np.concatenate([np.linspace(0, 0, Points),np.linspace(0, 5, Points),np.linspace(5, 5, Points),np.linspace(5, 0, Points)])
+
+    Chamber = [ContourPoint(row[0],row[1]) for row in np.transpose([Chamber_x,Chamber_r])]
+    Point = (2.0,-5.1)
+
+    Check, OnTheLine, InsideOutside  = Intersect(Point, Chamber, np.array([10000,10000]))
+    ic(Check, OnTheLine, InsideOutside)
+
+
+
+
+
+
+
+if __name__ == "__main__":
+    main()
