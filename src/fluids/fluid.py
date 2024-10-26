@@ -25,13 +25,19 @@ ureg = UnitRegistry()
 ureg.default_system = 'US'
 Q_ = ureg.Quantity
 ureg.default_format = "~P"  # Compact unit formatting
+ureg.define("lbmol = 453.59237 * mol")  # 1 lbmol = 453.59237 mol (since 1 lb = 453.59237 g)
 
-
-OF = 2.4
-TotalMdot = 9
+OF = 2.0
+TotalMdot = 8
 Chamber_Press = 300.0 #psia
 from rocketcea.cea_obj import CEA_Obj; Combustion=CEA_Obj(oxName='LOX', fuelName='RP-1');
 Combustion_Temp = Q_(Combustion.get_Tcomb(Pc=Chamber_Press, MR=OF), ureg.degR)
+IspVac, Cstar, Tc, MW, gamma = Combustion.get_IvacCstrTc_ThtMwGam(Pc=Chamber_Press, MR=OF, eps=7.11)
+MW = Q_(MW, ureg.pound / ureg.lbmol)
+R_universal = Q_(10.731577089016, ureg.psi * ureg.foot**3 / (ureg.lbmol * ureg.degR))  # Universal gas constant in ft·lbf/(lbmol·°R)
+R_specific = (R_universal / MW).to(ureg.foot * ureg.pound_force / (ureg.pound * ureg.degR))
+ic(R_specific)
+
 
 class PROP:
     def __init__(self, gamma, mdot, rho):
