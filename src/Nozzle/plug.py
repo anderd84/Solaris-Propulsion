@@ -52,6 +52,9 @@ def CreateRaoContour(exhaustGas: Gas, chamberPressure: float, chamberTemp: float
     field = rao.PruneField(field)
 
     formatContour = nozzle.RaoContourFormat(cont, lipRadius)
+    formatContour = np.append(formatContour, nozzle.ContourPoint((lipRadius - radiusThroat*lipRadius)*np.tan(thetaThroat), 0))
+    formatContour = np.append(formatContour, nozzle.ContourPoint(formatContour[0].x, 0))
+    formatContour = np.append(formatContour, nozzle.ContourPoint(formatContour[0].x, formatContour[0].r))
 
     outputData = {"radiusThroat": radiusThroat*lipRadius, "thetaThroat": thetaThroat, "machLip": machLip, "thetaLip": thetaLip, "areaRatio": areaRatio, "Cf": Cf, "lengthRatio": lengthRatio}
 
