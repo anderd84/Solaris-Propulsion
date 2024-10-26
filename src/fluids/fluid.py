@@ -6,13 +6,32 @@ import numpy as np
 import pyromat as pm
 import CoolProp.CoolProp as CP
 from icecream import ic
+from rocketprops.rocket_prop import get_prop
+
+# -------------- Pyromat Shit -------------- #
+pm.config['unit_pressure'] = 'psi'
+pm.config['unit_mass'] = 'lbm'
+pm.config['unit_matter'] = 'lbm'
+pm.config['unit_length'] = 'ft'
+pm.config['unit_volume'] = 'ft3'
+pm.config['unit_volume'] = 'ft3'
+pm.config['unit_temperature'] = 'Rankine'
+N2 = pm.get('mp.N2')
+LOX = pm.get('mp.O2')
+CO2 = pm.get('mp.CO2')
+
+# -------------- Unit Shit -------------- #
+ureg = UnitRegistry()
+ureg.default_system = 'US'
+Q_ = ureg.Quantity
+ureg.default_format = "~P"  # Compact unit formatting
 
 
 OF = 2.4
 TotalMdot = 9
-from rocketcea.cea_obj import CEA_Obj; C=CEA_Obj(oxName='LOX', fuelName='RP-1');
-ic(C.get_Tcomb(Pc=300.0, MR=OF))
-
+Chamber_Press = 300.0 #psia
+from rocketcea.cea_obj import CEA_Obj; Combustion=CEA_Obj(oxName='LOX', fuelName='RP-1');
+Combustion_Temp = Q_(Combustion.get_Tcomb(Pc=Chamber_Press, MR=OF), ureg.degR)
 
 class PROP:
     def __init__(self, gamma, mdot, rho):
@@ -81,24 +100,10 @@ class PROP:
         Velocity_Actual = (self.mdot/(self.rho * Area_Actual)).to(ureg.feet / ureg.second)
         self.Area_Actual = Area_Actual
         self.Velocity_Actual = Velocity_Actual
+        self.Number_Actual = Number
         return Velocity_Actual, Area_Actual           
 
 
-
-# -------------- Pyromat Shit -------------- #
-pm.config['unit_pressure'] = 'psi'
-pm.config['unit_mass'] = 'lbm'
-pm.config['unit_matter'] = 'lbm'
-pm.config['unit_length'] = 'ft'
-pm.config['unit_volume'] = 'ft3'
-N2 = pm.get('mp.N2')
-LOX = pm.get('mp.O2')
-CO2 = pm.get('mp.CO2')
-
-# -------------- Unit Shit -------------- #
-ureg = UnitRegistry()
-ureg.default_system = 'US'
-Q_ = ureg.Quantity
 
 
 
@@ -110,8 +115,8 @@ JetADensity = 51.15666
 
 # -------------- Lox Dewar Pressure -------------- #
 def LOXDensity(Lox_Dewar_Pressure):
-    Lox_Absolute_Pressure = Q_(Lox_Dewar_Pressure, ureg.force_pound / ureg.inch**2) + Prescott_pressure
-    LOX_Sat_Temp = LOX.Ts(p=Lox_Absolute_Pressure.magnitude )
+    LOX_Absolute_Pressure = Q_(Lox_Dewar_Pressure, ureg.force_pound / ureg.inch**2) + Prescott_pressure
+    LOX_Sat_Temp = LOX.Ts(p=LOX_Absolute_Pressure.magnitude )
     LOX_Sat_Dens = LOX.ds(T=LOX_Sat_Temp)
     LOX_Sat_Dens = LOX_Sat_Dens[0][0]
     return LOX_Sat_Dens
@@ -123,18 +128,27 @@ Pressure_Drop_Lox = 0.2 #Pressure drop Percentage (ROT: Always in terms of Chamb
 
 
 # -------------- $ 4 Different PROP FLOWS -------------- #
-def PROPFLOWS(Film_Cooling,gammas,Lox_Dewar_Pressure):
+def PROPFLOWS(Film_Cooling,gammas,Lox_Dewar_Pressure, AirTemperature, AirPressure,fuel_name):
+    temperature_R = AirTemperature.to(ureg.degR)
+    pressure_psi = AirPressure.to(ureg.psi)
+
+
+    properties_fuel = get_fluid_properties(fuel_name,temperature_R.magnitude, pressure_psi.magnitude)
+
+    (viscosity_f, specific_heat_p_f, gamma_f, thermal_conductivity_f, density_f, prandtl_f, alpha_f, thermal_diffusivity_f, SurfaceTens_f) = properties_fuel
+
     mdots = np.array([OF*TotalMdot/(1+OF), TotalMdot/(1+OF)]) #LOX_CORE, FUEL_CORE lbm/s
     OX_CORE = PROP(gamma=gammas[0], mdot=mdots[0], rho=LOXDensity(Lox_Dewar_Pressure))
-    FUEL_CORE = PROP(gamma = gammas[1], mdot = mdots[1]*(1 - Film_Cooling[0] - Film_Cooling[1]), rho=JetADensity) #gamma zero for this one because it's the initialized guess just making the FUEL CORE class requires it ( should change when moving to data classes)
+    FUEL_CORE = PROP(gamma = gammas[1], mdot = mdots[1]*(1 - Film_Cooling[0] - Film_Cooling[1]), rho=density_f) #gamma zero for this one because it's the initialized guess just making the FUEL CORE class requires it ( should change when moving to data classes)
     OUT_FILM_C = PROP(gamma = gammas[2], mdot = Film_Cooling[0]* mdots[1], rho = FUEL_CORE.rho)
     IN_FILM_C = PROP(gamma = gammas[3], mdot = Film_Cooling[1]* mdots[1], rho = FUEL_CORE.rho)
+ 
     print("checking that mdots were calculated right... error =", 
           Q_(mdots[0], ureg.pound / ureg.second) + Q_(mdots[1], ureg.pound / ureg.second) - OX_CORE.mdot - FUEL_CORE.mdot - OUT_FILM_C.mdot - IN_FILM_C.mdot)
         
 
 
-    return OX_CORE,FUEL_CORE,OUT_FILM_C,IN_FILM_C
+    return OX_CORE,FUEL_CORE,OUT_FILM_C,IN_FILM_C, viscosity_f, specific_heat_p_f, thermal_conductivity_f, SurfaceTens_f
 
 
 
@@ -142,53 +156,47 @@ def PROPFLOWS(Film_Cooling,gammas,Lox_Dewar_Pressure):
 
 # -------------- $ Cooling Equations -------------- #
 #def bartzConv()
+#rp1 = get_prop("RP1")
+#rp1.summ_print()
 
 
-# -------------- $ Kerosene Properties -------------- #
+# Function to retrieve fluid properties using RocketProps defaults (English Engineering units)
 def get_fluid_properties(name, temperature_R, pressure_psi):
+    # Ensure inputs are in the correct units for RocketProps methods
     temperature = Q_(temperature_R, ureg.degR)
     pressure = Q_(pressure_psi, ureg.psi)
-    temperature_SI = temperature.to(ureg.kelvin).magnitude
-    pressure_SI = pressure.to(ureg.pascal).magnitude
     
-    # Viscosity
-    viscosity_SI = Q_(CP.PropsSI('V', 'T', temperature_SI, 'P', pressure_SI, name), ureg.pascal * ureg.second)
-    viscosity = viscosity_SI.to(ureg.pound / ureg.foot / ureg.second)
+    # Create an fluid object
+    fluid = get_prop(name)
     
-    # Specific heat at constant pressure
-    specific_heat_p_SI = Q_(CP.PropsSI('C', 'T', temperature_SI, 'P', pressure_SI, name), ureg.joule / ureg.kilogram / ureg.kelvin)
-    specific_heat_p = specific_heat_p_SI.to(ureg.BTU / ureg.pound / ureg.degR)
+    # Retrieve dynamic properties from RocketProps at the given temperature and pressure
+    viscosity_poise = Q_(fluid.ViscAtTdegR(temperature.magnitude), ureg.poise)  # Viscosity in poise
+    viscosity = viscosity_poise.to(ureg.pound / ureg.foot / ureg.second)  # Convert to lb/ft·s using .to()
     
-    # Specific heat at constant volume
-    specific_heat_v_SI = Q_(CP.PropsSI('O', 'T', temperature_SI, 'P', pressure_SI, name), ureg.joule / ureg.kilogram / ureg.kelvin)
+    specific_heat_p = Q_(fluid.CpAtTdegR(temperature.magnitude), ureg.BTU / ureg.pound / ureg.degR)  # Cp in BTU/lbm-R
+    thermal_conductivity = Q_(fluid.CondAtTdegR(temperature.magnitude), ureg.BTU / ureg.foot / ureg.hour / ureg.degR)  # Thermal conductivity
     
-    # Gamma (Cp/Cv)
-    gamma = specific_heat_p_SI / specific_heat_v_SI
+    # Density (lbm/ft³) using compressed specific gravity and accurate water density
+    specific_gravity = fluid.SG_compressed(temperature.magnitude, pressure.magnitude)  # Specific gravity in g/ml
+    water_density = Q_(1, ureg.gram / ureg.milliliter).to(ureg.pound / ureg.foot**3)  # Density of water in lbm/ft³
+    density = specific_gravity * water_density  # Convert specific gravity to density for RP-1 in lbm/ft³
     
-    # Thermal conductivity
-    thermal_conductivity_SI = Q_(CP.PropsSI('L', 'T', temperature_SI, 'P', pressure_SI, name), ureg.watt / ureg.meter / ureg.kelvin)
-    thermal_conductivity = thermal_conductivity_SI.to(ureg.BTU / ureg.foot / ureg.hour / ureg.degR)
+    # Calculate Prandtl number (dimensionless)
+    prandtl = (viscosity * specific_heat_p / thermal_conductivity).to('dimensionless')
     
-    # Density (kg/m³)
-    density_SI = Q_(CP.PropsSI('D', 'T', temperature_SI, 'P', pressure_SI, name), ureg.kilogram / ureg.meter**3)
-    density = density_SI.to(ureg.pound / ureg.foot**3)  # Convert to lbm/ft³
+    # Estimate gamma (Cp/Cv) assuming Cv ~ Cp/1.25 if no direct Cv is available
+    specific_heat_v = specific_heat_p / 1.25
+    gamma = specific_heat_p / specific_heat_v
     
-    # Prandtl number (dimensionless)
-    prandtl = CP.PropsSI('PRANDTL', 'T', temperature_SI, 'P', pressure_SI, name)
+    # Coefficient of thermal expansion (1/°R) as an approximation
+    alpha = Q_(1 / (temperature.magnitude * 60), 1 / ureg.degR)
     
-    # Quality (dimensionless) - vapor mass fraction (0 = saturated liquid, 1 = saturated vapor)
-    quality = CP.PropsSI('Q', 'T', temperature_SI, 'P', pressure_SI, name)
+    # Thermal diffusivity (ft²/s)
+    thermal_diffusivity = thermal_conductivity / (density * specific_heat_p) * ureg.foot**2 / ureg.second
+
+    # Surface Tension (lbf/ft)
+    SurfaceTens = Q_(fluid.SurfAtTdegR(temperature.magnitude), ureg.pound_force / ureg.foot)
     
-    # Phase (integer: 0 = unknown, 1 = liquid, 2 = vapor, 3 = supercritical)
-    phase = CP.PropsSI('PHASE', 'T', temperature_SI, 'P', pressure_SI, name)
-    
-    # Coefficient of thermal expansion (1/K)
-    alpha_SI = Q_(CP.PropsSI('ISOBARIC_EXPANSION_COEFFICIENT', 'T', temperature_SI, 'P', pressure_SI, name), 1 / ureg.kelvin)
-    
-    # Thermal diffusivity (m²/s)
-    thermal_diffusivity_SI = (thermal_conductivity_SI / (density_SI * specific_heat_p_SI)).to(ureg.meter**2 / ureg.second)
-    thermal_diffusivity = thermal_diffusivity_SI.to(ureg.foot**2 / ureg.second)  # Convert to ft²/s
-    
-    # Return all the properties
-    return (viscosity, specific_heat_p, gamma, thermal_conductivity, density, prandtl, 
-            quality, phase, alpha_SI, thermal_diffusivity)
+    # Return all properties in English Engineering units
+    return (viscosity, specific_heat_p, gamma, thermal_conductivity, density, prandtl, alpha, thermal_diffusivity, SurfaceTens)
+
