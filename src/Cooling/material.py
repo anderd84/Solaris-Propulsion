@@ -3,6 +3,14 @@ from matplotlib import pyplot as plt, patches
 import numpy as np
 from icecream import ic
 from Nozzle.nozzle import ContourPoint
+from enum import Enum
+
+class DomainMaterial(Enum):
+    FREE = 0 
+    COWL = 1
+    COOLANT = 2
+    CHAMBER = 3
+    PLUG = 4
 
 Points = 1000
 
@@ -43,11 +51,3 @@ def ccw(A,B,C):
 
 Check, OnTheLine, InsideOutside  = Intersect(Point, Chamber, np.array([10000,10000]))
 ic(Check, OnTheLine, InsideOutside)
-from enum import Enum
-
-class DomainMaterial(Enum):
-    FREE = 0 
-    COWL = 1
-    COOLANT = 2
-    CHAMBER = 3
-    PLUG = 4
