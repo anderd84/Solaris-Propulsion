@@ -4,7 +4,8 @@ import numpy.typing as npt
 import matplotlib.pyplot as plt
 from scipy.optimize import fsolve
 import scipy.integrate as integrate
-from src.fluids.gas import mach2machStar, machStar2mach, PrandtlMeyerFunction, MachAngle, SpHeatRatio
+from  fluids.gas import mach2machStar, machStar2mach, PrandtlMeyerFunction, MachAngle, SpHeatRatio
+import Nozzle.config as config
 
 def cot(x: float) -> float:
     return np.cos(x) / np.sin(x)
@@ -205,7 +206,7 @@ def CalculateThroatAngle(machE: float, thetaE: float, machT: float, gamma: SpHea
     return thetaE - PrandtlMeyerFunction(machE, gamma) + PrandtlMeyerFunction(machT, gamma)
 
 def GenerateExpansionFan(machE: float, machT: float, thetaT: float, gamma: SpHeatRatio, arraySize: int = 100) -> np.ndarray[CharacteristicPoint]: # look into making the linspace angles instead of mach
-    machArr = np.linspace(machT, machE, arraySize)
+    machArr = np.linspace(machT, machE, arraySize) if machT > config.MIN_MOC_MACH else np.linspace(config.MIN_MOC_MACH, machE, arraySize)
     nuT = PrandtlMeyerFunction(machT, gamma)
 
     expansionFanArray = np.zeros(arraySize, dtype=CharacteristicPoint)

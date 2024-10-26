@@ -6,7 +6,10 @@ dependencies = ["numpy",
 "CoolProp",
 "pint",
 "icecream",
-"matrix_viewer"
+"logging",
+"matrix_viewer",
+"pyromat",
+"rocketcea"
 ]
 version = "0.1.0"
 description = "A package for aerospike engine calculations"

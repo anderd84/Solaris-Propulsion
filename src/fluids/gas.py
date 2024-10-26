@@ -44,33 +44,38 @@ class SpHeatRatio:
 class Gas:
     gammaTyp: SpHeatRatio
     Rgas: float
-    T0: float = 0
-    P0: float = 0
+    stagTemp: float = 0
+    stagPress: float = 0
 
     def __init__(self, gamma: float, Rgas: float, **kwargs):
         self.gammaTyp = SpHeatRatio(gamma)
         self.Rgas = Rgas
 
         if 'T0' in kwargs:
-            self.T0 = kwargs['T0']
+            self.stagTemp = kwargs['T0']
         if 'P0' in kwargs:
-            self.P0 = kwargs['P0']
+            self.stagPress = kwargs['P0']
         if 'Tt' in kwargs:
-            self.T0 = kwargs['Tt']
+            self.stagTemp = kwargs['Tt']
         if 'Pt' in kwargs:
-            self.P0 = kwargs['Pt']
+            self.stagPress = kwargs['Pt']
+    
+    def __expr__(self):
+        return f"Gas - k:{self.gammaTyp}, R:{self.Rgas}, P0:{self.stagPress}, T0:{self.stagTemp}"
 
     def getVariableGamma(self, mach) -> SpHeatRatio:
-        T = self.T0 * (1 + self.gammaTyp[2] * mach**2)
+        T = self.stagTemp * (1 + self.gammaTyp[2] * mach**2)
         gammaNext = self.SimpleHarmonicGamma(self.gammaTyp, T)
-        while (abs(gammaNext - self.gammaTyp) > 1e-6):
-            T = self.T0 * (1 + gammaNext[2] * mach**2)
+        gammaPrev = self.gammaTyp.g
+        while (abs(gammaNext - gammaPrev) > 1e-6):
+            gammaPrev = gammaNext.g
+            T = self.stagTemp * (1 + gammaNext[2] * mach**2)
             gammaNext = self.SimpleHarmonicGamma(self.gammaTyp, T)
         return gammaNext
     
     def getChokedArea(self, mdot):
-        gamma1 = self.getVariableGamma(1)
-        a = mdot*np.sqrt(self.T0)/self.P0
+        gamma1 = self.gammaTyp #self.getVariableGamma(1)
+        a = mdot*np.sqrt(self.stagTemp)/self.stagPress
         b = np.sqrt(gamma1/self.Rgas)*gamma1[1]**(-gamma1[1]*gamma1[3])
         return a/b
 
@@ -104,3 +109,7 @@ def obliqueShock(mach, delta, gamma: SpHeatRatio) -> tuple[float, float, float]:
 
     mach2 = np.sqrt(((gamma - 1)*(mach*np.sin(betaWeak))**2 + 2)/(2*gamma*(mach*np.sin(betaWeak))**2 - (gamma - 1)))/np.sin(betaWeak - delta)
     return betaWeak, betaStrong, mach2
+
+def StagPressRatio(mach, gas: Gas):
+    gamma = gas.getVariableGamma(mach)
+    return (1 + (gamma[2]*mach**2))**(-gamma[5])

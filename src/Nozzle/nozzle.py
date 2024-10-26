@@ -45,5 +45,5 @@ def InternalPreExpansion(machE: float, thetaE: float, machLip: float, thetaLip: 
     # return Xp, Rp
 
 
-def RaoContourFormat(contour):
-    return np.array([ContourPoint(p.x, p.r) for p in contour[::-1]])
+def RaoContourFormat(contour, scale = 1):
+    return np.array([ContourPoint(p.x * scale, p.r * scale) for p in contour])
