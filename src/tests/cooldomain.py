@@ -25,5 +25,7 @@ plugC = plug.GenerateDimPlug(cont, Rt, Tt, Re, 8, 1)
 
 cooling = domain.Domain(-8.5, 3.5, 15, 3.5, 100, 100)
 cooling.DefineMaterials(np.array([]), np.array([]), np.array([]), plugC)
+cooling = domain.Domain(-.5, 3.5, 6, 3.5, 500, 500)
+cooling.DefineMaterials(np.array([]), np.array([]), np.array([]), cont, fig)
 cooling.ShowMaterialPlot(fig)
 plt.show()
