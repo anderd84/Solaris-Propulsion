@@ -62,7 +62,7 @@ def CreateRaoContour(exhaustGas: Gas, chamberPressure: float, chamberTemp: float
     return formatContour, field, outputData
 
 def GenerateDimPlug(contour: np.ndarray[nozzle.ContourPoint], throatRadius: float, throatTheta: float, Re: float, chamberLength: float, baseRadius: float, circRes: int = 50):
-    designTable = {"throatArcRad": .1*Re, "convergeAngle": 25, "turnArcRad": 2*Re, "straightAngle": 10}
+    designTable = {"throatArcRad": .133*Re, "convergeAngle": 25, "turnArcRad": 2*Re, "straightAngle": 10}
 
     xt = (Re - throatRadius)*np.tan(throatTheta)
     absThetaT = abs(throatTheta)
@@ -100,8 +100,8 @@ def GenerateDimPlug(contour: np.ndarray[nozzle.ContourPoint], throatRadius: floa
 
     return fullPlugContour
 
-def GenerateDimCowl(contour: np.ndarray[nozzle.ContourPoint], throatRadius: float, throatTheta: float, Re: float, chamberLength: float, maxRadius: float, circRes: int = 50):
-    designTable = {"throatArcRad": .1*Re, "convergeAngle": 25, "turnArcRad": 2*Re, "straightAngle": 10}
+def GenerateDimCowl(contour: np.ndarray[nozzle.ContourPoint], throatRadius: float, throatTheta: float, Re: float, chamberLength: float, chamberOuter: float, thickness: float, circRes: int = 50):
+    designTable = {"throatArcRad": .133*Re, "convergeAngle": 25, "turnArcRad": 2*Re, "straightAngle": 10, "lipAngle": 5}
 
     absThetaT = abs(throatTheta)
     xt = (Re - throatRadius)*np.tan(throatTheta)
@@ -112,9 +112,35 @@ def GenerateDimCowl(contour: np.ndarray[nozzle.ContourPoint], throatRadius: floa
     Amat = np.array([[0, np.sin(alpha), np.cos(alpha)], 
                      [1, np.cos(alpha), -np.sin(alpha)],
                      [1, 1, 0]])
-    Bmat = np.array([[-xc], [Re], [maxRadius]])
+    Bmat = np.array([-xc, Re, chamberOuter])
 
     ic(np.linalg.det(Amat))
     yc, r, l = np.linalg.solve(Amat, Bmat)
 
-    ic(yc, r, l)
+    x1 = 0
+    r1 = Re
+
+    arcArr = np.linspace(alpha, 0, circRes)
+    innerArc = np.array([nozzle.ContourPoint(xc + r*np.sin(a), yc + r*np.cos(a)) for a in arcArr])
+    xL = innerArc[-1].x - chamberLength
+    rL = chamberOuter
+
+    innerCowl = np.insert(innerArc, 0, nozzle.ContourPoint(x1, r1))
+    innerCowl = np.append(innerCowl, nozzle.ContourPoint(xL, rL))
+
+    x1 = thickness*np.cos(np.deg2rad(designTable["lipAngle"]))
+    r1 = Re + thickness*np.sin(np.deg2rad(designTable["lipAngle"]))
+
+    r = r + thickness
+    outerArc = np.array([nozzle.ContourPoint(xc + r*np.sin(a), yc + r*np.cos(a)) for a in arcArr])
+
+    xL = outerArc[-1].x - chamberLength
+    rL = chamberOuter + thickness
+
+    outerCowl = np.insert(outerArc, 0, nozzle.ContourPoint(x1, r1))
+    outerCowl = np.append(outerCowl, nozzle.ContourPoint(xL, rL))
+
+    fullCowl = np.concat([innerCowl, outerCowl[::-1]], axis=0)
+    fullCowl = np.append(fullCowl, fullCowl[0])
+
+    return fullCowl

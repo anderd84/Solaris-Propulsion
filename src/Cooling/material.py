@@ -9,7 +9,7 @@ class DomainMaterial(Enum):
     FREE = 0 
     COWL = 1
     COOLANT = 2
-    contour = 3
+    CHAMBER = 3
     PLUG = 4
 
 def isIntersect(Point, contour: np.ndarray[ContourPoint], domainSize: tuple[int, int]):
