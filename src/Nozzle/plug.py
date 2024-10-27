@@ -62,7 +62,7 @@ def CreateRaoContour(exhaustGas: Gas, chamberPressure: float, chamberTemp: float
     return formatContour, field, outputData
 
 def GenerateDimPlug(contour: np.ndarray[nozzle.ContourPoint], throatRadius: float, throatTheta: float, Re: float, chamberLength: float, baseRadius: float, circRes: int = 50):
-    designTable = {"throatArcRad": .1*Re, "convergeAngle": 25, "turnArcRad": 2*Re}
+    designTable = {"throatArcRad": .1*Re, "convergeAngle": 25, "turnArcRad": 2*Re, "straightAngle": 10}
 
     xt = (Re - throatRadius)*np.tan(throatTheta)
     absThetaT = abs(throatTheta)
@@ -100,4 +100,21 @@ def GenerateDimPlug(contour: np.ndarray[nozzle.ContourPoint], throatRadius: floa
 
     return fullPlugContour
 
+def GenerateDimCowl(contour: np.ndarray[nozzle.ContourPoint], throatRadius: float, throatTheta: float, Re: float, chamberLength: float, maxRadius: float, circRes: int = 50):
+    designTable = {"throatArcRad": .1*Re, "convergeAngle": 25, "turnArcRad": 2*Re, "straightAngle": 10}
 
+    absThetaT = abs(throatTheta)
+    xt = (Re - throatRadius)*np.tan(throatTheta)
+    xc = xt - (np.cos(np.pi/2 - absThetaT)*designTable["throatArcRad"])
+
+    alpha = np.deg2rad(designTable["straightAngle"]) + absThetaT
+
+    Amat = np.array([[0, np.sin(alpha), np.cos(alpha)], 
+                     [1, np.cos(alpha), -np.sin(alpha)],
+                     [1, 1, 0]])
+    Bmat = np.array([[-xc], [Re], [maxRadius]])
+
+    ic(np.linalg.det(Amat))
+    yc, r, l = np.linalg.solve(Amat, Bmat)
+
+    ic(yc, r, l)
