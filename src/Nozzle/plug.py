@@ -7,6 +7,7 @@ from fluids.gas import Gas
 import fluids.gas as gas
 import Nozzle.rao as rao
 from Nozzle import nozzle
+from Nozzle import plots
 
 
 def CalcPlugLength(machLip: float, theta:float, exhaustGas: Gas, PbPc: float):
@@ -52,17 +53,51 @@ def CreateRaoContour(exhaustGas: Gas, chamberPressure: float, chamberTemp: float
     field = rao.PruneField(field)
 
     formatContour = nozzle.RaoContourFormat(cont, lipRadius)
-    formatContour = np.append(formatContour, nozzle.ContourPoint((lipRadius - radiusThroat*lipRadius)*np.tan(thetaThroat), 0))
-    formatContour = np.append(formatContour, nozzle.ContourPoint(formatContour[0].x, 0))
-    formatContour = np.append(formatContour, nozzle.ContourPoint(formatContour[0].x, formatContour[0].r))
+    # formatContour = np.append(formatContour, nozzle.ContourPoint((lipRadius - radiusThroat*lipRadius)*np.tan(thetaThroat), 0))
+    # formatContour = np.append(formatContour, nozzle.ContourPoint(formatContour[0].x, 0))
+    # formatContour = np.append(formatContour, nozzle.ContourPoint(formatContour[0].x, formatContour[0].r))
 
     outputData = {"radiusThroat": radiusThroat*lipRadius, "thetaThroat": thetaThroat, "machLip": machLip, "thetaLip": thetaLip, "areaRatio": areaRatio, "Cf": Cf, "lengthRatio": lengthRatio}
 
     return formatContour, field, outputData
 
+def GenerateDimPlug(contour: np.ndarray[nozzle.ContourPoint], throatRadius: float, throatTheta: float, Re: float, chamberLength: float, baseRadius: float, circRes: int = 50):
+    designTable = {"throatArcRad": .1*Re, "convergeAngle": 25, "turnArcRad": 2*Re}
 
+    xt = (Re - throatRadius)*np.tan(throatTheta)
+    absThetaT = abs(throatTheta)
+
+    # thoat arc
+    ycTA = throatRadius - (np.sin(np.pi/2 - absThetaT)*designTable["throatArcRad"])
+    xcTA = xt - (np.cos(np.pi/2 - absThetaT)*designTable["throatArcRad"])
+    arcArr = np.linspace(np.pi/2 - absThetaT, np.pi/2 + np.deg2rad(designTable["convergeAngle"]), circRes)
+    throatArc = np.array([nozzle.ContourPoint(xcTA + designTable["throatArcRad"]*np.cos(a), ycTA + designTable["throatArcRad"]*np.sin(a)) for a in arcArr])
+
+    # converge line
+    x1CL = throatArc[-1].x
+    r1CL = throatArc[-1].r
+
+    r2CL = baseRadius + designTable["turnArcRad"]*(1 - np.cos(np.deg2rad(designTable["convergeAngle"])))
+    x2CL = x1CL - (r1CL - r2CL)/np.tan(np.deg2rad(designTable["convergeAngle"]))
+
+    convergeLine = np.array([nozzle.ContourPoint(x1CL, r1CL), nozzle.ContourPoint(x2CL, r2CL)])
+
+    #converge arc
+    xcCA = x2CL - designTable["turnArcRad"]*np.sin(np.deg2rad(designTable["convergeAngle"]))
+    ycCA = r2CL + designTable["turnArcRad"]*np.cos(np.deg2rad(designTable["convergeAngle"]))
+    arcArr = np.linspace(np.deg2rad(designTable["convergeAngle"]), 0, circRes)
+    convergeArc = np.array([nozzle.ContourPoint(xcCA + designTable["turnArcRad"]*np.sin(a), ycCA - designTable["turnArcRad"]*np.cos(a)) for a in arcArr])
+
+    #straight section
+    spiketipx = contour[0].x
+    spiketipr = contour[0].r
+    xSS = np.array([convergeArc[-1].x, xcTA - chamberLength, xcTA - chamberLength, spiketipx, spiketipx])
+    rSS = np.array([convergeArc[-1].r, convergeArc[-1].r, 0, 0, spiketipr])
+
+    straightSection = np.array([nozzle.ContourPoint(xSS[i], rSS[i]) for i in range(len(xSS))])
     
+    fullPlugContour = np.concat([throatArc, convergeLine, convergeArc, straightSection, contour], axis=0)
 
-
+    return fullPlugContour
 
 
