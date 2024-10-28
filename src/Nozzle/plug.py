@@ -57,7 +57,7 @@ def CreateRaoContour(exhaustGas: Gas, chamberPressure: float, chamberTemp: float
     # formatContour = np.append(formatContour, nozzle.ContourPoint(formatContour[0].x, 0))
     # formatContour = np.append(formatContour, nozzle.ContourPoint(formatContour[0].x, formatContour[0].r))
 
-    outputData = {"radiusThroat": radiusThroat*lipRadius, "thetaThroat": thetaThroat, "machLip": machLip, "thetaLip": thetaLip, "areaRatio": areaRatio, "Cf": Cf, "lengthRatio": lengthRatio}
+    outputData = {"radiusThroat": radiusThroat*lipRadius, "thetaThroat": thetaThroat, "machLip": machLip, "thetaLip": thetaLip, "areaRatio": areaRatio, "Cf": Cf, "lengthRatio": lengthRatio, "rawContour": cont}
 
     return formatContour, field, outputData
 
@@ -89,14 +89,14 @@ def GenerateDimPlug(contour: np.ndarray[nozzle.ContourPoint], throatRadius: floa
     convergeArc = np.array([nozzle.ContourPoint(xcCA + designTable["turnArcRad"]*np.sin(a), ycCA - designTable["turnArcRad"]*np.cos(a)) for a in arcArr])
 
     #straight section
-    spiketipx = contour[0].x
-    spiketipr = contour[0].r
+    spiketipx = contour[-1].x
+    spiketipr = contour[-1].r
     xSS = np.array([convergeArc[-1].x, xcTA - chamberLength, xcTA - chamberLength, spiketipx, spiketipx])
     rSS = np.array([convergeArc[-1].r, convergeArc[-1].r, 0, 0, spiketipr])
 
     straightSection = np.array([nozzle.ContourPoint(xSS[i], rSS[i]) for i in range(len(xSS))])
     
-    fullPlugContour = np.concatenate([throatArc, convergeLine, convergeArc, straightSection, contour], axis=0)
+    fullPlugContour = np.concatenate([throatArc, convergeLine, convergeArc, straightSection, contour[::-1]], axis=0)
 
     return fullPlugContour
 
