@@ -11,12 +11,7 @@ from texttable import Texttable
 
 """
     Shit that needs to get done still in this code:
-    Utilize the Space prop notes to find time of vaporization and make sure our chamber length design fits for that. For instance the larger the diameter
-    the larger the time necessary to vaporize and the larger the L* we need
-    Add the film cooling angles onto the plot
-    have A seperate figure for a 2D sketch of the hgoles to make visualization much much easier
-    Error handle the numerical solve for if the angle is bigger than 90 or less than the minimum angle possible (USE TRY CATCH)
-    Make all code blocks into functions - EASIER TO READ. So david no kill me
+        have A seperate figure for a 2D sketch of the hgoles to make visualization much much easier
 """
 
 # -------------- Design Inputs -------------- #    
@@ -198,164 +193,165 @@ def InjectorParameters(ri: float ,Spacing: float , Rgamma_lox: float, Film_Cooli
  
     return OX_CORE, FUEL_CORE, OUT_FILM_C, Dickerson, NASA, fuel_Doublet, film_Cool_Doublet, Doublet_Diameter_Fuel, gamma_FUEL_original, x_profile, y_profile, Peakx, Peaky
 
-
-OX_CORE, FUEL_CORE, OUT_FILM_C, Dickerson, NASA, fuel_Doublet, film_Cool_Doublet, Doublet_Diameter_Fuel, gamma_FUEL_original, x_profile, y_profile, Peakx, Peaky = InjectorParameters(ri ,Spacing, Rgamma_lox, Film_Cooling, FilmCoolingSpacing, Pressure_Chamber,Doublet_Diameter_LOX, gammas,Lox_Dewar_Pressure, AirTemperature, AirPressure ,FuelName, spike_contour,Points)
-
-
-fuel_Core_Diameter, closest_Fuel_Diameter, fuel_Doublet_Drill = fuel_Doublet
-film_Cool_CORE_Diameter, closest_Film_Cool_Diameter, film_Cool_Doublet_Drill = film_Cool_Doublet
-[D_f_Dickerson, Vaporize_time_Dickerson, Travel_Length_Dickerson, Chamber_Length_Dickerson] = Dickerson
-[D_f_NASA, Vaporize_time_NASA, Travel_Length_NASA, Chamber_Length_NASA] = NASA
-_, LOX_doublet_drill_size, _ = drill_approximation(Doublet_Diameter_LOX.magnitude)
-angle_off_axial_fuel_original = gamma_FUEL_original.magnitude  # Strip units for display
-angle_off_axial_ox = OX_CORE.gamma.magnitude  # Strip units for display
-angle_off_axial_fuel = FUEL_CORE.gamma.magnitude  # Strip units for display
-angle_off_axial_film = OUT_FILM_C.gamma.magnitude  # Strip units for display
+def main():
+    OX_CORE, FUEL_CORE, OUT_FILM_C, Dickerson, NASA, fuel_Doublet, film_Cool_Doublet, Doublet_Diameter_Fuel, gamma_FUEL_original, x_profile, y_profile, Peakx, Peaky = InjectorParameters(ri ,Spacing, Rgamma_lox, Film_Cooling, FilmCoolingSpacing, Pressure_Chamber,Doublet_Diameter_LOX, gammas,Lox_Dewar_Pressure, AirTemperature, AirPressure ,FuelName, spike_contour,Points)
 
 
-Injector_Parameters = Texttable()
-Injector_Parameters.add_rows([["",'Oxidizer', 'Fuel', 'Film Cooling'], ["Prop Type","LOX", FuelName, FuelName]])
-Injector_Parameters.add_row(["Angle off Axial (Deg)", angle_off_axial_ox, angle_off_axial_fuel, angle_off_axial_film])
-Injector_Parameters.add_row(["Doublet Size", Doublet_Diameter_LOX,closest_Fuel_Diameter, closest_Film_Cool_Diameter ])
-Injector_Parameters.add_row(["Drill Size", LOX_doublet_drill_size,fuel_Doublet_Drill, film_Cool_Doublet_Drill ])
-Injector_Parameters.add_row(["Hole Number",OX_CORE.Number_Actual , FUEL_CORE.Number_Actual, OUT_FILM_C.Number_Actual ])
-rounded_Table = Texttable()
-rounded_Table.add_rows([["",'Unrounded Values', 'Rounded Values'], ["Fuel Angle off Axial (Deg)", angle_off_axial_fuel_original, angle_off_axial_fuel]])
-rounded_Table.add_row(["Oxidizer Velocity", f"{OX_CORE.Velocity_init:.3f~}", f"{OX_CORE.Velocity_Actual:.3f~} "],)
-rounded_Table.add_row(["Fuel Velocity", f"{FUEL_CORE.Velocity_init:.3f~}", f"{FUEL_CORE.Velocity_Actual:.3f~} "])
+    fuel_Core_Diameter, closest_Fuel_Diameter, fuel_Doublet_Drill = fuel_Doublet
+    film_Cool_CORE_Diameter, closest_Film_Cool_Diameter, film_Cool_Doublet_Drill = film_Cool_Doublet
+    [D_f_Dickerson, Vaporize_time_Dickerson, Travel_Length_Dickerson, Chamber_Length_Dickerson] = Dickerson
+    [D_f_NASA, Vaporize_time_NASA, Travel_Length_NASA, Chamber_Length_NASA] = NASA
+    _, LOX_doublet_drill_size, _ = drill_approximation(Doublet_Diameter_LOX.magnitude)
+    angle_off_axial_fuel_original = gamma_FUEL_original.magnitude  # Strip units for display
+    angle_off_axial_ox = OX_CORE.gamma.magnitude  # Strip units for display
+    angle_off_axial_fuel = FUEL_CORE.gamma.magnitude  # Strip units for display
+    angle_off_axial_film = OUT_FILM_C.gamma.magnitude  # Strip units for display
 
 
-Vaporization = Texttable()
-Vaporization.add_rows([["",'Dickerson Method', 'NASA Method'], ["Droplet Size (microns)", f"{D_f_Dickerson:.3f~} ", f"{D_f_NASA:.3f~} "]])
-Vaporization.add_row(["Required Vaporization Time", f"{Vaporize_time_Dickerson:.3f~} ", f"{Vaporize_time_NASA:.3f~} "],)
-Vaporization.add_row(["Required Travel Length", f"{Travel_Length_Dickerson:.3f~} ", f"{Travel_Length_NASA:.3f~} "])
-Vaporization.add_row(["Required Chamber Length", f"{Chamber_Length_Dickerson:.3f~} ", f"{Chamber_Length_NASA:.3f~} "])
-
-print(Injector_Parameters.draw())
-print(rounded_Table.draw())
-print(Vaporization.draw())
-
-# -------------- Constants and parameters -------------- #
-gamma_lox = OX_CORE.gamma.magnitude  # degrees and making the variables work below since i made the matlab version of this first and converted to python with ChatGPT
-gamma_fuel = FUEL_CORE.gamma.magnitude  # degrees
-Chamber_Cowl_r = 0.5  # in
-Past_Peak = 1.15 #some terrible constant for shitty chamber I made drawn
+    Injector_Parameters = Texttable()
+    Injector_Parameters.add_rows([["",'Oxidizer', 'Fuel', 'Film Cooling'], ["Prop Type","LOX", FuelName, FuelName]])
+    Injector_Parameters.add_row(["Angle off Axial (Deg)", angle_off_axial_ox, angle_off_axial_fuel, angle_off_axial_film])
+    Injector_Parameters.add_row(["Doublet Size", Doublet_Diameter_LOX,closest_Fuel_Diameter, closest_Film_Cool_Diameter ])
+    Injector_Parameters.add_row(["Drill Size", LOX_doublet_drill_size,fuel_Doublet_Drill, film_Cool_Doublet_Drill ])
+    Injector_Parameters.add_row(["Hole Number",OX_CORE.Number_Actual , FUEL_CORE.Number_Actual, OUT_FILM_C.Number_Actual ])
+    rounded_Table = Texttable()
+    rounded_Table.add_rows([["",'Unrounded Values', 'Rounded Values'], ["Fuel Angle off Axial (Deg)", angle_off_axial_fuel_original, angle_off_axial_fuel]])
+    rounded_Table.add_row(["Oxidizer Velocity", f"{OX_CORE.Velocity_init:.3f~}", f"{OX_CORE.Velocity_Actual:.3f~} "],)
+    rounded_Table.add_row(["Fuel Velocity", f"{FUEL_CORE.Velocity_init:.3f~}", f"{FUEL_CORE.Velocity_Actual:.3f~} "])
 
 
-# -------------- Plotting the aerospike nozzle contour -------------- #
-plt.figure()
-plt.plot(x_profile, y_profile, linewidth=2) 
-plt.axhline(0, linewidth=2, color="b")
+    Vaporization = Texttable()
+    Vaporization.add_rows([["",'Dickerson Method', 'NASA Method'], ["Droplet Size (microns)", f"{D_f_Dickerson:.3f~} ", f"{D_f_NASA:.3f~} "]])
+    Vaporization.add_row(["Required Vaporization Time", f"{Vaporize_time_Dickerson:.3f~} ", f"{Vaporize_time_NASA:.3f~} "],)
+    Vaporization.add_row(["Required Travel Length", f"{Travel_Length_Dickerson:.3f~} ", f"{Travel_Length_NASA:.3f~} "])
+    Vaporization.add_row(["Required Chamber Length", f"{Chamber_Length_Dickerson:.3f~} ", f"{Chamber_Length_NASA:.3f~} "])
+
+    print(Injector_Parameters.draw())
+    print(rounded_Table.draw())
+    print(Vaporization.draw())
+
+    # -------------- Constants and parameters -------------- #
+    gamma_lox = OX_CORE.gamma.magnitude  # degrees and making the variables work below since i made the matlab version of this first and converted to python with ChatGPT
+    gamma_fuel = FUEL_CORE.gamma.magnitude  # degrees
+    Chamber_Cowl_r = 0.5  # in
+    Past_Peak = 1.15 #some terrible constant for shitty chamber I made drawn
 
 
-# -------------- Calculations and Plotting for impingement point and Resultant Point -------------- #
-x = Spacing * np.sin(np.radians(90 + gamma_fuel)) / np.sin(np.radians(gamma_lox - gamma_fuel)) * np.sin(np.radians(90 - gamma_lox)) 
-y = Spacing * np.sin(np.radians(90 + gamma_fuel)) / np.sin(np.radians(gamma_lox - gamma_fuel)) * np.cos(np.radians(90 - gamma_lox)) + Rgamma_lox
-plt.plot(x, y, "o")
-yprime = (ri + Peaky) / 2
-xprime = Peakx
-plt.plot(xprime, yprime, "o")
+    # -------------- Plotting the aerospike nozzle contour -------------- #
+    plt.figure()
+    plt.plot(x_profile, y_profile, linewidth=2) 
+    plt.axhline(0, linewidth=2, color="b")
 
 
-# -------------- Creating all linspaces needed for the following plots -------------- #
-x_graph = np.linspace(0, max(x_profile), Points)
-x_angled_lines = np.linspace(0, x, Points)  # Up to the impingement point for FUEL line
-#print(FilmCoolingSpacing[0]* np.tan( np.pi / 2  - np.radians(IN_FILM_C.gamma.magnitude)))
-x_filmcooling_outer = np.linspace(0, FilmCoolingSpacing[0]* np.tan( np.pi / 2  - np.abs(np.radians(OUT_FILM_C.gamma.magnitude))), Points)
-thetaRange4 = np.linspace(np.radians(90), 0, Points)
+    # -------------- Calculations and Plotting for impingement point and Resultant Point -------------- #
+    x = Spacing * np.sin(np.radians(90 + gamma_fuel)) / np.sin(np.radians(gamma_lox - gamma_fuel)) * np.sin(np.radians(90 - gamma_lox)) 
+    y = Spacing * np.sin(np.radians(90 + gamma_fuel)) / np.sin(np.radians(gamma_lox - gamma_fuel)) * np.cos(np.radians(90 - gamma_lox)) + Rgamma_lox
+    plt.plot(x, y, "o")
+    yprime = (ri + Peaky) / 2
+    xprime = Peakx
+    plt.plot(xprime, yprime, "o")
 
 
-# -------------- Making and Plotting a Shitty Chamber Drawing  -------------- 
-ChamberX = x_graph / x_graph[-1] * Peakx * Past_Peak
-ChamberY = np.ones(len(ChamberX)) * ri
-ChamberArcX = ChamberX[-1] + Chamber_Cowl_r * np.cos(thetaRange4)
-ChamberArcY = ChamberY[-1] + Chamber_Cowl_r * (-1 + np.sin(thetaRange4))
-Chamber_ContourX = np.concatenate([ChamberX, ChamberArcX])
-Chamber_ContourY = np.concatenate([ChamberY, ChamberArcY])
-plt.plot(Chamber_ContourX, Chamber_ContourY, "k", linewidth=2)
-
-# -------------- Plotting Horizontal Lines axial lines (References for angles) -------------- #
-plt.axhline(Rgamma_lox, linestyle="--")
-plt.axhline(Rgamma_lox + Spacing, linestyle="--")
-plt.axhline(y, linestyle="--") #need y before this plot. THis is the horizontal line to represent the axial POV from the resultant angle
-plt.axhline((ri - FilmCoolingSpacing[0]) , linestyle="dotted")
-
-# -------------- Plotting the angled Prop Lines -------------- #
-gamma_lox_line = np.tan(np.radians(gamma_lox)) * x_angled_lines + Rgamma_lox
-plt.plot(x_angled_lines, gamma_lox_line,"g")
-gamma_fuel_line = np.tan(np.radians(gamma_fuel)) * x_angled_lines + Rgamma_lox + Spacing
-plt.plot(x_angled_lines, gamma_fuel_line,"r")
-
-# -------------- Plotting the film cooling lines -------------- #
-outercooling_line = np.tan(np.radians(OUT_FILM_C.gamma.magnitude)) * x_filmcooling_outer + ri - FilmCoolingSpacing[0] 
-plt.plot(x_filmcooling_outer, outercooling_line,"r")
+    # -------------- Creating all linspaces needed for the following plots -------------- #
+    x_graph = np.linspace(0, max(x_profile), Points)
+    x_angled_lines = np.linspace(0, x, Points)  # Up to the impingement point for FUEL line
+    #print(FilmCoolingSpacing[0]* np.tan( np.pi / 2  - np.radians(IN_FILM_C.gamma.magnitude)))
+    x_filmcooling_outer = np.linspace(0, FilmCoolingSpacing[0]* np.tan( np.pi / 2  - np.abs(np.radians(OUT_FILM_C.gamma.magnitude))), Points)
+    thetaRange4 = np.linspace(np.radians(90), 0, Points)
 
 
-# -------------- Plotting the resultant line -------------- #
-tan_resultant =     (OX_CORE.mdot.magnitude * OX_CORE.Velocity_Actual.magnitude * np.sin(np.deg2rad(OX_CORE.gamma.magnitude)) \
-    + FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity_Actual.magnitude * np.sin(np.deg2rad(FUEL_CORE.gamma.magnitude)))/ \
-    (OX_CORE.mdot.magnitude * OX_CORE.Velocity_Actual.magnitude * np.cos(np.deg2rad(OX_CORE.gamma.magnitude)) \
-    + FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity_Actual.magnitude * np.cos(np.deg2rad(FUEL_CORE.gamma.magnitude))) 
-resultant_y_intercept = y - tan_resultant * x
-ResultantX = x_graph / x_graph[-1] * (xprime - x) * Past_Peak + x
-ResultantY = tan_resultant * ResultantX + resultant_y_intercept
-plt.plot(ResultantX, ResultantY, "y", linewidth=2)
+    # -------------- Making and Plotting a Shitty Chamber Drawing  -------------- 
+    ChamberX = x_graph / x_graph[-1] * Peakx * Past_Peak
+    ChamberY = np.ones(len(ChamberX)) * ri
+    ChamberArcX = ChamberX[-1] + Chamber_Cowl_r * np.cos(thetaRange4)
+    ChamberArcY = ChamberY[-1] + Chamber_Cowl_r * (-1 + np.sin(thetaRange4))
+    Chamber_ContourX = np.concatenate([ChamberX, ChamberArcX])
+    Chamber_ContourY = np.concatenate([ChamberY, ChamberArcY])
+    plt.plot(Chamber_ContourX, Chamber_ContourY, "k", linewidth=2)
+
+    # -------------- Plotting Horizontal Lines axial lines (References for angles) -------------- #
+    plt.axhline(Rgamma_lox, linestyle="--")
+    plt.axhline(Rgamma_lox + Spacing, linestyle="--")
+    plt.axhline(y, linestyle="--") #need y before this plot. THis is the horizontal line to represent the axial POV from the resultant angle
+    plt.axhline((ri - FilmCoolingSpacing[0]) , linestyle="dotted")
+
+    # -------------- Plotting the angled Prop Lines -------------- #
+    gamma_lox_line = np.tan(np.radians(gamma_lox)) * x_angled_lines + Rgamma_lox
+    plt.plot(x_angled_lines, gamma_lox_line,"g")
+    gamma_fuel_line = np.tan(np.radians(gamma_fuel)) * x_angled_lines + Rgamma_lox + Spacing
+    plt.plot(x_angled_lines, gamma_fuel_line,"r")
+
+    # -------------- Plotting the film cooling lines -------------- #
+    outercooling_line = np.tan(np.radians(OUT_FILM_C.gamma.magnitude)) * x_filmcooling_outer + ri - FilmCoolingSpacing[0] 
+    plt.plot(x_filmcooling_outer, outercooling_line,"r")
 
 
-# -------------- Plotting the resultant error line And Error -------------- #
-a,b,c = -tan_resultant,1,-resultant_y_intercept
-Error = Q_(np.abs(a*xprime + b*yprime +c)/np.sqrt(a**2 + b**2),ureg.inch)
-print(f'The errors from rounding to nearest drill size, and half degree for angles: resulted in missing the target by {Error :.4f~}')
+    # -------------- Plotting the resultant line -------------- #
+    tan_resultant =     (OX_CORE.mdot.magnitude * OX_CORE.Velocity_Actual.magnitude * np.sin(np.deg2rad(OX_CORE.gamma.magnitude)) \
+        + FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity_Actual.magnitude * np.sin(np.deg2rad(FUEL_CORE.gamma.magnitude)))/ \
+        (OX_CORE.mdot.magnitude * OX_CORE.Velocity_Actual.magnitude * np.cos(np.deg2rad(OX_CORE.gamma.magnitude)) \
+        + FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity_Actual.magnitude * np.cos(np.deg2rad(FUEL_CORE.gamma.magnitude))) 
+    resultant_y_intercept = y - tan_resultant * x
+    ResultantX = x_graph / x_graph[-1] * (xprime - x) * Past_Peak + x
+    ResultantY = tan_resultant * ResultantX + resultant_y_intercept
+    plt.plot(ResultantX, ResultantY, "y", linewidth=2)
 
 
-# -------------- Plotting the arcs that show the angles -------------- #
-arc_lox = patches.Arc((0, Rgamma_lox), x, x, 
-                      angle=0, theta1=0, theta2=gamma_lox, color='green', label=f'Gamma_LOX: {gamma_lox} deg')
-plt.gca().add_patch(arc_lox)
-arc_fuel = patches.Arc((0, Rgamma_lox + Spacing), x, x, 
-                       angle=0, theta1=gamma_fuel, theta2=0, color='red', label=f'Gamma_FUEL: {gamma_fuel} deg')
-plt.gca().add_patch(arc_fuel)
-delta = Q_((np.arctan(tan_resultant)) *180 / np.pi, ureg.degrees)
-arc_delta = patches.Arc((x, y), 3*x, 3*x, 
-                       angle=0, theta1=0, theta2=delta.magnitude, color='y', label=f'Resultant_Angle: {delta} deg')
-plt.gca().add_patch(arc_delta)
-arc_filmcooling_outer = patches.Arc((0, (ri - FilmCoolingSpacing)), 1.5*x, 1.5*x, 
-                      angle=0, theta1=0, theta2=OUT_FILM_C.gamma.magnitude, color='red', label=f'Gamma_FilmCooling_Outer: {OUT_FILM_C.gamma.magnitude} deg')
-plt.gca().add_patch(arc_filmcooling_outer)
+    # -------------- Plotting the resultant error line And Error -------------- #
+    a,b,c = -tan_resultant,1,-resultant_y_intercept
+    Error = Q_(np.abs(a*xprime + b*yprime +c)/np.sqrt(a**2 + b**2),ureg.inch)
+    print(f'The errors from rounding to nearest drill size, and half degree for angles: resulted in missing the target by {Error :.4f~}')
 
 
-# -------------- Plotting the angles onto the graph for easier readibility -------------- #
-x_offset = -x/2  # Adjust as needed
-y_offset_lox = -3*(y - Rgamma_lox)/4  
-y_offset_fuel = 5*(Spacing + Rgamma_lox - y)/8  
-x_offset_delta = 3*(xprime-x)/4  
-y_offset_delta = 5*(yprime-y)/8
-x_offset_Filmcooling = x
-y_offset_Filmcooling_Outer =  FilmCoolingSpacing[0]/4
-FUEL_CORE_gamma_writing = abs(FUEL_CORE.gamma.magnitude)
-plt.text(x + x_offset,y + y_offset_lox, rf'$\gamma_{{\mathrm{{OX}}}}: {OX_CORE.gamma.magnitude:.2f}^\circ$', color='green')
-plt.text(x + x_offset,y + y_offset_fuel, rf'$\gamma_{{\mathrm{{F}}}}: {FUEL_CORE_gamma_writing:.2f}^\circ$', color='red')
-plt.text(x + x_offset_delta, y + y_offset_delta, rf'$\delta: {delta.magnitude:.2f}^\circ$', color='y')
-plt.text(x_offset_Filmcooling, (ri - FilmCoolingSpacing[0]) + y_offset_Filmcooling_Outer, rf'$\gamma_{{\mathrm{{FCO}}}}: {OUT_FILM_C.gamma.magnitude:.2f}^\circ$', color='red')
+    # -------------- Plotting the arcs that show the angles -------------- #
+    arc_lox = patches.Arc((0, Rgamma_lox), x, x, 
+                          angle=0, theta1=0, theta2=gamma_lox, color='green', label=f'Gamma_LOX: {gamma_lox} deg')
+    plt.gca().add_patch(arc_lox)
+    arc_fuel = patches.Arc((0, Rgamma_lox + Spacing), x, x, 
+                           angle=0, theta1=gamma_fuel, theta2=0, color='red', label=f'Gamma_FUEL: {gamma_fuel} deg')
+    plt.gca().add_patch(arc_fuel)
+    delta = Q_((np.arctan(tan_resultant)) *180 / np.pi, ureg.degrees)
+    arc_delta = patches.Arc((x, y), 3*x, 3*x, 
+                           angle=0, theta1=0, theta2=delta.magnitude, color='y', label=f'Resultant_Angle: {delta} deg')
+    plt.gca().add_patch(arc_delta)
+    arc_filmcooling_outer = patches.Arc((0, (ri - FilmCoolingSpacing)), 1.5*x, 1.5*x, 
+                          angle=0, theta1=0, theta2=OUT_FILM_C.gamma.magnitude, color='red', label=f'Gamma_FilmCooling_Outer: {OUT_FILM_C.gamma.magnitude} deg')
+    plt.gca().add_patch(arc_filmcooling_outer)
 
 
-# -------------- Extra Plotting Shit -------------- #
-plt.legend(['Spike Contour', 'Centerline', 'Impingement Point', 'Aim Point','Chamber Contour', 'Gamma_(OX) Straight Line', 'Gamma_(FUEL) Straight Line',
-            'Resultant Straight Line', 'Film Cooling Outer Straight Line',
-              f'Gamma_(OX) Angled Line {OX_CORE.gamma :.3f~}', 
-             f'Gamma_(FUEL) Angled Line {FUEL_CORE.gamma :.3f~}', 
-             f'Gamma_FilmCooling_Outer {OUT_FILM_C.gamma :.3f~}',
-             f'Resultant Line {delta :.3f~}'], loc="upper right", bbox_to_anchor=(1.05,.85), mode="expand")
-plt.subplots_adjust(left=0.06)
-plt.subplots_adjust(bottom=0.069)
-plt.subplots_adjust(right=0.7420)
-plt.subplots_adjust(top=0.9)
-plt.xlabel('Distance Along Engine Axis (inches)')
-plt.ylabel('Radius (inches)')
-plt.axis('equal')
-plt.title('Side View Contour of an Aerospike Nozzle')
-plt.grid(True)
-plt.show()
+    # -------------- Plotting the angles onto the graph for easier readibility -------------- #
+    x_offset = -x/2  # Adjust as needed
+    y_offset_lox = -3*(y - Rgamma_lox)/4  
+    y_offset_fuel = 5*(Spacing + Rgamma_lox - y)/8  
+    x_offset_delta = 3*(xprime-x)/4  
+    y_offset_delta = 5*(yprime-y)/8
+    x_offset_Filmcooling = x
+    y_offset_Filmcooling_Outer =  FilmCoolingSpacing[0]/4
+    FUEL_CORE_gamma_writing = abs(FUEL_CORE.gamma.magnitude)
+    plt.text(x + x_offset,y + y_offset_lox, rf'$\gamma_{{\mathrm{{OX}}}}: {OX_CORE.gamma.magnitude:.2f}^\circ$', color='green')
+    plt.text(x + x_offset,y + y_offset_fuel, rf'$\gamma_{{\mathrm{{F}}}}: {FUEL_CORE_gamma_writing:.2f}^\circ$', color='red')
+    plt.text(x + x_offset_delta, y + y_offset_delta, rf'$\delta: {delta.magnitude:.2f}^\circ$', color='y')
+    plt.text(x_offset_Filmcooling, (ri - FilmCoolingSpacing[0]) + y_offset_Filmcooling_Outer, rf'$\gamma_{{\mathrm{{FCO}}}}: {OUT_FILM_C.gamma.magnitude:.2f}^\circ$', color='red')
 
 
-# injector_cad_write()
+    # -------------- Extra Plotting Shit -------------- #
+    plt.legend(['Spike Contour', 'Centerline', 'Impingement Point', 'Aim Point','Chamber Contour', 'Gamma_(OX) Straight Line', 'Gamma_(FUEL) Straight Line',
+                'Resultant Straight Line', 'Film Cooling Outer Straight Line',
+                  f'Gamma_(OX) Angled Line {OX_CORE.gamma :.3f~}', 
+                 f'Gamma_(FUEL) Angled Line {FUEL_CORE.gamma :.3f~}', 
+                 f'Gamma_FilmCooling_Outer {OUT_FILM_C.gamma :.3f~}',
+                 f'Resultant Line {delta :.3f~}'], loc="upper right", bbox_to_anchor=(1.05,.85), mode="expand")
+    plt.subplots_adjust(left=0.06)
+    plt.subplots_adjust(bottom=0.069)
+    plt.subplots_adjust(right=0.7420)
+    plt.subplots_adjust(top=0.9)
+    plt.xlabel('Distance Along Engine Axis (inches)')
+    plt.ylabel('Radius (inches)')
+    plt.axis('equal')
+    plt.title('Side View Contour of an Aerospike Nozzle')
+    plt.grid(True)
+    plt.show()
+
+
+if __name__ == "__main__":
+    main()
