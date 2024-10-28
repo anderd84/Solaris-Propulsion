@@ -4,7 +4,7 @@ import numpy.typing as npt
 import matplotlib.pyplot as plt
 from scipy.optimize import fsolve
 import scipy.integrate as integrate
-from src.fluids.gas import mach2machStar, machStar2mach, PrandtlMeyerFunction, MachAngle, SpHeatRatio
+from fluids.gas import mach2machStar, machStar2mach, PrandtlMeyerFunction, MachAngle, SpHeatRatio
 
 def cot(x: float) -> float:
     return np.cos(x) / np.sin(x)

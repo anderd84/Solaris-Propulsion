@@ -1,5 +1,5 @@
 import numpy as np
-from src.fluids.gas import MachAngle, SpHeatRatio, PrandtlMeyerFunction, Isentropic1DExpansion
+from fluids.gas import MachAngle, SpHeatRatio, PrandtlMeyerFunction, Isentropic1DExpansion
 from dataclasses import dataclass
 
 @dataclass
