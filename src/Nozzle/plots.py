@@ -45,19 +45,30 @@ def PlotContour(fig: plt.Figure, contour: np.ndarray[ContourPoint | Characterist
     cx = [p.x for p in contour]
     cy = [p.r for p in contour]
 
-    cx.append((lipRadius - Rt)*np.tan(Tt))
-    cy.append(0)
+    if lipRadius == 1:
+        cx.append((lipRadius - Rt)*np.tan(Tt))
+        cy.append(0)
 
-    cx.append(cx[0])
-    cy.append(0)
+        cx.append(cx[0])
+        cy.append(0)
 
-    cx.append(cx[0])
-    cy.append(cy[0])
+        cx.append(cx[0])
+        cy.append(cy[0])
 
     ax.plot([0, (lipRadius - Rt)*np.tan(Tt)], [lipRadius, Rt], '-r', linewidth=2) # Throat
     ax.plot(cx, cy, '-k', linewidth=2) # Contour
     # ax.fill(cx, cy, 'k')
     
+    return fig
+
+def PlotPlug(fig: plt.Figure, plug: np.ndarray[ContourPoint]) -> plt.Figure:
+    ax = fig.axes[0]
+
+    x = [p.x for p in plug]
+    r = [p.r for p in plug]
+
+    ax.plot(x, r, '-k', linewidth=2)
+
     return fig
 
 def show3d(contour: np.ndarray):

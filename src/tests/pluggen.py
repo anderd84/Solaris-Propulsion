@@ -24,7 +24,7 @@ cont, field, outputData = plug.CreateRaoContour(exhaust, 300, 6200, 6.75, 15, Re
 Rt = outputData["radiusThroat"]
 Tt = outputData["thetaThroat"]
 ic(outputData["areaRatio"])
-ic(Tt)
+ic(np.rad2deg(Tt))
 phi = np.pi/2 + Tt
 Astar = np.pi/np.sin(phi) * (Re**2 - Rt**2)
 ic(Astar)
@@ -35,7 +35,10 @@ ic(Cf)
 ic(outputData["thetaLip"])
 
 fig = plots.CreateNonDimPlot()
-plots.PlotContour(fig, cont, Rt, Tt, Re)
-plots.PlotField(fig, field, Re)
+# plots.PlotContour(fig, cont, Rt, Tt, Re)
+# plots.PlotField(fig, field, Re)
+plugC = plug.GenerateDimPlug(cont, Rt, Tt, Re, 8, 2)
+cowlC = plug.GenerateDimCowl(cont, Rt, Tt, Re, 8, 3.5, .25)
+plots.PlotPlug(fig, plugC)
+plots.PlotPlug(fig, cowlC)
 plt.show()
-plots.WriteContourTXT(cont, "contour.txt")

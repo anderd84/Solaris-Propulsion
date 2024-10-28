@@ -8,7 +8,7 @@ def spike_contour(Points):
     angle2 = 83.62
     # Initial positions
     startX, startY = 0, 1
-    startX1, startY1 = 2, 1  # Adjusted based on given code
+    startX1, startY1 = 3.5, 1  # Adjusted based on given code
     BaseX = np.linspace(startX, startX1, Points)
     BaseY = np.linspace(startY, startY1, Points)
     # Calculating end points and start points for the arcs
