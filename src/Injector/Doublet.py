@@ -64,7 +64,6 @@ def InjectorParameters(ri: float ,Spacing: float , Rgamma_lox: float, Film_Cooli
 
     gamma_FUEL_original = fsolve(func, np.deg2rad(5)) 
     gamma_FUEL_original = Q_(np.rad2deg(gamma_FUEL_original[0]), ureg.degrees) 
-#    FUEL_CORE.gamma = Q_(np.rad2deg(gamma_FUEL_original.magnitude), ureg.degrees) 
     FUEL_CORE.gamma = Q_(round(gamma_FUEL_original.magnitude * 2)/2, ureg.degrees) 
 
 
@@ -72,6 +71,7 @@ def InjectorParameters(ri: float ,Spacing: float , Rgamma_lox: float, Film_Cooli
     # Initialize variables to track the closest match
     OX_CORE.Number(Doublet_Diameter_LOX, CD_drill, Pressure_Chamber * Pressure_Drop_Lox)
     FUEL_CORE_Diameter = np.sqrt((FUEL_CORE.Area(CD_drill, Pressure_Chamber * Pressure_Drop_Fuel) / OX_CORE.Hole_Number.magnitude) * 4 / np.pi)
+    Original_Fuel_Diameter = FUEL_CORE_Diameter
     target_hole_number = OX_CORE.Hole_Number.magnitude  # Target number of holes
     # Set initial values for the closest diameter match
     closest_diameter = FUEL_CORE_Diameter
@@ -103,7 +103,7 @@ def InjectorParameters(ri: float ,Spacing: float , Rgamma_lox: float, Film_Cooli
     FUEL_CORE.Number(closest_diameter, CD_drill, Pressure_Chamber * Pressure_Drop_Fuel)
     OX_CORE.Actual(Doublet_Diameter_LOX, OX_CORE.Hole_Number)
     FUEL_CORE.Actual(closest_diameter, OX_CORE.Hole_Number)
-    fuel_Doublet = [FUEL_CORE_Diameter, closest_diameter, drill_size]
+    fuel_Doublet = [ Original_Fuel_Diameter, closest_diameter, drill_size]
 
 
 
@@ -111,7 +111,8 @@ def InjectorParameters(ri: float ,Spacing: float , Rgamma_lox: float, Film_Cooli
     RFilmCooling = ri - FilmCoolingSpacing
     OuterFC_Number_Guess = np.ceil(2 * np.pi * RFilmCooling / 0.3)  # NASA spec: 0.3 inches between holes
    # Initial estimate for Outer Film Cooling hole diameter
-    OuterFC_Diameter = np.sqrt((OUT_FILM_C.Area(CD_drill, Pressure_Chamber * Pressure_Drop_Fuel) / OuterFC_Number_Guess) * 4 / np.pi)
+    OuterFC_Diameter = np.sqrt((OUT_FILM_C.Area(CD_drill, Pressure_Chamber * Pressure_Drop_Fuel) / OuterFC_Number_Guess) * 4 / np.pi)[0]
+    Original_Film_Cooling_Diameter = OuterFC_Diameter
     target_hole_number = OuterFC_Number_Guess  # Target number of holes for the outer film cooling
     # Set initial closest diameter and hole difference
     closest_diameter = OuterFC_Diameter
@@ -144,7 +145,7 @@ def InjectorParameters(ri: float ,Spacing: float , Rgamma_lox: float, Film_Cooli
     OUT_FILM_C.Number(closest_diameter, CD_drill, Pressure_Chamber * Pressure_Drop_Fuel)
     # Initialize the actual values for the selected diameter
     OUT_FILM_C.Actual(closest_diameter, OUT_FILM_C.Hole_Number)
-    film_Cool_Doublet = [OuterFC_Diameter, closest_diameter, drill_size]
+    film_Cool_Doublet = [Original_Film_Cooling_Diameter, closest_diameter, drill_size]
 
     # DROPLET SIZING
     # R. A. DlCKERSON method
@@ -196,9 +197,8 @@ def InjectorParameters(ri: float ,Spacing: float , Rgamma_lox: float, Film_Cooli
 def main():
     OX_CORE, FUEL_CORE, OUT_FILM_C, Dickerson, NASA, fuel_Doublet, film_Cool_Doublet, Doublet_Diameter_Fuel, gamma_FUEL_original, x_profile, y_profile, Peakx, Peaky = InjectorParameters(ri ,Spacing, Rgamma_lox, Film_Cooling, FilmCoolingSpacing, Pressure_Chamber,Doublet_Diameter_LOX, gammas,Lox_Dewar_Pressure, AirTemperature, AirPressure ,FuelName, spike_contour,Points)
 
-
-    fuel_Core_Diameter, closest_Fuel_Diameter, fuel_Doublet_Drill = fuel_Doublet
-    film_Cool_CORE_Diameter, closest_Film_Cool_Diameter, film_Cool_Doublet_Drill = film_Cool_Doublet
+    Original_Fuel_Diameter, closest_Fuel_Diameter, fuel_Doublet_Drill = fuel_Doublet
+    Original_Film_Cooling_Diameter, closest_Film_Cool_Diameter, film_Cool_Doublet_Drill = film_Cool_Doublet
     [D_f_Dickerson, Vaporize_time_Dickerson, Travel_Length_Dickerson, Chamber_Length_Dickerson] = Dickerson
     [D_f_NASA, Vaporize_time_NASA, Travel_Length_NASA, Chamber_Length_NASA] = NASA
     _, LOX_doublet_drill_size, _ = drill_approximation(Doublet_Diameter_LOX.magnitude)
@@ -216,6 +216,8 @@ def main():
     Injector_Parameters.add_row(["Hole Number",OX_CORE.Number_Actual , FUEL_CORE.Number_Actual, OUT_FILM_C.Number_Actual ])
     rounded_Table = Texttable()
     rounded_Table.add_rows([["",'Unrounded Values', 'Rounded Values'], ["Fuel Angle off Axial (Deg)", angle_off_axial_fuel_original, angle_off_axial_fuel]])
+    rounded_Table.add_row(["Fuel Diameter", f"{Original_Fuel_Diameter:.5f~}", closest_Fuel_Diameter],)
+    rounded_Table.add_row(["Film Cooling ", f"{Original_Film_Cooling_Diameter:.5f~}", closest_Film_Cool_Diameter],)
     rounded_Table.add_row(["Oxidizer Velocity", f"{OX_CORE.Velocity_init:.3f~}", f"{OX_CORE.Velocity_Actual:.3f~} "],)
     rounded_Table.add_row(["Fuel Velocity", f"{FUEL_CORE.Velocity_init:.3f~}", f"{FUEL_CORE.Velocity_Actual:.3f~} "])
 
