@@ -96,7 +96,7 @@ def GenerateDimPlug(contour: np.ndarray[nozzle.ContourPoint], throatRadius: floa
 
     straightSection = np.array([nozzle.ContourPoint(xSS[i], rSS[i]) for i in range(len(xSS))])
     
-    fullPlugContour = np.concat([throatArc, convergeLine, convergeArc, straightSection, contour], axis=0)
+    fullPlugContour = np.concatenate([throatArc, convergeLine, convergeArc, straightSection, contour], axis=0)
 
     return fullPlugContour
 
@@ -140,7 +140,7 @@ def GenerateDimCowl(contour: np.ndarray[nozzle.ContourPoint], throatRadius: floa
     outerCowl = np.insert(outerArc, 0, nozzle.ContourPoint(x1, r1))
     outerCowl = np.append(outerCowl, nozzle.ContourPoint(xL, rL))
 
-    fullCowl = np.concat([innerCowl, outerCowl[::-1]], axis=0)
+    fullCowl = np.concatenate([innerCowl, outerCowl[::-1]], axis=0)
     fullCowl = np.append(fullCowl, fullCowl[0])
 
     return fullCowl

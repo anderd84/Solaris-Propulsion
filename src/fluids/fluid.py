@@ -36,7 +36,7 @@ IspVac, Cstar, Tc, MW, gamma = Combustion.get_IvacCstrTc_ThtMwGam(Pc=Chamber_Pre
 MW = Q_(MW, ureg.pound / ureg.lbmol)
 R_universal = Q_(10.731577089016, ureg.psi * ureg.foot**3 / (ureg.lbmol * ureg.degR))  # Universal gas constant in ft·lbf/(lbmol·°R)
 R_specific = (R_universal / MW).to(ureg.foot * ureg.pound_force / (ureg.pound * ureg.degR))
-ic(R_specific)
+#ic(R_specific)
 
 
 class PROP:
@@ -149,8 +149,8 @@ def PROPFLOWS(Film_Cooling,gammas,Lox_Dewar_Pressure, AirTemperature, AirPressur
     OUT_FILM_C = PROP(gamma = gammas[2], mdot = Film_Cooling[0]* mdots[1], rho = FUEL_CORE.rho)
     IN_FILM_C = PROP(gamma = gammas[3], mdot = Film_Cooling[1]* mdots[1], rho = FUEL_CORE.rho)
  
-    print("checking that mdots were calculated right... error =", 
-          Q_(mdots[0], ureg.pound / ureg.second) + Q_(mdots[1], ureg.pound / ureg.second) - OX_CORE.mdot - FUEL_CORE.mdot - OUT_FILM_C.mdot - IN_FILM_C.mdot)
+#    print("checking that mdots were calculated right... error =", 
+#          Q_(mdots[0], ureg.pound / ureg.second) + Q_(mdots[1], ureg.pound / ureg.second) - OX_CORE.mdot - FUEL_CORE.mdot - OUT_FILM_C.mdot - IN_FILM_C.mdot)
         
 
 
