@@ -24,11 +24,11 @@ di = 5.5 #Internal Diameter of Chamber
 ri = di / 2 #Internal Radius of Chamber
 Spacing = 0.55  #Spacing between centear of impingement Holes
 Rgamma_lox = 1.25  #Radial distance between centerline and LOX hole
-Film_Cooling = np.array([0.15, 0.00]) #Outer Film Cooling Percentage, Inner Film Cooling Percentage
-FilmCoolingSpacing = np.array([.60, .25]) #inches Inner, Outer
+Film_Cooling = np.array([0.15]) #Outer Film Cooling Percentage
+FilmCoolingSpacing = np.array([.60]) #inches Outer
 Pressure_Chamber = Q_(Chamber_Press, ureg.force_pound / ureg.inch**2) #Chamber Pressure Pretty Obvious
 Doublet_Diameter_LOX = Q_(0.0625, ureg.inch)  #Design choise for DOublet Diameter size (Need to look more properly into it as 1/4 holes might make vaporization time too long)\
-gammas = np.array([25.,0,25,-25]) #Lox, fuel, outer FC, inner FC  #All Angles from axial
+gammas = np.array([25.,0,25]) #Lox, fuel, outer FC  #All Angles from axial
 Lox_Dewar_Pressure = 22
 AirTemperature = Q_(70, ureg.degF)
 AirPressure = Q_(12.2, ureg.force_pound / ureg.inch**2)
@@ -38,7 +38,7 @@ Points = 1000 #also used in other plots if this section ends up getting deleted
 def InjectorParameters(ri: float ,Spacing: float , Rgamma_lox: float, Film_Cooling: float, FilmCoolingSpacing: float, Pressure_Chamber: float,Doublet_Diameter_LOX: float
                        , gammas: float,Lox_Dewar_Pressure: float, AirTemperature: float, AirPressure: float ,FuelName, spike_contour: float, Points: float):
     # -------------- Prop Initialization -------------- #
-    OX_CORE,FUEL_CORE,OUT_FILM_C,IN_FILM_C,viscosity_f, specific_heat_p_f, thermal_conductivity_f, SurfaceTens_f = PROPFLOWS(Film_Cooling,gammas,Lox_Dewar_Pressure, AirTemperature, AirPressure ,  FuelName)
+    OX_CORE,FUEL_CORE,OUT_FILM_C,viscosity_f, specific_heat_p_f, thermal_conductivity_f, SurfaceTens_f = PROPFLOWS(Film_Cooling,gammas,Lox_Dewar_Pressure, AirTemperature, AirPressure ,  FuelName)
 
     # -------------- Function in DOublet to make my version of the SHitty Spike Contour -------------- #
     x_profile,y_profile = spike_contour(Points)
@@ -113,7 +113,7 @@ def InjectorParameters(ri: float ,Spacing: float , Rgamma_lox: float, Film_Cooli
 
 
     # -------------- Outer Film Cooling Holes -------------- #
-    RFilmCooling = ri - FilmCoolingSpacing[0]
+    RFilmCooling = ri - FilmCoolingSpacing
     OuterFC_Number_Guess = np.ceil(2 * np.pi * RFilmCooling / 0.3)  # NASA spec: 0.3 inches between holes
    # Initial estimate for Outer Film Cooling hole diameter
     OuterFC_Diameter = np.sqrt((OUT_FILM_C.Area(CD_drill, Pressure_Chamber * Pressure_Drop_Fuel) / OuterFC_Number_Guess) * 4 / np.pi)
@@ -196,12 +196,10 @@ def InjectorParameters(ri: float ,Spacing: float , Rgamma_lox: float, Film_Cooli
     Dickerson = [D_f_Dickerson, Vaporize_time_Dickerson, Travel_Length_Dickerson, Chamber_Length_Dickerson]
     NASA = [D_f_NASA, Vaporize_time_NASA, Travel_Length_NASA, Chamber_Length_NASA]
  
-    return OX_CORE, FUEL_CORE, IN_FILM_C, OUT_FILM_C, Dickerson, NASA, fuel_Doublet, film_Cool_Doublet, Doublet_Diameter_Fuel, gamma_FUEL_original, x_profile, y_profile, Peakx, Peaky
+    return OX_CORE, FUEL_CORE, OUT_FILM_C, Dickerson, NASA, fuel_Doublet, film_Cool_Doublet, Doublet_Diameter_Fuel, gamma_FUEL_original, x_profile, y_profile, Peakx, Peaky
 
 
-OX_CORE, FUEL_CORE, IN_FILM_C, OUT_FILM_C, Dickerson, NASA, fuel_Doublet, film_Cool_Doublet, Doublet_Diameter_Fuel, gamma_FUEL_original, x_profile, y_profile, Peakx, Peaky = InjectorParameters(ri ,Spacing, Rgamma_lox, Film_Cooling, FilmCoolingSpacing, Pressure_Chamber,Doublet_Diameter_LOX, gammas,Lox_Dewar_Pressure, AirTemperature, AirPressure ,FuelName, spike_contour,Points)
-# PLOTTING SHIT BELOW
-
+OX_CORE, FUEL_CORE, OUT_FILM_C, Dickerson, NASA, fuel_Doublet, film_Cool_Doublet, Doublet_Diameter_Fuel, gamma_FUEL_original, x_profile, y_profile, Peakx, Peaky = InjectorParameters(ri ,Spacing, Rgamma_lox, Film_Cooling, FilmCoolingSpacing, Pressure_Chamber,Doublet_Diameter_LOX, gammas,Lox_Dewar_Pressure, AirTemperature, AirPressure ,FuelName, spike_contour,Points)
 
 
 fuel_Core_Diameter, closest_Fuel_Diameter, fuel_Doublet_Drill = fuel_Doublet
@@ -263,7 +261,6 @@ plt.plot(xprime, yprime, "o")
 x_graph = np.linspace(0, max(x_profile), Points)
 x_angled_lines = np.linspace(0, x, Points)  # Up to the impingement point for FUEL line
 #print(FilmCoolingSpacing[0]* np.tan( np.pi / 2  - np.radians(IN_FILM_C.gamma.magnitude)))
-x_filmcooling_inner = np.linspace(0, FilmCoolingSpacing[1]* np.tan( np.pi / 2  - np.abs(np.radians(IN_FILM_C.gamma.magnitude))), Points)
 x_filmcooling_outer = np.linspace(0, FilmCoolingSpacing[0]* np.tan( np.pi / 2  - np.abs(np.radians(OUT_FILM_C.gamma.magnitude))), Points)
 thetaRange4 = np.linspace(np.radians(90), 0, Points)
 
@@ -281,7 +278,6 @@ plt.plot(Chamber_ContourX, Chamber_ContourY, "k", linewidth=2)
 plt.axhline(Rgamma_lox, linestyle="--")
 plt.axhline(Rgamma_lox + Spacing, linestyle="--")
 plt.axhline(y, linestyle="--") #need y before this plot. THis is the horizontal line to represent the axial POV from the resultant angle
-plt.axhline((y_profile[0] + FilmCoolingSpacing[1]) , linestyle="dotted")
 plt.axhline((ri - FilmCoolingSpacing[0]) , linestyle="dotted")
 
 # -------------- Plotting the angled Prop Lines -------------- #
@@ -291,8 +287,6 @@ gamma_fuel_line = np.tan(np.radians(gamma_fuel)) * x_angled_lines + Rgamma_lox +
 plt.plot(x_angled_lines, gamma_fuel_line,"r")
 
 # -------------- Plotting the film cooling lines -------------- #
-innercooling_line = np.tan(np.radians(IN_FILM_C.gamma.magnitude)) * x_filmcooling_inner + y_profile[0] + FilmCoolingSpacing[1] 
-plt.plot(x_filmcooling_inner, innercooling_line,"r")
 outercooling_line = np.tan(np.radians(OUT_FILM_C.gamma.magnitude)) * x_filmcooling_outer + ri - FilmCoolingSpacing[0] 
 plt.plot(x_filmcooling_outer, outercooling_line,"r")
 
@@ -325,10 +319,7 @@ delta = Q_((np.arctan(tan_resultant)) *180 / np.pi, ureg.degrees)
 arc_delta = patches.Arc((x, y), 3*x, 3*x, 
                        angle=0, theta1=0, theta2=delta.magnitude, color='y', label=f'Resultant_Angle: {delta} deg')
 plt.gca().add_patch(arc_delta)
-arc_filmcooling_inner = patches.Arc((0, (y_profile[0] + FilmCoolingSpacing[1])), 1.5*x, 1.5*x, 
-                      angle=0, theta1=IN_FILM_C.gamma.magnitude, theta2=0, color='red', label=f'Gamma_Filmcooling_Inner: {IN_FILM_C.gamma.magnitude} deg')
-plt.gca().add_patch(arc_filmcooling_inner)
-arc_filmcooling_outer = patches.Arc((0, (ri - FilmCoolingSpacing[0])), 1.5*x, 1.5*x, 
+arc_filmcooling_outer = patches.Arc((0, (ri - FilmCoolingSpacing)), 1.5*x, 1.5*x, 
                       angle=0, theta1=0, theta2=OUT_FILM_C.gamma.magnitude, color='red', label=f'Gamma_FilmCooling_Outer: {OUT_FILM_C.gamma.magnitude} deg')
 plt.gca().add_patch(arc_filmcooling_outer)
 
@@ -340,22 +331,19 @@ y_offset_fuel = 5*(Spacing + Rgamma_lox - y)/8
 x_offset_delta = 3*(xprime-x)/4  
 y_offset_delta = 5*(yprime-y)/8
 x_offset_Filmcooling = x
-y_offset_Filmcooling_Inner = -2*FilmCoolingSpacing[1]/4
 y_offset_Filmcooling_Outer =  FilmCoolingSpacing[0]/4
 FUEL_CORE_gamma_writing = abs(FUEL_CORE.gamma.magnitude)
 plt.text(x + x_offset,y + y_offset_lox, rf'$\gamma_{{\mathrm{{OX}}}}: {OX_CORE.gamma.magnitude:.2f}^\circ$', color='green')
 plt.text(x + x_offset,y + y_offset_fuel, rf'$\gamma_{{\mathrm{{F}}}}: {FUEL_CORE_gamma_writing:.2f}^\circ$', color='red')
 plt.text(x + x_offset_delta, y + y_offset_delta, rf'$\delta: {delta.magnitude:.2f}^\circ$', color='y')
-plt.text(x_offset_Filmcooling, (y_profile[0] + FilmCoolingSpacing[1]) + y_offset_Filmcooling_Inner, rf'$\gamma_{{\mathrm{{FCI}}}}: {IN_FILM_C.gamma.magnitude:.2f}^\circ$', color='red')
 plt.text(x_offset_Filmcooling, (ri - FilmCoolingSpacing[0]) + y_offset_Filmcooling_Outer, rf'$\gamma_{{\mathrm{{FCO}}}}: {OUT_FILM_C.gamma.magnitude:.2f}^\circ$', color='red')
 
 
 # -------------- Extra Plotting Shit -------------- #
 plt.legend(['Spike Contour', 'Centerline', 'Impingement Point', 'Aim Point','Chamber Contour', 'Gamma_(OX) Straight Line', 'Gamma_(FUEL) Straight Line',
-            'Resultant Straight Line', '(Film Cooling Inner) Straight Line', 'Film Cooling Outer Straight Line',
+            'Resultant Straight Line', 'Film Cooling Outer Straight Line',
               f'Gamma_(OX) Angled Line {OX_CORE.gamma :.3f~}', 
              f'Gamma_(FUEL) Angled Line {FUEL_CORE.gamma :.3f~}', 
-             f'Gamma_FilmCooling_Inner {IN_FILM_C.gamma :.3f~}',
              f'Gamma_FilmCooling_Outer {OUT_FILM_C.gamma :.3f~}',
              f'Resultant Line {delta :.3f~}'], loc="upper right", bbox_to_anchor=(1.05,.85), mode="expand")
 plt.subplots_adjust(left=0.06)
