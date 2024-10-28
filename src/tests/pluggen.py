@@ -4,17 +4,17 @@ from Nozzle import plots
 import matplotlib.pyplot as plt
 from icecream import ic
 import numpy as np
-import pint
+# import pint
 
-ureg = pint.UnitRegistry()
-ureg.default_system = 'US'
-Q_ = ureg.Quantity
+# ureg = pint.UnitRegistry()
+# ureg.default_system = 'US'
+# Q_ = ureg.Quantity
 
-exhaustt = gas.Gas(1.17, 287)
-exhaustt.Rgas = Q_(68.004, ureg.foot * ureg.force_pound / ureg.degR / ureg.pound)
-exhaustt.stagPress = Q_(300, ureg.psi)
-exhaustt.stagTemp = Q_(6200, ureg.degR)
-ic(exhaustt.getChokedArea(Q_(8, ureg.pound/ureg.second)).to(ureg.inch**2))
+# exhaustt = gas.Gas(1.17, 287)
+# exhaustt.Rgas = Q_(68.004, ureg.foot * ureg.force_pound / ureg.degR / ureg.pound)
+# exhaustt.stagPress = Q_(300, ureg.psi)
+# exhaustt.stagTemp = Q_(6200, ureg.degR)
+# ic(exhaustt.getChokedArea(Q_(8, ureg.pound/ureg.second)).to(ureg.inch**2))
 
 
 Re = 3
