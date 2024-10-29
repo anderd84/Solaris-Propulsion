@@ -1,5 +1,4 @@
 import pint
-from icecream import ic
 from ambiance import Atmosphere
 
 # -------------- Unit Shit -------------- #
