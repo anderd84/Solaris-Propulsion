@@ -1,6 +1,7 @@
 import numpy as np
 from dataclasses import dataclass
 from scipy.optimize import fsolve
+from General.units import Q_, unitReg
 
 @dataclass
 class SpHeatRatio:
@@ -43,9 +44,9 @@ class SpHeatRatio:
 
 class Gas:
     gammaTyp: SpHeatRatio
-    Rgas: float
-    stagTemp: float = 0
-    stagPress: float = 0
+    Rgas: Q_
+    stagTemp: Q_ = Q_(0, unitReg.degR)
+    stagPress: Q_ = Q_(0, unitReg.psi)
 
     def __init__(self, gamma: float, Rgas: float, **kwargs):
         self.gammaTyp = SpHeatRatio(gamma)
@@ -74,14 +75,14 @@ class Gas:
         return gammaNext
     
     def getChokedArea(self, mdot):
-        gamma1 = self.gammaTyp #self.getVariableGamma(1)
+        gamma1 = self.getVariableGamma(1)
         a = mdot*np.sqrt(self.stagTemp)/self.stagPress
         b = np.sqrt(gamma1/self.Rgas)*gamma1[1]**(-gamma1[1]*gamma1[3])
         return a/b
 
     @staticmethod
     def SimpleHarmonicGamma(gammaTyp: SpHeatRatio, temp: float):
-        THETA = 5500 # R
+        THETA = Q_(5500, unitReg.degR)
         tr = THETA/temp
         return SpHeatRatio(1 + (gammaTyp - 1)/(1 + (gammaTyp - 1)*((tr)**2)*(np.exp(tr))/(np.exp(tr) - 1)**2))
 
