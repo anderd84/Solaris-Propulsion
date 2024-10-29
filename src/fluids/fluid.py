@@ -7,9 +7,8 @@ import pyromat as pm
 import CoolProp.CoolProp as CP
 from icecream import ic
 from rocketprops.rocket_prop import get_prop
-
-
-
+from General.units import Q_, unitReg
+import General.design as DESIGN
 
 # -------------- Pyromat Shit -------------- #
 pm.config['unit_pressure'] = 'psi'
@@ -19,27 +18,11 @@ pm.config['unit_length'] = 'ft'
 pm.config['unit_volume'] = 'ft3'
 pm.config['unit_volume'] = 'ft3'
 pm.config['unit_temperature'] = 'Rankine'
-N2 = pm.get('mp.N2')
 LOX = pm.get('mp.O2')
-CO2 = pm.get('mp.CO2')
 
-# -------------- Unit Shit -------------- #
-unitReg = UnitRegistry()
-unitReg.default_system = 'US'
-Q_ = unitReg.Quantity
-unitReg.default_format = "~P"  # Compact unit formatting
-unitReg.define("lbmol = 453.59237 * mol")  # 1 lbmol = 453.59237 mol (since 1 lb = 453.59237 g)
-
-OF = 2.0
-TotalMdot = 8
-Chamber_Press = 300.0 #psia
-from rocketcea.cea_obj import CEA_Obj; Combustion=CEA_Obj(oxName='LOX', fuelName='RP-1');
-Combustion_Temp = Q_(Combustion.get_Tcomb(Pc=Chamber_Press, MR=OF), unitReg.degR)
-IspVac, Cstar, Tc, MW, gamma = Combustion.get_IvacCstrTc_ThtMwGam(Pc=Chamber_Press, MR=OF, eps=7.11)
-MW = Q_(MW, unitReg.pound / unitReg.lbmol)
-R_universal = Q_(10.731577089016, unitReg.psi * unitReg.foot**3 / (unitReg.lbmol * unitReg.degR))  # Universal gas constant in ft·lbf/(lbmol·°R)
-R_specific = (R_universal / MW).to(unitReg.foot * unitReg.pound_force / (unitReg.pound * unitReg.degR))
-#ic(R_specific)
+OF = DESIGN.OFratio
+TotalMdot = DESIGN.totalmdot
+Chamber_Press = DESIGN.chamberPressure
 
 
 class PROP:
@@ -50,9 +33,9 @@ class PROP:
             mdot (float): mdot of prop
             rho (float): density of prop
         """        
-        self.gamma = Q_(gamma, unitReg.degrees)
-        self.mdot = Q_(mdot, unitReg.pound / unitReg.second)
-        self.rho = Q_(rho, unitReg.pound / unitReg.foot**3)
+        self.gamma = gamma
+        self.mdot = mdot
+        self.rho = rho
 
 
     def Velocity(self,Cd , Pressure_Diff) -> float:
@@ -117,14 +100,14 @@ class PROP:
 
 
 # -------------- Constants -------------- #
-Prescott_pressure = Q_(12.04, unitReg.force_pound / unitReg.inch**2)
+Prescott_pressure = DESIGN.prescottAmbientPressure
 CD_drill = 0.7 #Constant for Sharp Edged Orifices         
 g0 = Q_(32.174, unitReg.foot / unitReg.second**2)
-JetADensity = 51.15666
+
 
 # -------------- Lox Dewar Pressure -------------- #
 def LOXDensity(Lox_Dewar_Pressure):
-    LOX_Absolute_Pressure = Q_(Lox_Dewar_Pressure, unitReg.force_pound / unitReg.inch**2) + Prescott_pressure
+    LOX_Absolute_Pressure = Lox_Dewar_Pressure + Prescott_pressure
     LOX_Sat_Temp = LOX.Ts(p=LOX_Absolute_Pressure.magnitude )
     LOX_Sat_Dens = LOX.ds(T=LOX_Sat_Temp)
     LOX_Sat_Dens = LOX_Sat_Dens[0][0]
@@ -137,15 +120,14 @@ Pressure_Drop_Lox = 0.2 #Pressure drop Percentage (ROT: Always in terms of Chamb
 
 
 # -------------- $ 4 Different PROP FLOWS -------------- #
-def PROPFLOWS(Film_Cooling,gammas,Lox_Dewar_Pressure, AirTemperature, AirPressure,fuel_name):
+def PROPFLOWS(Film_Cooling,oxImpingeAngle, fuelInitalImpingeAngle, filmImpingeAngle,Lox_Dewar_Pressure, AirTemperature, AirPressure,fuel_name):
     temperature_R = AirTemperature.to(unitReg.degR)
     pressure_psi = AirPressure.to(unitReg.psi)
     properties_fuel = get_fluid_properties(fuel_name,temperature_R.magnitude, pressure_psi.magnitude)
     (viscosity_f, specific_heat_p_f, gamma_f, thermal_conductivity_f, density_f, prandtl_f, alpha_f, thermal_diffusivity_f, SurfaceTens_f) = properties_fuel
-    mdots = np.array([OF*TotalMdot/(1+OF), TotalMdot/(1+OF)]) #LOX_CORE, FUEL_CORE lbm/s
-    OX_CORE = PROP(gamma=gammas[0], mdot=mdots[0], rho=LOXDensity(Lox_Dewar_Pressure))
-    FUEL_CORE = PROP(gamma = gammas[1], mdot = mdots[1]*(1 - Film_Cooling), rho=density_f) #gamma zero for this one because it's the initialized guess just making the FUEL CORE class requires it ( should change when moving to data classes)
-    OUT_FILM_C = PROP(gamma = gammas[2], mdot = Film_Cooling* mdots[1], rho = FUEL_CORE.rho)
+    OX_CORE = PROP(gamma=oxImpingeAngle, mdot=OF*TotalMdot/(1+OF), rho=Q_(LOXDensity(Lox_Dewar_Pressure), unitReg.pound / unitReg.foot**3))
+    FUEL_CORE = PROP(gamma = fuelInitalImpingeAngle, mdot = TotalMdot/(1+OF)*(1 - Film_Cooling), rho=density_f) #gamma zero for this one because it's the initialized guess just making the FUEL CORE class requires it ( should change when moving to data classes)
+    OUT_FILM_C = PROP(gamma =  filmImpingeAngle, mdot = Film_Cooling* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
  
 #    print("checking that mdots were calculated right... error =", 
 #          Q_(mdots[0], unitReg.pound / unitReg.second) + Q_(mdots[1], unitReg.pound / unitReg.second) - OX_CORE.mdot - FUEL_CORE.mdot - OUT_FILM_C.mdot - IN_FILM_C.mdot)
@@ -154,14 +136,6 @@ def PROPFLOWS(Film_Cooling,gammas,Lox_Dewar_Pressure, AirTemperature, AirPressur
 
     return OX_CORE,FUEL_CORE,OUT_FILM_C,viscosity_f, specific_heat_p_f, thermal_conductivity_f, SurfaceTens_f
 
-
-
-
-
-# -------------- $ Cooling Equations -------------- #
-#def bartzConv()
-#rp1 = get_prop("RP1")
-#rp1.summ_print()
 
 
 # Function to retrieve fluid properties using RocketProps defaults (English Engineering units)
