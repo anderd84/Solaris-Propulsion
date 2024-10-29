@@ -1,5 +1,4 @@
 *.pyc
-*.SLDPRT
 .vscode/*
 logs/*
 src/*.egg-info/*
