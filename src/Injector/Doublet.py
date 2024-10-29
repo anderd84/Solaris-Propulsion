@@ -16,23 +16,6 @@ from texttable import Texttable
         have A seperate figure for a 2D sketch of the hgoles to make visualization much much easier
 """
 
-
-# -------------- Design Inputs -------------- #    
-di = DESIGN.chamberInternalRadius #Internal Diameter of Chamber
-Spacing = DESIGN.Spacing  #Spacing between centear of impingement Holes
-Rgamma_lox = DESIGN.oxHoleRadius  #Radial distance between centerline and LOX hole
-Film_Cooling = DESIGN.percentFilmCooling #Outer Film Cooling Percentage
-FilmCoolingSpacing = DESIGN.filmCoolingSpacing #inches Outer
-Pressure_Chamber = DESIGN.chamberPressure #Chamber Pressure Pretty Obvious
-Doublet_Diameter_LOX = DESIGN.oxDoubletDiameter  #Design choise for DOublet Diameter size (Need to look more properly into it as 1/4 holes might make vaporization time too long)\
-oxImpingeAngle, fuelInitalImpingeAngle, filmImpingeAngle = DESIGN.oxImpingeAngle,0,DESIGN.filmImpingeAngle #Lox, fuel, outer FC  #All Angles from axial
-Lox_Dewar_Pressure = DESIGN.oxDewarPressure
-AirTemperature = DESIGN.prescottAmbientTemp
-AirPressure = DESIGN.prescottAmbientPressure
-FuelName = DESIGN.fuelName
-Points = 1000 #also used in other plots if this section ends up getting deleted
-
-
 def InjectorParameters(di: float ,Spacing: float , Rgamma_lox: float, Film_Cooling: float, FilmCoolingSpacing: float, Pressure_Chamber: float,Doublet_Diameter_LOX: float
                        , oxImpingeAngle:float, fuelInitalImpingeAngle:float, filmImpingeAngle:float,Lox_Dewar_Pressure: float, AirTemperature: float, AirPressure: float ,FuelName, spike_contour: float, Points: float):
     ri = di / 2 #Internal Radius of Chamber
@@ -200,6 +183,21 @@ def InjectorParameters(di: float ,Spacing: float , Rgamma_lox: float, Film_Cooli
     return OX_CORE, FUEL_CORE, OUT_FILM_C, Dickerson, NASA, fuel_Doublet, film_Cool_Doublet, Doublet_Diameter_Fuel, gamma_FUEL_original, x_profile, y_profile, Peakx, Peaky
 
 def main():
+    # -------------- Design Inputs -------------- #    
+    di = DESIGN.chamberInternalRadius #Internal Diameter of Chamber
+    Spacing = DESIGN.Spacing  #Spacing between centear of impingement Holes
+    Rgamma_lox = DESIGN.oxHoleRadius  #Radial distance between centerline and LOX hole
+    Film_Cooling = DESIGN.percentFilmCooling #Outer Film Cooling Percentage
+    FilmCoolingSpacing = DESIGN.filmCoolingSpacing #inches Outer
+    Pressure_Chamber = DESIGN.chamberPressure #Chamber Pressure Pretty Obvious
+    Doublet_Diameter_LOX = DESIGN.oxDoubletDiameter  #Design choise for DOublet Diameter size (Need to look more properly into it as 1/4 holes might make vaporization time too long)\
+    oxImpingeAngle, fuelInitalImpingeAngle, filmImpingeAngle = DESIGN.oxImpingeAngle,0,DESIGN.filmImpingeAngle #Lox, fuel, outer FC  #All Angles from axial
+    Lox_Dewar_Pressure = DESIGN.oxDewarPressure
+    AirTemperature = DESIGN.prescottAmbientTemp
+    AirPressure = DESIGN.prescottAmbientPressure
+    FuelName = DESIGN.fuelName
+    Points = 1000 #also used in other plots if this section ends up getting deleted
+           
     OX_CORE, FUEL_CORE, OUT_FILM_C, Dickerson, NASA, fuel_Doublet, film_Cool_Doublet, Doublet_Diameter_Fuel, gamma_FUEL_original, x_profile, y_profile, Peakx, Peaky = InjectorParameters(di ,Spacing, Rgamma_lox, Film_Cooling, FilmCoolingSpacing, Pressure_Chamber,Doublet_Diameter_LOX, oxImpingeAngle, fuelInitalImpingeAngle, filmImpingeAngle,Lox_Dewar_Pressure, AirTemperature, AirPressure ,FuelName, spike_contour,Points)
     ri = di/2
 
