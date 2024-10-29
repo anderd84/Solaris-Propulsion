@@ -99,6 +99,7 @@ def free_convection(beta, T_s, T_infinity, P_atm, D_outer):
         print("Raleigh number exceeds restriction")
     return Nu_D*k_f/D_outer
 
+
 # Testing
 # """ temperature_R = 700 * unitreg.degR  # Temperature in Rankine (~80°F)
 # pressure_psi = 14.7 * unitreg.psi  # Pressure in psi (1 atmosphere)

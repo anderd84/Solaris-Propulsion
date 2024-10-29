@@ -17,11 +17,14 @@ Rt = outputData["radiusThroat"]
 Tt = outputData["thetaThroat"]
 
 fig = plots.CreateNonDimPlot()
-plots.PlotContour(fig, cont, Rt, Tt, Re)
+# plots.PlotContour(fig, cont, Rt, Tt, Re)
+plugC = plug.GenerateDimPlug(cont, Rt, Tt, Re, 8, 1)
+cowlC = plug.GenerateDimCowl(cont, Rt, Tt, Re, 8, 3.5, .25)
+# plots.PlotPlug(fig, plugC)
 # plots.PlotField(fig, field, Re)
 # plt.show()
 
-cooling = domain.Domain(-.5, 3.5, 6, 3.5, 500, 500)
-cooling.DefineMaterials(np.array([]), np.array([]), np.array([]), cont, fig)
+cooling = domain.Domain(-8.5, 4, 15, 4, .025, .025)
+cooling.DefineMaterials(cowlC, np.array([]), np.array([]), plugC, fig)
 cooling.ShowMaterialPlot(fig)
 plt.show()

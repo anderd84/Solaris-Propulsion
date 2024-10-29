@@ -61,6 +61,16 @@ def PlotContour(fig: plt.Figure, contour: np.ndarray[ContourPoint | Characterist
     
     return fig
 
+def PlotPlug(fig: plt.Figure, plug: np.ndarray[ContourPoint]) -> plt.Figure:
+    ax = fig.axes[0]
+
+    x = [p.x for p in plug]
+    r = [p.r for p in plug]
+
+    ax.plot(x, r, '-k', linewidth=2)
+
+    return fig
+
 def show3d(contour: np.ndarray):
     fig = plt.figure()
     ax = fig.add_subplot(projection='3d')
