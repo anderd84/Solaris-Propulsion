@@ -215,7 +215,7 @@ class CharacteristicPoint:
 
         return CharacteristicPoint(x, r, theta, machStar, s, mach, alpha)
 
-    @staticmethod
+    @staticmethod #TODO Make this iterative
     def CalculateSolidReflect(point: 'CharacteristicPoint', isRight: bool, contour: np.ndarray[nozzle.ContourPoint], PbPc: float, workingGas: Gas) -> 'CharacteristicPoint':
         ic(isRight)
         PV = point.CalculateRightVariant(workingGas) if isRight else point.CalculateLeftVariant(workingGas)
@@ -232,7 +232,7 @@ class CharacteristicPoint:
 
         return CharacteristicPoint(x, r, theta, machStar, s, machStar2mach(machStar, workingGas.gammaTyp), MachAngle(machStar2mach(machStar, workingGas.gammaTyp)))
 
-    @staticmethod
+    @staticmethod #TODO make this iterative
     def CalculateGasReflect(point: 'CharacteristicPoint', isRight, PambPc, workingGas: Gas, streamline: np.ndarray['CharacteristicPoint']) -> 'CharacteristicPoint':
         PV = point.CalculateRightVariant(workingGas) if isRight else point.CalculateLeftVariant(workingGas)
         machInf = np.sqrt((PambPc**(-1/workingGas.gammaTyp[5]) - 1)/workingGas.gammaTyp[2])

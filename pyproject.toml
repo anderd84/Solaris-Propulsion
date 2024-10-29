@@ -11,7 +11,9 @@ dependencies = ["numpy",
 "pyromat",
 "rocketcea",
 "texttable",
-"rocketprops"
+"rocketprops",
+"pyyaml",
+"ambiance"
 ]
 version = "0.1.0"
 description = "A package for aerospike engine calculations"
