@@ -189,7 +189,7 @@ class CharacteristicPoint:
                 N = NN.clone()
                 del NN, NL, NR, L2, R2
 
-        ic("Failed to converge")
+        # ic("Failed to converge")
         return N
 
     @staticmethod
@@ -215,12 +215,13 @@ class CharacteristicPoint:
 
         return CharacteristicPoint(x, r, theta, machStar, s, mach, alpha)
 
-    @staticmethod
+    @staticmethod #TODO Make this iterative
     def CalculateSolidReflect(point: 'CharacteristicPoint', isRight: bool, contour: np.ndarray[nozzle.ContourPoint], PbPc: float, workingGas: Gas) -> 'CharacteristicPoint':
         ic(isRight)
         PV = point.CalculateRightVariant(workingGas) if isRight else point.CalculateLeftVariant(workingGas)
         # ic(PV)
         intersect, theta = CharacteristicPoint.CalculateSolidBoundaryIntersect(PV, contour, isRight)
+        ic(intersect)
         if intersect is None:
             return PV.clone()#CharacteristicPoint.CalculateGasReflect(point, isRight, PbPc, workingGas)
         
@@ -231,7 +232,7 @@ class CharacteristicPoint:
 
         return CharacteristicPoint(x, r, theta, machStar, s, machStar2mach(machStar, workingGas.gammaTyp), MachAngle(machStar2mach(machStar, workingGas.gammaTyp)))
 
-    @staticmethod
+    @staticmethod #TODO make this iterative
     def CalculateGasReflect(point: 'CharacteristicPoint', isRight, PambPc, workingGas: Gas, streamline: np.ndarray['CharacteristicPoint']) -> 'CharacteristicPoint':
         PV = point.CalculateRightVariant(workingGas) if isRight else point.CalculateLeftVariant(workingGas)
         machInf = np.sqrt((PambPc**(-1/workingGas.gammaTyp[5]) - 1)/workingGas.gammaTyp[2])
@@ -277,18 +278,20 @@ class CharacteristicPoint:
                 return (Bx, By), np.atan2((d - b),(c - a))
         return None, None
 
-def CalculateComplexField(contour, PambPc, PbPc, workingGas: Gas, Mt, Tt, Rsteps = 20, Lsteps = 0, reflections = 3):
+def CalculateComplexField(contour, PambPc, PbPc, workingGas: Gas, Mt, Tt, scale = 1, Rsteps = 20, Lsteps = 0, reflections = 3):
     gamma = workingGas.gammaTyp
     Me = np.sqrt((PambPc**(-1/gamma[5]) - 1)/gamma[2])
     thetaExit = Tt + gas.PrandtlMeyerFunction(Me, gamma) - gas.PrandtlMeyerFunction(Mt, gamma)
 
-    outerStreamLine = np.array([CharacteristicPoint(0, 1, thetaExit, mach2machStar(Me, gamma), 0, Me, MachAngle(Me))])
+    outerStreamLine = np.array([CharacteristicPoint(0, scale, thetaExit, mach2machStar(Me, gamma), 0, Me, MachAngle(Me))])
 
     rLines = np.empty((Rsteps, 1 + (Lsteps + Rsteps)*reflections), dtype=CharacteristicPoint)
     lLines = np.empty((Lsteps, 1 + (Lsteps + Rsteps)*reflections), dtype=CharacteristicPoint)
 
-    rLines[:, 0] = np.transpose(GenerateExpansionFan(Me, Mt, Tt, workingGas, Rsteps))
-    lLines[:, 0] = np.transpose(GenerateExpansionFan(Me, Mt, Tt, workingGas, Lsteps))
+    rLines[:, 0] = np.transpose(GenerateExpansionFan(Me, Mt, Tt, workingGas, Rsteps, scale))
+    lLines[:, 0] = np.transpose(GenerateExpansionFan(Me, Mt, Tt, workingGas, Lsteps, scale))
+
+    ic(rLines)
 
     for i in range(reflections):
         PropogateRegionAll(rLines, lLines, workingGas, i)
@@ -296,7 +299,7 @@ def CalculateComplexField(contour, PambPc, PbPc, workingGas: Gas, Mt, Tt, Rsteps
 
     return np.concatenate((rLines, lLines), axis=0), outerStreamLine
 
-def GenerateExpansionFan(machE: float, machT: float, thetaT: float, workingGas: Gas, arraySize: int):
+def GenerateExpansionFan(machE: float, machT: float, thetaT: float, workingGas: Gas, arraySize: int, scale = 1):
     gamma = workingGas.gammaTyp
     machs = np.linspace(machT, machE, arraySize) if machT > config.MIN_MOC_MACH else np.linspace(config.MIN_MOC_MACH, machE, arraySize)
 
@@ -304,7 +307,7 @@ def GenerateExpansionFan(machE: float, machT: float, thetaT: float, workingGas: 
 
     expansionFanArray = np.empty(arraySize, dtype=CharacteristicPoint)
     for i, mach in enumerate(machs):
-        expansionFanArray[i] = CharacteristicPoint(0, 1, thetas[i], mach2machStar(mach, gamma), 0, mach, MachAngle(mach))
+        expansionFanArray[i] = CharacteristicPoint(0, scale, thetas[i], mach2machStar(mach, gamma), 0, mach, MachAngle(mach))
 
     return expansionFanArray
 

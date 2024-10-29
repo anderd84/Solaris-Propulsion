@@ -1,6 +1,7 @@
 from Nozzle import plug
 from fluids import gas
 from Nozzle import plots
+from Nozzle import analysis
 import matplotlib.pyplot as plt
 from icecream import ic
 import numpy as np
@@ -41,4 +42,7 @@ plugC = plug.GenerateDimPlug(cont, Rt, Tt, Re, 8, 2)
 cowlC = plug.GenerateDimCowl(cont, Rt, Tt, Re, 8, 3.5, .25)
 plots.PlotPlug(fig, plugC)
 plots.PlotPlug(fig, cowlC)
+mat, stream = analysis.CalculateComplexField(cont, 14/300, 15/300, exhaust, 1, Tt, Re, 25, 0, 3)
+fig.axes[0].plot([p.x for p in stream], [p.r for p in stream], '--b', linewidth=1.5)
+analysis.PlotCharacteristicLines(fig, mat)
 plt.show()
