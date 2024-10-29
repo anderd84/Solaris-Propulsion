@@ -4,7 +4,7 @@ from Injector.InjectorCad import injector_cad_write
 from Injector.Drill import drill_approximation
 from scipy.optimize import fsolve
 import matplotlib.pyplot as plt
-from fluids.fluid import Q_, ureg, CD_drill, Pressure_Drop_Fuel, Pressure_Drop_Lox, PROPFLOWS, Chamber_Press
+from fluids.fluid import Q_, unitReg, CD_drill, Pressure_Drop_Fuel, Pressure_Drop_Lox, PROPFLOWS, Chamber_Press
 import numpy as np
 from icecream import ic
 from texttable import Texttable
@@ -16,22 +16,22 @@ from texttable import Texttable
 
 # -------------- Design Inputs -------------- #    
 di = 5.5 #Internal Diameter of Chamber
-ri = di / 2 #Internal Radius of Chamber
 Spacing = 0.55  #Spacing between centear of impingement Holes
 Rgamma_lox = 1.25  #Radial distance between centerline and LOX hole
-Film_Cooling = np.array([0.15]) #Outer Film Cooling Percentage
-FilmCoolingSpacing = np.array([.60]) #inches Outer
-Pressure_Chamber = Q_(Chamber_Press, ureg.force_pound / ureg.inch**2) #Chamber Pressure Pretty Obvious
-Doublet_Diameter_LOX = Q_(0.0625, ureg.inch)  #Design choise for DOublet Diameter size (Need to look more properly into it as 1/4 holes might make vaporization time too long)\
+Film_Cooling = 0.15 #Outer Film Cooling Percentage
+FilmCoolingSpacing = .60 #inches Outer
+Pressure_Chamber = Q_(Chamber_Press, unitReg.force_pound / unitReg.inch**2) #Chamber Pressure Pretty Obvious
+Doublet_Diameter_LOX = Q_(0.0625, unitReg.inch)  #Design choise for DOublet Diameter size (Need to look more properly into it as 1/4 holes might make vaporization time too long)\
 gammas = np.array([25.,0,25]) #Lox, fuel, outer FC  #All Angles from axial
 Lox_Dewar_Pressure = 22
-AirTemperature = Q_(70, ureg.degF)
-AirPressure = Q_(12.2, ureg.force_pound / ureg.inch**2)
+AirTemperature = Q_(70, unitReg.degF)
+AirPressure = Q_(12.2, unitReg.force_pound / unitReg.inch**2)
 FuelName = "RP-1" 
 Points = 1000 #also used in other plots if this section ends up getting deleted
 
-def InjectorParameters(ri: float ,Spacing: float , Rgamma_lox: float, Film_Cooling: float, FilmCoolingSpacing: float, Pressure_Chamber: float,Doublet_Diameter_LOX: float
+def InjectorParameters(di: float ,Spacing: float , Rgamma_lox: float, Film_Cooling: float, FilmCoolingSpacing: float, Pressure_Chamber: float,Doublet_Diameter_LOX: float
                        , gammas: float,Lox_Dewar_Pressure: float, AirTemperature: float, AirPressure: float ,FuelName, spike_contour: float, Points: float):
+    ri = di / 2 #Internal Radius of Chamber
     # -------------- Prop Initialization -------------- #
     OX_CORE,FUEL_CORE,OUT_FILM_C,viscosity_f, specific_heat_p_f, thermal_conductivity_f, SurfaceTens_f = PROPFLOWS(Film_Cooling,gammas,Lox_Dewar_Pressure, AirTemperature, AirPressure ,  FuelName)
 
@@ -63,8 +63,8 @@ def InjectorParameters(ri: float ,Spacing: float , Rgamma_lox: float, Film_Cooli
 
 
     gamma_FUEL_original = fsolve(func, np.deg2rad(5)) 
-    gamma_FUEL_original = Q_(np.rad2deg(gamma_FUEL_original[0]), ureg.degrees) 
-    FUEL_CORE.gamma = Q_(round(gamma_FUEL_original.magnitude * 2)/2, ureg.degrees) 
+    gamma_FUEL_original = Q_(np.rad2deg(gamma_FUEL_original[0]), unitReg.degrees) 
+    FUEL_CORE.gamma = Q_(round(gamma_FUEL_original.magnitude * 2)/2, unitReg.degrees) 
 
 
     # -------------- Main Doublets Holes -------------- #
@@ -81,7 +81,7 @@ def InjectorParameters(ri: float ,Spacing: float , Rgamma_lox: float, Film_Cooli
     while iterated > 0:
         # Calculate new diameter and corresponding hole count
         Doublet_Diameter_Fuel, drill_size, closest_index = drill_approximation(FUEL_CORE_Diameter.magnitude)
-        Doublet_Diameter_Fuel = Q_(Doublet_Diameter_Fuel, ureg.inch)
+        Doublet_Diameter_Fuel = Q_(Doublet_Diameter_Fuel, unitReg.inch)
         FUEL_CORE.Number(Doublet_Diameter_Fuel, CD_drill, Pressure_Chamber * Pressure_Drop_Fuel)
         # Calculate current difference in hole numbers
         hole_diff = np.abs(FUEL_CORE.Hole_Number.magnitude - target_hole_number)
@@ -94,9 +94,9 @@ def InjectorParameters(ri: float ,Spacing: float , Rgamma_lox: float, Film_Cooli
             break
         # Adjust diameter based on hole count difference
         if FUEL_CORE.Hole_Number.magnitude > target_hole_number:
-            FUEL_CORE_Diameter += Q_(0.0005, ureg.inch)
+            FUEL_CORE_Diameter += Q_(0.0005, unitReg.inch)
         else:
-            FUEL_CORE_Diameter -= Q_(0.0005, ureg.inch)
+            FUEL_CORE_Diameter -= Q_(0.0005, unitReg.inch)
         iterated -= 1
     # After exiting loop, set FUEL_CORE to the closest diameter found
     # Initialize the actual values for the selected diameter
@@ -122,7 +122,7 @@ def InjectorParameters(ri: float ,Spacing: float , Rgamma_lox: float, Film_Cooli
     while iterated > 0:
         # Determine the diameter and corresponding hole count
         Doublet_Diameter_OuterFC, drill_size, closest_index = drill_approximation(OuterFC_Diameter.magnitude)
-        Doublet_Diameter_OuterFC = Q_(Doublet_Diameter_OuterFC, ureg.inch)
+        Doublet_Diameter_OuterFC = Q_(Doublet_Diameter_OuterFC, unitReg.inch)
         OUT_FILM_C.Number(Doublet_Diameter_OuterFC, CD_drill, Pressure_Chamber * Pressure_Drop_Fuel)
 
         # Calculate the difference in hole numbers
@@ -136,9 +136,9 @@ def InjectorParameters(ri: float ,Spacing: float , Rgamma_lox: float, Film_Cooli
             break
         # Adjust diameter based on hole count difference
         if OUT_FILM_C.Hole_Number.magnitude > target_hole_number:
-            OuterFC_Diameter += Q_(0.0001, ureg.inch)
+            OuterFC_Diameter += Q_(0.0001, unitReg.inch)
         else:
-            OuterFC_Diameter -= Q_(0.0001, ureg.inch)
+            OuterFC_Diameter -= Q_(0.0001, unitReg.inch)
         iterated -= 1
 
     # After loop, set the closest diameter found
@@ -150,16 +150,16 @@ def InjectorParameters(ri: float ,Spacing: float , Rgamma_lox: float, Film_Cooli
     # DROPLET SIZING
     # R. A. DlCKERSON method
     D_f_Dickerson = Q_( 1e5 * np.power(Doublet_Diameter_Fuel.magnitude, 0.27) *  np.power(Doublet_Diameter_LOX.magnitude, 0.023) / \
-        (  np.power(FUEL_CORE.Velocity_Actual.magnitude, 0.74) * np.power(OX_CORE.Velocity_Actual.magnitude, 0.33)), ureg.micron   )
-    P_dynamic_OX = (0.5 * OX_CORE.rho * OX_CORE.Velocity_Actual**2).to(ureg.psi)
-    P_dynamic_FUEL = (0.5 * FUEL_CORE.rho * FUEL_CORE.Velocity_Actual**2).to(ureg.psi)
+        (  np.power(FUEL_CORE.Velocity_Actual.magnitude, 0.74) * np.power(OX_CORE.Velocity_Actual.magnitude, 0.33)), unitReg.micron   )
+    P_dynamic_OX = (0.5 * OX_CORE.rho * OX_CORE.Velocity_Actual**2).to(unitReg.psi)
+    P_dynamic_FUEL = (0.5 * FUEL_CORE.rho * FUEL_CORE.Velocity_Actual**2).to(unitReg.psi)
     # Now use these in the NASA SP-8089 droplet size calculation
     P_D = (P_dynamic_OX / P_dynamic_FUEL).magnitude
-    viscosity_shellwax = Q_(2.69e-3, ureg.pound / (ureg.foot * ureg.second))  # lbm/(ft-sec)
-    rho_shellwax = Q_(47.7, ureg.pound / ureg.foot**3)  # lbm/ft^3
-    SurfaceTens_shellwax = Q_(17, ureg.dyne / ureg.centimeter)  # dynes/cm
-    viscosity_f = viscosity_f.to(ureg.pound / (ureg.foot * ureg.second))
-    SurfaceTens_f = Q_(SurfaceTens_f.to(ureg.dyne / ureg.centimeter))
+    viscosity_shellwax = Q_(2.69e-3, unitReg.pound / (unitReg.foot * unitReg.second))  # lbm/(ft-sec)
+    rho_shellwax = Q_(47.7, unitReg.pound / unitReg.foot**3)  # lbm/ft^3
+    SurfaceTens_shellwax = Q_(17, unitReg.dyne / unitReg.centimeter)  # dynes/cm
+    viscosity_f = viscosity_f.to(unitReg.pound / (unitReg.foot * unitReg.second))
+    SurfaceTens_f = Q_(SurfaceTens_f.to(unitReg.dyne / unitReg.centimeter))
     # Assuming `FUEL_CORE.Viscosity`, `FUEL_CORE.Density`, and `FUEL_CORE.Surface_Tension` are defined
     # and contain the viscosity, density, and surface tension of the fuel, respectively.
     Pc_Pj = 2 #Ratio of the Core Max Velocity / Average Velocity Roughly 2
@@ -170,11 +170,11 @@ def InjectorParameters(ri: float ,Spacing: float , Rgamma_lox: float, Film_Cooli
         2.9e4 * np.power(FUEL_CORE.Velocity_Actual.magnitude, -0.766) * np.power(Pc_Pj, -0.65) * 
         np.power(P_D, 0.165) * np.power(Doublet_Diameter_Fuel.magnitude, 0.293) *
         np.power(Doublet_Diameter_LOX.magnitude / Doublet_Diameter_Fuel.magnitude, 0.023) * K_prop,
-        ureg.micron)
+        unitReg.micron)
     # VAPORIZATION TIME & CHAMBER LENGTH
-    B = 10 # B for most hydrocarbon fuels are between 5 & 20.
-    Vaporize_time_Dickerson = (FUEL_CORE.rho * specific_heat_p_f * (D_f_Dickerson/2)**2 / (2* thermal_conductivity_f * np.log(1 + B))).to(ureg.second)
-    Vaporize_time_NASA = (FUEL_CORE.rho * specific_heat_p_f * (D_f_NASA/2)**2 / (2* thermal_conductivity_f * np.log(1 + B))).to(ureg.second)
+    B = 26.8 # B for most hydrocarbon fuels are between 5 & 20.
+    Vaporize_time_Dickerson = (FUEL_CORE.rho * specific_heat_p_f * (D_f_Dickerson/2)**2 / (2* thermal_conductivity_f * np.log(1 + B))).to(unitReg.second)
+    Vaporize_time_NASA = (FUEL_CORE.rho * specific_heat_p_f * (D_f_NASA/2)**2 / (2* thermal_conductivity_f * np.log(1 + B))).to(unitReg.second)
     gamma_lox_rad = np.deg2rad(OX_CORE.gamma.magnitude)
     gamma_fuel_rad = np.deg2rad(FUEL_CORE.gamma.magnitude)
     # Calculate momentum components
@@ -184,9 +184,10 @@ def InjectorParameters(ri: float ,Spacing: float , Rgamma_lox: float, Film_Cooli
                   FUEL_CORE.mdot * FUEL_CORE.Velocity_Actual * np.sin(gamma_fuel_rad))
     Resultant_angle = np.arctan2(momentum_y,momentum_x)
     # Calculate total resultant impingement velocity from x and y components
-    V_impingement = (np.sqrt(momentum_x**2 + momentum_y**2) / (OX_CORE.mdot + FUEL_CORE.mdot)).to(ureg.feet / ureg.second)
-    Travel_Length_Dickerson = (V_impingement *Vaporize_time_Dickerson).to(ureg.inch)
-    Travel_Length_NASA = (V_impingement *Vaporize_time_NASA).to(ureg.inch)
+    V_impingement = (np.sqrt(momentum_x**2 + momentum_y**2) / (OX_CORE.mdot + FUEL_CORE.mdot)).to(unitReg.feet / unitReg.second)
+    ic(V_impingement)
+    Travel_Length_Dickerson = (V_impingement *Vaporize_time_Dickerson).to(unitReg.inch)
+    Travel_Length_NASA = (V_impingement *Vaporize_time_NASA).to(unitReg.inch)
     Chamber_Length_Dickerson = Travel_Length_Dickerson * np.cos(Resultant_angle)
     Chamber_Length_NASA = Travel_Length_NASA * np.cos(Resultant_angle)
     Dickerson = [D_f_Dickerson, Vaporize_time_Dickerson, Travel_Length_Dickerson, Chamber_Length_Dickerson]
@@ -195,7 +196,7 @@ def InjectorParameters(ri: float ,Spacing: float , Rgamma_lox: float, Film_Cooli
     return OX_CORE, FUEL_CORE, OUT_FILM_C, Dickerson, NASA, fuel_Doublet, film_Cool_Doublet, Doublet_Diameter_Fuel, gamma_FUEL_original, x_profile, y_profile, Peakx, Peaky
 
 def main():
-    OX_CORE, FUEL_CORE, OUT_FILM_C, Dickerson, NASA, fuel_Doublet, film_Cool_Doublet, Doublet_Diameter_Fuel, gamma_FUEL_original, x_profile, y_profile, Peakx, Peaky = InjectorParameters(ri ,Spacing, Rgamma_lox, Film_Cooling, FilmCoolingSpacing, Pressure_Chamber,Doublet_Diameter_LOX, gammas,Lox_Dewar_Pressure, AirTemperature, AirPressure ,FuelName, spike_contour,Points)
+    OX_CORE, FUEL_CORE, OUT_FILM_C, Dickerson, NASA, fuel_Doublet, film_Cool_Doublet, Doublet_Diameter_Fuel, gamma_FUEL_original, x_profile, y_profile, Peakx, Peaky = InjectorParameters(di ,Spacing, Rgamma_lox, Film_Cooling, FilmCoolingSpacing, Pressure_Chamber,Doublet_Diameter_LOX, gammas,Lox_Dewar_Pressure, AirTemperature, AirPressure ,FuelName, spike_contour,Points)
 
     Original_Fuel_Diameter, closest_Fuel_Diameter, fuel_Doublet_Drill = fuel_Doublet
     Original_Film_Cooling_Diameter, closest_Film_Cool_Diameter, film_Cool_Doublet_Drill = film_Cool_Doublet
@@ -301,7 +302,7 @@ def main():
 
     # -------------- Plotting the resultant error line And Error -------------- #
     a,b,c = -tan_resultant,1,-resultant_y_intercept
-    Error = Q_(np.abs(a*xprime + b*yprime +c)/np.sqrt(a**2 + b**2),ureg.inch)
+    Error = Q_(np.abs(a*xprime + b*yprime +c)/np.sqrt(a**2 + b**2),unitReg.inch)
     print(f'The errors from rounding to nearest drill size, and half degree for angles: resulted in missing the target by {Error :.4f~}')
 
 
@@ -312,7 +313,7 @@ def main():
     arc_fuel = patches.Arc((0, Rgamma_lox + Spacing), x, x, 
                            angle=0, theta1=gamma_fuel, theta2=0, color='red', label=f'Gamma_FUEL: {gamma_fuel} deg')
     plt.gca().add_patch(arc_fuel)
-    delta = Q_((np.arctan(tan_resultant)) *180 / np.pi, ureg.degrees)
+    delta = Q_((np.arctan(tan_resultant)) *180 / np.pi, unitReg.degrees)
     arc_delta = patches.Arc((x, y), 3*x, 3*x, 
                            angle=0, theta1=0, theta2=delta.magnitude, color='y', label=f'Resultant_Angle: {delta} deg')
     plt.gca().add_patch(arc_delta)
