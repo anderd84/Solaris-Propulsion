@@ -10,7 +10,7 @@ def setupLogging():
         os.makedirs("./logs", exist_ok=True)
 
         logger = logging.getLogger()
-        logger.setLevel(logging.INFO)
+        logger.setLevel(logging.DEBUG)
         formatter = logging.Formatter("[%(levelname)s] : %(message)s")
 
         fileH = logging.FileHandler(filename=f"./logs/{time.strftime('[%d-%m-%Y] %H-%M-%S')}.log")

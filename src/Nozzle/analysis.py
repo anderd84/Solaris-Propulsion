@@ -84,7 +84,7 @@ class CharacteristicPoint:
             R2 = R.NextIterationPoint(NR)
 
             NN = CharacteristicPoint.ApproxCharacteristicEqn(L2, R2, workingGas)
-            if np.abs((NN.theta - N.theta)/(NN.theta)) < 1e-6:
+            if np.abs((NN.theta - N.theta)/(NN.theta)) < tol:
                 logging.debug(f"Converged in {i} iterations")
                 return NN
             else:
@@ -117,9 +117,28 @@ class CharacteristicPoint:
 
         return CharacteristicPoint(x, r, theta, machStar, s, mach, alpha)
 
-    @staticmethod #TODO Make this iterative
-    def CalculateSolidReflect(point: 'CharacteristicPoint', isRight: bool, contour: np.ndarray[nozzle.ContourPoint], PbPc: float, workingGas: Gas) -> 'CharacteristicPoint':
+    @staticmethod
+    def CalculateSolidReflect(point: 'CharacteristicPoint', isRight: bool, contour: np.ndarray[nozzle.ContourPoint], PbPc: float, workingGas: Gas, tol = 1e-6) -> 'CharacteristicPoint':
         PV = point.CalculateRightVariant(workingGas) if isRight else point.CalculateLeftVariant(workingGas)
+        N = CharacteristicPoint.ApproxSolidReflect(PV, isRight, contour, PbPc, workingGas)
+
+        for i in range(30):
+            N2 = N.CalculateRightVariant(workingGas) if isRight else N.CalculateLeftVariant(workingGas)
+            N2 = PV.NextIterationPoint(N2)
+
+            NN = CharacteristicPoint.ApproxSolidReflect(N2, isRight, contour, PbPc, workingGas)
+            if np.abs((NN.theta - N.theta)/(NN.theta)) < tol:
+                logging.debug(f"Solid Converged in {i} iterations")
+                return NN
+            else:
+                N = NN.clone()
+                del NN, N2
+
+        logging.debug(f"Solid Did not converge in 30 iterations")
+        return N
+
+    @staticmethod #TODO Make this iterative
+    def ApproxSolidReflect(PV: 'CharacteristicPoint', isRight: bool, contour: np.ndarray[nozzle.ContourPoint], PbPc: float, workingGas: Gas) -> 'CharacteristicPoint':
         # ic(PV)
         intersect, theta = CharacteristicPoint.CalculateSolidBoundaryIntersect(PV, contour, isRight)
         if intersect is None:
@@ -132,9 +151,28 @@ class CharacteristicPoint:
 
         return CharacteristicPoint(x, r, theta, machStar, s, machStar2mach(machStar, workingGas.gammaTyp), MachAngle(machStar2mach(machStar, workingGas.gammaTyp)))
 
-    @staticmethod #TODO make this iterative
-    def CalculateGasReflect(point: 'CharacteristicPoint', isRight, PambPc, workingGas: Gas, streamline: np.ndarray['CharacteristicPoint']) -> 'CharacteristicPoint':
+    @staticmethod
+    def CalculateGasReflect(point: 'CharacteristicPoint', isRight: bool, PambPc: float, workingGas: Gas, streamline: np.ndarray['CharacteristicPoint'], tol = 1e-6) -> 'CharacteristicPoint':
         PV = point.CalculateRightVariant(workingGas) if isRight else point.CalculateLeftVariant(workingGas)
+        N = CharacteristicPoint.ApproxGasReflect(PV, isRight, PambPc, workingGas, streamline)
+
+        for i in range(30):
+            N2 = N.CalculateRightVariant(workingGas) if isRight else N.CalculateLeftVariant(workingGas)
+            N2 = PV.NextIterationPoint(N2)
+
+            NN = CharacteristicPoint.ApproxGasReflect(N2, isRight, PambPc, workingGas, streamline)
+            if np.abs((NN.theta - N.theta)/(NN.theta)) < tol:
+                logging.debug(f"Gas Converged in {i} iterations")
+                return NN
+            else:
+                N = NN.clone()
+                del NN, N2
+
+        logging.debug(f"Gas Did not converge in 30 iterations")
+        return N
+
+    @staticmethod #TODO make this iterative
+    def ApproxGasReflect(PV: 'CharacteristicPoint', isRight, PambPc, workingGas: Gas, streamline: np.ndarray['CharacteristicPoint']) -> 'CharacteristicPoint':
         machInf = np.sqrt((PambPc**(-1/workingGas.gammaTyp[5]) - 1)/workingGas.gammaTyp[2])
         streamPoint: CharacteristicPoint = streamline[-1]
 
@@ -151,8 +189,6 @@ class CharacteristicPoint:
         theta = PV.theta - PV.G*(machStar - PV.machStar) - PV.H*(x - PV.x) - PV.J*(s - PV.s)
 
         return CharacteristicPoint(x, r, theta, machStar, s, machStar2mach(machStar, workingGas.gammaTyp), MachAngle(machStar2mach(machStar, workingGas.gammaTyp)))
-
-
 
     @staticmethod
     def CaclulateBaseReflect():
