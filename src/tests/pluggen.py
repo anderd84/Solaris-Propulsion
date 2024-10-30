@@ -5,6 +5,8 @@ from Nozzle import analysis
 import matplotlib.pyplot as plt
 from icecream import ic
 import numpy as np
+import General.design as DESIGN
+from General.units import Q_, unitReg
 # import pint
 
 # ureg = pint.UnitRegistry()
@@ -18,10 +20,10 @@ import numpy as np
 # ic(exhaustt.getChokedArea(Q_(8, ureg.pound/ureg.second)).to(ureg.inch**2))
 
 
-Re = 3
-exhaust = gas.Gas(1.17, 287)
+Re = Q_(2.5, unitReg.inch)
+exhaust = DESIGN.exhaustGas
 
-cont, field, outputData = plug.CreateRaoContour(exhaust, 300, 6200, 6.75, 15, Re, 5)
+cont, field, outputData = plug.CreateRaoContour(exhaust, DESIGN.chamberPressure, DESIGN.designAmbientPressure, DESIGN.basePressure, Re, DESIGN.lengthMax)
 Rt = outputData["radiusThroat"]
 Tt = outputData["thetaThroat"]
 ic(outputData["areaRatio"])
@@ -38,11 +40,11 @@ ic(outputData["thetaLip"])
 fig = plots.CreateNonDimPlot()
 # plots.PlotContour(fig, cont, Rt, Tt, Re)
 # plots.PlotField(fig, field, Re)
-plugC = plug.GenerateDimPlug(cont, Rt, Tt, Re, 8, 2)
-cowlC = plug.GenerateDimCowl(cont, Rt, Tt, Re, 8, 3.5, .25)
+plugC = plug.GenerateDimPlug(cont, Rt, Tt, Re, Q_(8, unitReg.inch), Q_(2, unitReg.inch))
+cowlC = plug.GenerateDimCowl(cont, Rt, Tt, Re, Q_(8, unitReg.inch), DESIGN.maxRadius, DESIGN.wallThickness)
 plots.PlotPlug(fig, plugC)
 plots.PlotPlug(fig, cowlC)
-mat, stream = analysis.CalculateComplexField(cont, 14/300, 15/300, exhaust, 1, Tt, Re, 25, 0, 3)
+mat, stream = analysis.CalculateComplexField(cont, 14/300, 15/300, exhaust, 1, Tt, Re.magnitude, 25, 0, 3)
 fig.axes[0].plot([p.x for p in stream], [p.r for p in stream], '--b', linewidth=1.5)
 analysis.PlotCharacteristicLines(fig, mat)
 plt.show()

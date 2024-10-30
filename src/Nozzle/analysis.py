@@ -9,6 +9,9 @@ import Nozzle.nozzle as nozzle
 from icecream import ic
 import Nozzle.config as config
 from General.units import Q_, unitReg
+import logging
+from General.setenv import setupLogging
+setupLogging()
 
 @dataclass
 class CharacteristicPoint:
@@ -32,7 +35,7 @@ class CharacteristicPoint:
         return CharacteristicPoint(self.x, self.r, self.theta, self.machStar, self.s, self.mach, self.alpha)
 
     def CalculateRightVariant(self, gas: Gas) -> 'CharacteristicPoint': # I characteristic
-        Rgas = gas.Rgas
+        Rgas = gas.Rgas.magnitude
         gamma = gas.gammaTyp
         RV = self.clone()
         RV.F = np.tan(RV.theta - RV.alpha)
@@ -42,7 +45,7 @@ class CharacteristicPoint:
         return RV
 
     def CalculateLeftVariant(self, gas: Gas) -> 'CharacteristicPoint': # II characteristic
-        Rgas = gas.Rgas
+        Rgas = gas.Rgas.magnitude
         gamma = gas.gammaTyp
         LV = self.clone()
         LV.F = np.tan(LV.theta + LV.alpha)
@@ -82,13 +85,13 @@ class CharacteristicPoint:
 
             NN = CharacteristicPoint.ApproxCharacteristicEqn(L2, R2, workingGas)
             if np.abs((NN.theta - N.theta)/(NN.theta)) < 1e-6:
-                # ic(f"Converged in {i} iterations")
+                logging.debug(f"Converged in {i} iterations")
                 return NN
             else:
                 N = NN.clone()
                 del NN, NL, NR, L2, R2
 
-        # ic("Failed to converge")
+        logging.debug(f"Did not converge in 30 iterations")
         return N
 
     @staticmethod
@@ -116,11 +119,9 @@ class CharacteristicPoint:
 
     @staticmethod #TODO Make this iterative
     def CalculateSolidReflect(point: 'CharacteristicPoint', isRight: bool, contour: np.ndarray[nozzle.ContourPoint], PbPc: float, workingGas: Gas) -> 'CharacteristicPoint':
-        ic(isRight)
         PV = point.CalculateRightVariant(workingGas) if isRight else point.CalculateLeftVariant(workingGas)
         # ic(PV)
         intersect, theta = CharacteristicPoint.CalculateSolidBoundaryIntersect(PV, contour, isRight)
-        ic(intersect)
         if intersect is None:
             return PV.clone()#CharacteristicPoint.CalculateGasReflect(point, isRight, PbPc, workingGas)
         
@@ -161,7 +162,6 @@ class CharacteristicPoint:
     def CalculateSolidBoundaryIntersect(point: 'CharacteristicPoint', contour: np.ndarray[nozzle.ContourPoint], isRight: bool) -> tuple[float, float] | None:        
         Sx, Sy = point.x, point.r
         angle = point.theta - point.alpha if isRight else point.theta + point.alpha
-        ic(np.rad2deg(angle))
 
         for j in range(len(contour) - 1):
             a, b, c, d = contour[j].x, contour[j].r, contour[j+1].x, contour[j+1].r
@@ -239,10 +239,6 @@ def ReflectionRegion(lines: np.ndarray[CharacteristicPoint], X0, Y0, contour, Pa
     region[1:,0] = lines[:,start-1]
     region[0,1:] = np.transpose(lines[:,start-1])
 
-    # plt.ion()
-    # fig = post.CreateNonDimPlot()
-    # post.PlotContour(fig, contour, 0, 0)
-
     for i in range(1, X0+1):
         for j in range(1, i+1):
             isRight = not (reflection % 2 == 0) ^ startAsRight
@@ -255,26 +251,6 @@ def ReflectionRegion(lines: np.ndarray[CharacteristicPoint], X0, Y0, contour, Pa
                 region[i,j] = CharacteristicPoint.CalculateFieldPoint(region[i-1,j], region[i,j-1], workingGas) if isRight else CharacteristicPoint.CalculateFieldPoint(region[i,j-1], region[i-1,j], workingGas)
                 region[j, i] = region[i, j].clone()
 
-            # if i != j:
-            #     fig.axes[0].plot(region[i-1, j].x, region[i-1, j].r, 'or')
-            #     fig.axes[0].plot(region[i, j-1].x, region[i, j-1].r, 'ob')
-            #     fig.axes[0].plot(region[i, j].x, region[i, j].r, 'og')
-            #     fig.axes[0].legend(['', 'Nozzle', 'Left', 'Right', 'Current'])
-            # else:
-            #     fig.axes[0].plot(region[i, j-1].x, region[i, j-1].r, 'ob')
-            #     fig.axes[0].plot(region[i, j].x, region[i, j].r, 'og')
-            #     fig.axes[0].legend(['', 'Nozzle', 'Previous', 'Current'])
-
-            # PlotComplexField(fig, region)
-            # fig.canvas.draw()
-            # fig.canvas.flush_events()
-            # plt.waitforbuttonpress()
-            # xlims = fig.axes[0].get_xlim()
-            # ylims = fig.axes[0].get_ylim()
-            # fig.axes[0].clear()
-            # post.PlotContour(fig, contour, 0, 0)
-            # fig.axes[0].set_xlim(xlims)
-            # fig.axes[0].set_ylim(ylims)
     lines[:, start:start+X0] = region[1:,1:]
     return lines, streamline
 
