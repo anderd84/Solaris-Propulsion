@@ -15,7 +15,7 @@ OFratio = 2
 # geometry
 chamberPressure = Q_(300, unitReg.psi)
 totalmdot = Q_(8, unitReg.pound / unitReg.sec)
-maxRadius = Q_(6, unitReg.inch)
+maxRadius = Q_(3, unitReg.inch)
 wallThickness = Q_(0.25, unitReg.inch)
 
 # injector inputs
