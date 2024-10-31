@@ -119,6 +119,9 @@ def GenerateDimCowl(contour: np.ndarray[nozzle.ContourPoint], throatRadius: Q_, 
 
     alpha = np.deg2rad(designTable["straightAngle"]) + absThetaT
 
+
+
+
     Amat = np.array([[0, np.sin(alpha), np.cos(alpha)], 
                      [1, np.cos(alpha), -np.sin(alpha)],
                      [1, 1, 0]])
