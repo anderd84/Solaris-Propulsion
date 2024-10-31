@@ -5,12 +5,12 @@ from scipy.optimize import fsolve
 from icecream import ic
 
 #from Doublet import OX_CORE, FUEL_CORE
-from fluids.fluid import Q_, unitreg, CD_drill, Pressure_Drop_Fuel, \
+from fluids.fluid import CD_drill, Pressure_Drop_Fuel, \
                          Pressure_Drop_Lox,  pm, get_fluid_properties, CP
 from Injector.Doublet_Functions import spike_contour
 from Injector.InjectorCad import injector_cad_write
 from Injector.Drill import drill_approximation
-from generalInput import Q_, unitreg
+from General.units import Q_, unitReg
 
 #First step always is to update doublet.py file and run beforehand to grab all mdot and density values at injector side
 
@@ -25,18 +25,18 @@ def combustion_convection(mu, c_p, Pr, P_0, c_star, D_star, A_star, A, r_c,
                           Ma, T_wg, T_0g, gamma):
     # Bartz's Correlation for combustion side
     # Inputs (Combustion gases)
-    mu = mu.to(unitreg.pound / unitreg.foot / unitreg.second)  # Dynamic viscosity at stagnation conditions
-    c_p = c_p.to(unitreg.BTU / unitreg.pound / unitreg.degR)    # Specific heat at stagnation conditions
+    mu = mu.to(unitReg.pound / unitReg.foot / unitReg.second)  # Dynamic viscosity at stagnation conditions
+    c_p = c_p.to(unitReg.BTU / unitReg.pound / unitReg.degR)    # Specific heat at stagnation conditions
     # Pr = 2.45       # Prandtl number at stagnation conditions
-    P_0 = P_0.to(unitreg.pound / unitreg.inch**2)   # Stagnation pressure
-    c_star = c_star.to(unitreg.feet / unitreg.s) # Characteristic velocity
-    D_star = D_star.to(unitreg.feet)      # Throat diameter (as hydraulic diameter, 4*A_c/P)
-    A_star = A_star.to(unitreg.inch**2)      # Throat area
-    A = A.to(unitreg.inch**2)           # Nozzle area at location of interest
-    r_c = r_c.to(unitreg.inch)   # Throat radius of curvature
+    P_0 = P_0.to(unitReg.pound / unitReg.inch**2)   # Stagnation pressure
+    c_star = c_star.to(unitReg.feet / unitReg.s) # Characteristic velocity
+    D_star = D_star.to(unitReg.feet)      # Throat diameter (as hydraulic diameter, 4*A_c/P)
+    A_star = A_star.to(unitReg.inch**2)      # Throat area
+    A = A.to(unitReg.inch**2)           # Nozzle area at location of interest
+    r_c = r_c.to(unitReg.inch)   # Throat radius of curvature
     # Ma = 0          # Local Mach number
-    T_wg = T_wg.to(unitreg.degR)     # Hot side wall temperature
-    T_0g = T_0g.to(unitreg.degR)  # Hot gas stagnation temperature
+    T_wg = T_wg.to(unitReg.degR)     # Hot side wall temperature
+    T_0g = T_0g.to(unitReg.degR)  # Hot gas stagnation temperature
     omega = 0.6     # for diatomic gases
     # gamma = 1.145   # Ratio of specific heats, assumed to be constant
 
@@ -51,20 +51,20 @@ def func(f, *data):
 def internal_flow_convection(epsilon, m_dot_c, NumberofChannels, rho, v, A_c, P, Pr, mu, k_c, mu_s):
     # Gnielinski/Sieder & Tate for channel side
     # Inputs (Cooling channel)
-    epsilon = epsilon.to(unitreg.inch)     # Surface roughness
-    m_dot_c = m_dot_c.to(unitreg.pound / unitreg.second) / NumberofChannels     # Coolant mass flow rate through one channel
-    rho = rho.to(unitreg.pound / unitreg.inch**3)  # Coolant density
-    v = v.to(unitreg.feet / unitreg.s)      # Coolant velocity along channel
-    D_h = D_h.to(unitreg.inch)     # Hydraulic diameter of cooling channel
+    epsilon = epsilon.to(unitReg.inch)     # Surface roughness
+    m_dot_c = m_dot_c.to(unitReg.pound / unitReg.second) / NumberofChannels     # Coolant mass flow rate through one channel
+    rho = rho.to(unitReg.pound / unitReg.inch**3)  # Coolant density
+    v = v.to(unitReg.feet / unitReg.s)      # Coolant velocity along channel
+    D_h = D_h.to(unitReg.inch)     # Hydraulic diameter of cooling channel
     # Pr = 1      # Prandtl number (likely an array)
-    mu = mu.to(unitreg.pound / unitreg.foot / unitreg.second)   # Dynamic viscosity (likely an array)
-    k_c = k_c.to(unitreg.BTU / unitreg.foot / unitreg.hour / unitreg.degR)    # Thermal conductivity of coolant
-    mu_s = mu_s.to(unitreg.pound / unitreg.foot / unitreg.second)    # Dynamic viscosity at the heat transfer boundary surface temperature
+    mu = mu.to(unitReg.pound / unitReg.foot / unitReg.second)   # Dynamic viscosity (likely an array)
+    k_c = k_c.to(unitReg.BTU / unitReg.foot / unitReg.hour / unitReg.degR)    # Thermal conductivity of coolant
+    mu_s = mu_s.to(unitReg.pound / unitReg.foot / unitReg.second)    # Dynamic viscosity at the heat transfer boundary surface temperature
 
     # Calculations
     D_h = 4*A_c/P
     Re_D = 4*m_dot_c/np.pi/D_h/mu   # Reynold's number
-    # Re_D = Re_D.to(unitreg.inch / unitreg.inch)
+    # Re_D = Re_D.to(unitReg.inch / unitReg.inch)
     # Darcy Friction Factor
     if Re_D < 2300:
         f = 64/Re_D # Laminar flow
@@ -80,16 +80,16 @@ def internal_flow_convection(epsilon, m_dot_c, NumberofChannels, rho, v, A_c, P,
 
 def free_convection(beta, T_s, T_infinity, P_atm, D_outer):
     # Properties
-    beta = beta.to(1 / unitreg.degR)
-    T_s = T_s.to(unitreg.degR)
-    T_infinity = T_infinity.to(unitreg.degR)
-    P_atm = P_atm.to(unitreg.pound / unitreg.inch**2)
-    D_outer = D_outer.to(unitreg.inch)
-    g = Q_(32.174, unitreg.feet / unitreg.s**2)
+    beta = beta.to(1 / unitReg.degR)
+    T_s = T_s.to(unitReg.degR)
+    T_infinity = T_infinity.to(unitReg.degR)
+    P_atm = P_atm.to(unitReg.pound / unitReg.inch**2)
+    D_outer = D_outer.to(unitReg.inch)
+    g = Q_(32.174, unitReg.feet / unitReg.s**2)
     (viscosity, _, _, k_f, density, Pr, _, _, _) = get_fluid_properties('Air', T_infinity, P_atm)
     nu = viscosity/density  # Dynamic viscosity, air property lookup
     # Calculations
-    Gr_D = Q_(g*beta*(T_s - T_infinity)*D_outer**3/nu^2, unitreg.inch / unitreg.inch)
+    Gr_D = Q_(g*beta*(T_s - T_infinity)*D_outer**3/nu^2, unitReg.inch / unitReg.inch)
     Gr_D.to_base_units()
     Ra_D = Q_(Gr_D*Pr, '')
     if Ra_D < 10^12:
@@ -101,8 +101,8 @@ def free_convection(beta, T_s, T_infinity, P_atm, D_outer):
 
 
 # Testing
-# """ temperature_R = 700 * unitreg.degR  # Temperature in Rankine (~80°F)
-# pressure_psi = 14.7 * unitreg.psi  # Pressure in psi (1 atmosphere)
+# """ temperature_R = 700 * unitReg.degR  # Temperature in Rankine (~80°F)
+# pressure_psi = 14.7 * unitReg.psi  # Pressure in psi (1 atmosphere)
 # properties = get_fluid_properties('n-Dodecane', temperature_R.magnitude, pressure_psi.magnitude)
 # h_g = combustion_convection()
 # #fluids = CP.get_global_param_string('fluids_list')

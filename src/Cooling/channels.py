@@ -4,8 +4,9 @@ import os
 from scipy.optimize import fsolve
 from icecream import ic
 
-from fluids.fluid import Q_, ureg, CD_drill, Pressure_Drop_Fuel, \
+from fluids.fluid import CD_drill, Pressure_Drop_Fuel, \
                          Pressure_Drop_Lox,  pm, get_fluid_properties, CP
+from General.units import Q_, unitReg
 from cooling2d import combustion_convection
 from domain import DomainPoint
 
@@ -20,7 +21,7 @@ def channel_area_sizing(point: DomainPoint):
 
     # Lame implementation
     T_wi = point.temperature
-    T_wi = T_wi.to(T_wi, ureg.degR)
+    T_wi = T_wi.to(T_wi, unitReg.degR)
     if T_wi >= 3400:
         point.area -= 0.0005
     if T_wi < 3000:
