@@ -91,7 +91,7 @@ def GenerateDimPlug(contour: np.ndarray[nozzle.ContourPoint], throatRadius: floa
     #straight section
     spiketipx = contour[-1].x
     spiketipr = contour[-1].r
-    xSS = np.array([convergeArc[-1].x, xcTA - chamberLength, xcTA - chamberLength, spiketipx, spiketipx])
+    xSS = np.array([convergeArc[-1].x, x2CL - chamberLength, x2CL - chamberLength, spiketipx, spiketipx])
     rSS = np.array([convergeArc[-1].r, convergeArc[-1].r, 0, 0, spiketipr])
 
     straightSection = np.array([nozzle.ContourPoint(xSS[i], rSS[i]) for i in range(len(xSS))])
