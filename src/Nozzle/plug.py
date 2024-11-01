@@ -101,7 +101,7 @@ def GenerateDimPlug(contour: np.ndarray[nozzle.ContourPoint], throatRadius: Q_, 
 
     return fullPlugContour
 
-def GenerateDimCowl(contour: np.ndarray[nozzle.ContourPoint], throatRadius: Q_, throatTheta: Q_, Re: Q_, chamberLength: Q_, chamberOuter: Q_, thickness: Q_, circRes: int = 50):
+def GenerateDimCowl(throatRadius: Q_, throatTheta: Q_, Re: Q_, chamberLength: Q_, chamberOuter: Q_, thickness: Q_, overchoke: Q_, circRes: int = 50):
     designTable = DESIGN.plugDesignTable
     designTable["throatArcRad"] = designTable["throatArcRadFactor"]*Re.to(unitReg.inch).magnitude
     designTable["turnArcRad"] = designTable["turnArcRadFactor"]*Re.to(unitReg.inch).magnitude
@@ -117,12 +117,9 @@ def GenerateDimCowl(contour: np.ndarray[nozzle.ContourPoint], throatRadius: Q_, 
     xt = (Re - throatRadius)*np.tan(throatTheta)
     xc = xt - (np.cos(np.pi/2 - absThetaT)*designTable["throatArcRad"])
 
-
     #! New stuff
-    thetaL = np.deg2rad(15)
-    thetal = np.deg2rad(90 - 10 - abs(68.5157))
-
-    ic(np.rad2deg(thetal))
+    thetaL = np.deg2rad(designTable["lipAngle"])
+    thetal = np.deg2rad(90 - designTable["straightAngle"]) - absThetaT
 
     sL = np.sin(thetaL)
     cL = np.cos(thetaL)
@@ -131,12 +128,14 @@ def GenerateDimCowl(contour: np.ndarray[nozzle.ContourPoint], throatRadius: Q_, 
     cotl = 1/np.tan(thetal)
     cscl = 1/np.sin(thetal)
 
-    o = .025
-    Re = 3
-    Rinner = 3.5
-    Rmax = 4
-    xc = -.5456
-    xm = .15
+    o = overchoke.to(unitReg.inch).magnitude
+    Rinner = chamberOuter
+    ic(Rinner)
+    Rmax = chamberOuter + thickness
+    ic(Rmax)
+    ic(xc)
+
+    xm = .05 #! make an input
 
     Amat = np.array([[0, 0, 1, 0, sL, 0, 0, 0, 0], 
                     [0, 0, 0, 1, -cL, 0, 0, 0 ,0],
@@ -150,40 +149,28 @@ def GenerateDimCowl(contour: np.ndarray[nozzle.ContourPoint], throatRadius: Q_, 
 
     bmat = np.array([0, Re, Rinner, Rmax, xc, 0, xm, Re, Re-o*cscl])
 
-    ic(np.linalg.solve(Amat, bmat))
+    yc, rc, xf, yf, rf, ym, rm, l, L = np.linalg.solve(Amat, bmat)
     #! New stuff
-
-
-
-
-
-    ic(np.linalg.det(Amat))
-    yc, r, l = np.linalg.solve(Amat, Bmat)
 
     x1 = 0
     r1 = Re
 
-    arcArr = np.linspace(alpha, 0, circRes)
-    innerArc = np.array([nozzle.ContourPoint(xc + r*np.sin(a), yc + r*np.cos(a)) for a in arcArr])
-    xL = innerArc[-1].x - chamberLength
-    rL = chamberOuter
+    arcArr = np.linspace(-thetaL, np.pi/2 - thetal, circRes)
+    lipArc = np.array([nozzle.ContourPoint(xf - rf*np.sin(a), yf - rf*np.cos(a)) for a in arcArr])
 
-    innerCowl = np.insert(innerArc, 0, nozzle.ContourPoint(x1, r1))
-    innerCowl = np.append(innerCowl, nozzle.ContourPoint(xL, rL))
+    plt.plot(0, Re, 'rx')
+    
+    # lipStraight = np.array([nozzle.ContourPoint(xf - rf*cl, yf - rf*sl), nozzle.ContourPoint(xc + rc*cl, yc + rc*sl)])
 
-    x1 = thickness*np.cos(np.deg2rad(designTable["lipAngle"]))
-    r1 = Re + thickness*np.sin(np.deg2rad(designTable["lipAngle"]))
+    arcArr = np.linspace(thetal, np.pi/2, circRes)
+    convergeArc = np.array([nozzle.ContourPoint(xc + rc*np.cos(a), yc + rc*np.sin(a)) for a in arcArr])
 
-    r = r + thickness
-    outerArc = np.array([nozzle.ContourPoint(xc + r*np.sin(a), yc + r*np.cos(a)) for a in arcArr])
+    chamber = np.array([nozzle.ContourPoint(xc, yc+rc), nozzle.ContourPoint(xc - chamberLength, yc+rc), nozzle.ContourPoint(xc - chamberLength, Rmax), nozzle.ContourPoint(xm, Rmax)])
 
-    xL = outerArc[-1].x - chamberLength
-    rL = chamberOuter + thickness
+    arcArr = np.linspace(np.pi/2, -np.pi/2 + thetaL, circRes)
+    manifold = np.array([nozzle.ContourPoint(xm + rm*np.cos(a), ym + rm*np.sin(a)) for a in arcArr])
 
-    outerCowl = np.insert(outerArc, 0, nozzle.ContourPoint(x1, r1))
-    outerCowl = np.append(outerCowl, nozzle.ContourPoint(xL, rL))
+    final = np.array([nozzle.ContourPoint(0, Re)])
 
-    fullCowl = np.concatenate([innerCowl, outerCowl[::-1]], axis=0)
-    fullCowl = np.append(fullCowl, fullCowl[0])
 
-    return fullCowl
+    return np.concatenate([lipArc, convergeArc, chamber, manifold, final], axis=0)

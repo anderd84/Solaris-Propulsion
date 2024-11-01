@@ -46,8 +46,8 @@ class Domain:
 
     def DefineMaterials(self, cowl: np.ndarray, coolant: np.ndarray, chamber: np.ndarray, plug: np.ndarray, fig: plt.Figure):
         prevPercent = 0
-        # plt.ion()
-        # plt.show()
+        plt.ion()
+        plt.show()
 
         for i in range(self.hpoints):
             for j in range(self.vpoints):
@@ -55,12 +55,12 @@ class Domain:
                 if prevPercent < int(i * j / (self.hpoints * self.vpoints) * 200):
                     prevPercent = int(i * j / (self.hpoints * self.vpoints) * 200)
                     print(f"Progress: {prevPercent/2}%")
-                    # fig.axes[0].clear()
-                    # plots.PlotPlug(fig, plug)
-                    # plots.PlotPlug(fig, cowl)
-                    # self.ShowMaterialPlot(fig)
-                    # fig.canvas.draw()
-                    # fig.canvas.flush_events()
+                    fig.axes[0].clear()
+                    plots.PlotPlug(fig, plug)
+                    plots.PlotPlug(fig, cowl)
+                    self.ShowMaterialPlot(fig)
+                    fig.canvas.draw()
+                    fig.canvas.flush_events()
 
                 if material.isIntersect(self.array[i][j], coolant, (self.width, self.height)):
                     self.array[i,j].material = DomainMaterial.COOLANT

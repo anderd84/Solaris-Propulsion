@@ -20,7 +20,7 @@ from General.units import Q_, unitReg
 # ic(exhaustt.getChokedArea(Q_(8, ureg.pound/ureg.second)).to(ureg.inch**2))
 
 
-Re = Q_(3.25, unitReg.inch)
+Re = Q_(3, unitReg.inch)
 exhaust = DESIGN.exhaustGas
 
 cont, field, outputData = plug.CreateRaoContour(exhaust, DESIGN.chamberPressure, DESIGN.designAmbientPressure, DESIGN.basePressure, Re, DESIGN.lengthMax)
@@ -38,7 +38,7 @@ c = 8/DESIGN.chokeArea.magnitude
 ic(Astar*c)
 
 Cf = outputData["Cf"]
-thrust = Astar * 300 * Cf
+thrust = Astar * DESIGN.chamberPressure * Cf
 ic(thrust)
 ic(Cf)
 ic(outputData["thetaLip"])
@@ -47,9 +47,9 @@ fig = plots.CreateNonDimPlot()
 # plots.PlotContour(fig, cont, Rt, Tt, Re)
 # plots.PlotField(fig, field, Re)
 plugC = plug.GenerateDimPlug(cont, Rt, Tt, Re, Q_(5, unitReg.inch), Q_(1.5, unitReg.inch))
-# cowlC = plug.GenerateDimCowl(cont, Rt, Tt, Re, Q_(8, unitReg.inch), DESIGN.maxRadius, DESIGN.wallThickness)
+cowlC = plug.GenerateDimCowl(Rt, Tt, Re, Q_(8, unitReg.inch), DESIGN.maxRadius, DESIGN.wallThickness, Q_(0.025, unitReg.inch))
 plots.PlotPlug(fig, plugC)
-# plots.PlotPlug(fig, cowlC)
+plots.PlotPlug(fig, cowlC)
 # mat, stream = analysis.CalculateComplexField(cont, 14/300, 15/300, exhaust, 1, Tt, Re.magnitude, 25, 0, 3)
 # fig.axes[0].plot([p.x for p in stream], [p.r for p in stream], '--b', linewidth=1.5)
 # fieldGrid = analysis.GridifyComplexField(mat, np.array([]))
@@ -57,4 +57,4 @@ plots.PlotPlug(fig, plugC)
 # analysis.PlotCharacteristicLines(fig, mat)
 plt.show()
 
-plots.WriteContourTXT(plugC, "plug.txt")
+# plots.WriteContourTXT(plugC, "plug.txt")
