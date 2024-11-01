@@ -37,7 +37,7 @@ designAtm = Atmosphere(designAltitude.to(unitReg.meter).magnitude)
 
 designAmbientPressure = Q_(designAtm.pressure[0], unitReg.pascal)
 lengthMax = Q_(5.5, unitReg.inch)
-basePressure = Q_(15, unitReg.psi)
+basePressure = Q_(20, unitReg.psi)
 
 # chamber derived
 Combustion=CEA_Obj(oxName=oxName, fuelName=fuelName);
@@ -53,4 +53,4 @@ exhaustGas = Gas(gamma, R_throat, P0=chamberPressure, T0=chamberTemp)
 chokeArea = exhaustGas.getChokedArea(totalmdot).to(unitReg.inch**2)
 
 # nozzle design table
-plugDesignTable = {"throatArcRadFactor": .133, "convergeAngle": 25, "turnArcRadFactor": 2, "straightAngle": 10, "lipAngle": 5}
+plugDesignTable = {"throatArcRadFactor": .1, "convergeAngle": 30, "turnArcRadFactor": 2, "straightAngle": 10, "lipAngle": 15}
