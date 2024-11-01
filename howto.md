@@ -7,7 +7,7 @@ a preconfigured logger.
 
 ``` python
 import logging
-from src.General.setenv import setupLogging
+from General.setenv import setupLogging
 setupLogging()
 ```
 
@@ -35,3 +35,34 @@ totally bonkers. use the `ic(<var>)` instead of print.
 
 ### download any new required modules
 just run makeenv.py, easy as that
+
+### use unified unit registry
+ensure you import the unified registry at the start of your script where you use it
+
+``` python
+from General.units import Q_, unitReg
+```
+
+use as normal within script
+
+units also has constants defined in it as well
+
+``` python
+from General.units import ______
+```
+
+there are a couple defined:
+- ```R_UNIVERSAL```
+- ```PRESCOTT_ALT```
+- ```PRESCOTT_PRESSURE```
+- ```PRESCOTT_TEMP```
+
+### using design inputs
+import from ``` General.design ``` to get values
+
+full example:
+``` python
+import General.design as DESIGN
+
+DESIGN.oxName ...
+```
