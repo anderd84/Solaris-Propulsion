@@ -29,8 +29,8 @@ plots.PlotPlug(fig, cowlC)
 # plt.show()
 
 tic2 = time.perf_counter()
-cooling2 = domain.DomainMC(-8.5, 4, 15, 4, .05)
-cooling2.DefineMaterials(cowlC, np.array([]), np.array([]), plugC, fig)
+cooling2 = domain.DomainMC(-8.5, 4, 15, 4, .005)
+cooling2.DefineMaterials(cowlC, np.array([]), np.array([]), plugC)
 toc2 = time.perf_counter()
 
 # tic = time.perf_counter()

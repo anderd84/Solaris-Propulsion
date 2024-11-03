@@ -133,8 +133,8 @@ class DomainMC:
             for j in range(vpoints):
                 self.array[i][j] = DomainPoint(x0 + i*self.xstep, r0 - j*self.rstep, DomainMaterial.FREE, 0, self.xstep*self.rstep)
 
-    def DefineMaterials(self, cowl: np.ndarray, coolant: np.ndarray, chamber: np.ndarray, plug: np.ndarray, fig: plt.Figure):
-        MAX_CORES = 1
+    def DefineMaterials(self, cowl: np.ndarray, coolant: np.ndarray, chamber: np.ndarray, plug: np.ndarray, max_cores = mp.cpu_count() - 1):
+        MAX_CORES = max_cores
         shm = None
         try:
             shm = shared_memory.SharedMemory(create=True, size=self.array.nbytes, name=SHAREDMEMNAME)
@@ -177,19 +177,21 @@ class DomainMC:
         rarr = np.array([[point.r for point in row] for row in self.array])
         matarr = np.transpose(np.array([[point.material.value for point in row] for row in self.array]))
 
+        # extent = [xarr[0,0]-self.xstep, xarr[-1,-1]+self.xstep, rarr[-1,-1]-self.rstep, rarr[0,0]+self.rstep]
+        extent = [xarr[0,0]-self.xstep/2, xarr[-1,-1]+self.xstep/2, rarr[-1,-1]-self.rstep/2, rarr[0,0]+self.rstep/2]
         ax = fig.axes[0]
         # contf = ax.contourf(xarr, rarr, matarr, levels=[0, 1, 4] , colors=['white', 'blue', 'red'])
         # contf = ax.contourf(xarr, rarr, matarr)
-        ax.imshow(matarr, extent=(self.x0, self.x0 + self.width, self.r0 - self.height, self.r0), origin='upper', cmap='jet')
+        ax.imshow(matarr, extent=extent, origin='upper', cmap='jet')
         xcells = np.linspace(self.x0 - self.xstep/2, self.x0 + self.width + self.xstep/2, self.hpoints+1)
         rcells = np.linspace(self.r0 + self.rstep/2, self.r0 - self.height - self.rstep/2, self.vpoints+1)
         xl, rl = np.meshgrid(xcells, rcells)
-        # ax.plot(xl, rl, 'k', linewidth=0.25)
-        # ax.plot(np.transpose(xl), np.transpose(rl), 'k', linewidth=0.25)
+        ax.plot(xl, rl, 'k', linewidth=0.25)
+        ax.plot(np.transpose(xl), np.transpose(rl), 'k', linewidth=0.25)
 
     def DumpFile(self, filename):
         with open(filename, "wb") as f:
-            pickle.dump(self, f)
+            pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     @staticmethod
     def LoadFile(filename):
