@@ -25,10 +25,9 @@ plots.PlotPlug(fig, cowlC)
 
 coolmesh = domain.DomainMC.LoadFile("coolmesh.pkl")
 
-print(asizeof(coolmesh))
-
 # coolmesh.ShowMaterialPlot(fig)
-print(f"{coolmesh.array.nbytes / 1000000} MB" )
-coolmesh.DumpFile("coolmesh.pkl")
+print(f"{asizeof(coolmesh) / 1000000} MB" )
+
+plots.WriteContourTXT(plugC, "plugC.txt")
 
 plt.show()

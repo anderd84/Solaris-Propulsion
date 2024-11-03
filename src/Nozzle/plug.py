@@ -81,7 +81,7 @@ def GenerateDimPlug(contour: np.ndarray[nozzle.ContourPoint], throatRadius: Q_, 
     r2CL = baseRadius + designTable["turnArcRad"]*(1 - np.cos(np.deg2rad(designTable["convergeAngle"])))
     x2CL = x1CL - (r1CL - r2CL)/np.tan(np.deg2rad(designTable["convergeAngle"]))
 
-    convergeLine = np.array([nozzle.ContourPoint(x1CL, r1CL), nozzle.ContourPoint(x2CL, r2CL)])
+    # convergeLine = np.array([nozzle.ContourPoint(x1CL, r1CL), nozzle.ContourPoint(x2CL, r2CL)])
 
     #converge arc
     xcCA = x2CL - designTable["turnArcRad"]*np.sin(np.deg2rad(designTable["convergeAngle"]))
@@ -92,12 +92,13 @@ def GenerateDimPlug(contour: np.ndarray[nozzle.ContourPoint], throatRadius: Q_, 
     #straight section
     spiketipx = contour[-1].x
     spiketipr = contour[-1].r
-    xSS = np.array([convergeArc[-1].x, x2CL - chamberLength, x2CL - chamberLength, spiketipx, spiketipx])
-    rSS = np.array([convergeArc[-1].r, convergeArc[-1].r, 0, 0, spiketipr])
+    xSS = np.array([x2CL - chamberLength, x2CL - chamberLength, spiketipx])
+    rSS = np.array([convergeArc[-1].r, 0, 0])
 
     straightSection = np.array([nozzle.ContourPoint(xSS[i], rSS[i]) for i in range(len(xSS))])
     
-    fullPlugContour = np.concatenate([throatArc, convergeLine, convergeArc, straightSection, contour[::-1]], axis=0)
+    fullPlugContour = np.concatenate([contour[::-1], throatArc[1:], convergeArc, straightSection], axis=0)
+    fullPlugContour = np.insert(fullPlugContour, 0, nozzle.ContourPoint(spiketipx, 0), axis=0)
 
     return fullPlugContour
 
