@@ -15,7 +15,7 @@ OFratio = 2
 # geometry
 chamberPressure = Q_(300, unitReg.psi)
 totalmdot = Q_(7.5, unitReg.pound / unitReg.sec)
-chamberInternalRadius = Q_(4.125, unitReg.inch)
+chamberInternalRadius = Q_(3.825, unitReg.inch)
 wallThickness = Q_(0.125, unitReg.inch)
 maxRadius = chamberInternalRadius + wallThickness
 
@@ -54,3 +54,4 @@ chokeArea = exhaustGas.getChokedArea(totalmdot).to(unitReg.inch**2)
 
 # nozzle design table
 plugDesignTable = {"throatArcRadFactor": .1, "convergeAngle": 25, "turnArcRadFactor": 2, "straightAngle": 10, "lipAngle":15, "manifoldDistanceFactor": .1}
+# plugDesignTable = {"throatArcRadFactor": .1, "convergeAngle": 45, "turnArcRadFactor": 1.75, "straightAngle": 10, "lipAngle":15, "manifoldDistanceFactor": .1}
