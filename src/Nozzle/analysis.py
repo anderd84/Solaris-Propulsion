@@ -1,14 +1,17 @@
 import numpy as np
+np.product = np.prod
 from dataclasses import dataclass
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from scipy.optimize import fsolve
 import fluids.gas as gas
 from fluids.gas import MachAngle, mach2machStar, machStar2mach, Gas
+import General.design as DESIGN
 import Nozzle.nozzle as nozzle
 from icecream import ic
 import Nozzle.config as config
 from General.units import Q_, unitReg
+import matrix_viewer as mv
 import logging
 from General.setenv import setupLogging
 setupLogging()
@@ -22,6 +25,7 @@ class CharacteristicPoint:
     s: float = 0
     mach: float = 0
     alpha: float = 0
+    terminate = False
 
     F: float = 0
     G: float = 0
@@ -33,6 +37,9 @@ class CharacteristicPoint:
 
     def clone(self):
         return CharacteristicPoint(self.x, self.r, self.theta, self.machStar, self.s, self.mach, self.alpha)
+
+    def terminate(self):
+        self.terminate = True
 
     def CalculateRightVariant(self, gas: Gas) -> 'CharacteristicPoint': # I characteristic
         Rgas = gas.Rgas.magnitude
@@ -142,7 +149,7 @@ class CharacteristicPoint:
         # ic(PV)
         intersect, theta = CharacteristicPoint.CalculateSolidBoundaryIntersect(PV, contour, isRight)
         if intersect is None:
-            return PV.clone()#CharacteristicPoint.CalculateGasReflect(point, isRight, PbPc, workingGas)
+            return PV.clone().terminate()#CharacteristicPoint.CalculateGasReflect(point, isRight, PbPc, workingGas)
         
         x = intersect[0]
         r = intersect[1]
@@ -278,6 +285,9 @@ def ReflectionRegion(lines: np.ndarray[CharacteristicPoint], X0, Y0, contour, Pa
     for i in range(1, X0+1):
         for j in range(1, i+1):
             isRight = not (reflection % 2 == 0) ^ startAsRight
+            if region[i, j-1].terminate:
+                region[i,j] = region[i-1,j].clone().terminate()
+                continue
             if i == j:
                 reflectOrigin = region[i, j-1] # previous point in the same line
                 region[i,j] = CharacteristicPoint.CalculateSolidReflect(reflectOrigin, isRight, contour, PbPc, workingGas) if isRight else CharacteristicPoint.CalculateGasReflect(reflectOrigin, isRight, PambPc, workingGas, streamline)
@@ -359,3 +369,35 @@ def GridifyComplexField(rlines: np.ndarray, llines: np.ndarray) -> np.ndarray:
             j += 1 if not rline else 0
             pos += 1
     return gridField
+
+def CalculateThrust(exhaust, PambPc, Tt, Rt, Re, gridfield): # TODO trail termaination when can no longer continue
+    phi = np.pi/2 + Tt
+    Astar = np.pi/np.sin(phi) * (Re**2 - Rt**2)
+    
+    exitV = gas.MachToVelocity(1, exhaust)
+    exitVx = exitV * np.sin(-Tt)
+    momThrust = DESIGN.totalmdot * exitVx
+    ic(momThrust.to(unitReg.pound_force))
+
+    pressThrust = (gas.StagPressRatio(1, exhaust) * exhaust.stagPress - DESIGN.designAmbientPressure) * Astar * np.sin(-Tt)
+    ic(pressThrust.to(unitReg.pound_force))
+
+    ic(gridfield)
+    contPoints = []
+    for row in gridfield[1:,:]:
+        for point in row:
+            if point is not None:
+                contPoints.append(point)
+                break
+    
+    xarr = np.array([[p.x if p is not None else 0 for p in row] for row in gridfield])
+    rarr = np.array([[p.r if p is not None else 0 for p in row] for row in gridfield])
+
+    mv.view(xarr, "X")
+    mv.view(rarr, "R")
+    mv.show()
+    
+    ic(contPoints)
+    for point in contPoints:
+        plt.plot(point.x, point.r, 'or')
+

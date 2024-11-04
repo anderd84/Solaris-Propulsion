@@ -13,7 +13,8 @@ dependencies = ["numpy",
 "texttable",
 "rocketprops",
 "pyyaml",
-"ambiance"
+"ambiance",
+"PyQt6"
 ]
 version = "0.1.0"
 description = "A package for aerospike engine calculations"
