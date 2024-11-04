@@ -3,7 +3,7 @@ from types import NoneType
 import concurrent
 import numpy as np
 import matplotlib.pyplot as plt
-import matrix_viewer as mv
+# import matrix_viewer as mv
 
 import multiprocessing as mp
 from multiprocessing import shared_memory
