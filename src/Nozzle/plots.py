@@ -61,13 +61,13 @@ def PlotContour(fig: plt.Figure, contour: np.ndarray[ContourPoint | Characterist
     
     return fig
 
-def PlotPlug(fig: plt.Figure, plug: np.ndarray[ContourPoint]) -> plt.Figure:
+def PlotPlug(fig: plt.Figure, plug: np.ndarray[ContourPoint], style = '-k') -> plt.Figure:
     ax = fig.axes[0]
 
     x = [p.x for p in plug]
     r = [p.r for p in plug]
 
-    ax.plot(x, r, '-k', linewidth=2)
+    ax.plot(x, r, style, linewidth=2)
 
     return fig
 

@@ -49,6 +49,8 @@ def intersectPolyAt(polygon, point1, point2):
     Tx, Ty = point2
     for j in range(len(polygon) - 1):
         a, b, c, d = polygon[j].x, polygon[j].r, polygon[j+1].x, polygon[j+1].r
+        Tx = Tx if Tx != Sx else Tx - 1e-6
+        c = c if c != a else c - 1e-6
         mL = (Ty - Sy)/(Tx - Sx)
         mC = (d - b)/(c - a)
         Amat = np.array([[mL, -1], [mC, -1]])
@@ -57,8 +59,8 @@ def intersectPolyAt(polygon, point1, point2):
         Bx = X[0,0]
         By = X[1,0]
         if min(Sx,Tx) <= Bx <= max(Sx,Tx) and min(Sy,Ty) <= By <= max(Sy,Ty) and min(a,c) <= Bx <= max(a,c) and min(b,d) <= By <= max(b,d):
-            return (Bx, By)
-    return None
+            return (Bx, By), (j, j+1)
+    return None, None
 
 def main():
     Points = 1000

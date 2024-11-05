@@ -7,6 +7,7 @@ import numpy as np
 np.product = np.prod
 import matplotlib.pyplot as plt
 import matrix_viewer as mv
+from scipy.optimize import fsolve
 
 import multiprocessing as mp
 from multiprocessing import shared_memory
@@ -21,6 +22,7 @@ from Cooling.material import DomainMaterial
 from Cooling import material
 from Nozzle import plots
 from General.units import Q_, unitReg
+from fluids import gas
 
 mcQ = Queue()
 SHAREDMEMNAME = 'CoolingDomain'
@@ -180,7 +182,7 @@ class DomainMC:
     def ShowMaterialPlot(self, fig: plt.Figure):
         xarr = np.array([[point.x for point in row] for row in self.array])
         rarr = np.array([[point.r for point in row] for row in self.array])
-        matarr = np.array([[point.temperature.magnitude for point in row] for row in self.array])
+        matarr = np.array([[(point.material.value) for point in row] for row in self.array])
 
         # extent = [xarr[0,0]-self.xstep, xarr[-1,-1]+self.xstep, rarr[-1,-1]-self.rstep, rarr[0,0]+self.rstep]
         extent = [xarr[0,0]-self.xstep/2, xarr[-1,-1]+self.xstep/2, rarr[-1,-1]-self.rstep/2, rarr[0,0]+self.rstep/2]
@@ -197,26 +199,25 @@ class DomainMC:
     def ShowStatePlot(self, fig: plt.Figure):
         xarr = np.array([[point.x for point in row] for row in self.array])
         rarr = np.array([[point.r for point in row] for row in self.array])
-        matarr = np.array([[point.temperature.magnitude for point in row] for row in self.array])
+        matarr = np.array([[point.velocity.to(unitReg.feet/unitReg.sec).magnitude for point in row] for row in self.array])
 
         ax = fig.axes[0]
-        contf = ax.contourf(xarr, rarr, matarr, cmap='jet')
+        contf = ax.contourf(xarr, rarr, matarr, 100, cmap='jet')
         xcells = np.linspace(self.x0 - self.xstep/2, self.x0 + self.width + self.xstep/2, self.hpoints+1)
         rcells = np.linspace(self.r0 + self.rstep/2, self.r0 - self.height - self.rstep/2, self.vpoints+1)
         xl, rl = np.meshgrid(xcells, rcells)
         ax.plot(xl, rl, 'k', linewidth=0.25)
         ax.plot(np.transpose(xl), np.transpose(rl), 'k', linewidth=0.25)
 
-    def AssignChamberTemps(self, chamber: np.ndarray, exhaust: Gas, startPoint: tuple, endPoint: tuple, chamberWallRadius: Q_):
+    def AssignChamberTemps(self, chamber: np.ndarray, exhaust: Gas, startPoint: tuple, endPoint: tuple, chamberWallRadius: Q_, Astar: Q_, fig):
+        print("assigning stagnant")
         flowAngle = np.arctan((endPoint[1] - startPoint[1])/(endPoint[0] - startPoint[0]))
         phi = np.pi/2 - flowAngle
 
         farAway1 = (startPoint[0] - chamberWallRadius.magnitude*np.sin(flowAngle), startPoint[1] + chamberWallRadius.magnitude*np.cos(flowAngle))
         farAway2 = (startPoint[0] + chamberWallRadius.magnitude*np.sin(flowAngle), startPoint[1] - chamberWallRadius.magnitude*np.cos(flowAngle))
-        startPointU = material.intersectPolyAt(chamber, startPoint, farAway1)
-        startPointL = material.intersectPolyAt(chamber, startPoint, farAway2)
-
-
+        startPointU, _ = material.intersectPolyAt(chamber, startPoint, farAway1)
+        startPointL, _ = material.intersectPolyAt(chamber, startPoint, farAway2)
 
         originX = np.linspace(startPoint[0], endPoint[0], self.hpoints)
         originR = np.linspace(startPoint[1], endPoint[1], self.hpoints)
@@ -226,26 +227,111 @@ class DomainMC:
         for j in range(jStart, self.hpoints):
             for i in range(iStart, self.vpoints):
                 if self.array[i,j].material != DomainMaterial.CHAMBER:
-                    self.array[i,j].material = DomainMaterial.COOLANT
                     break
                 if self.lineInCell(startPointU, startPointL, i, j):
                     jStart = j if i == iStart else jStart
                     continue
-                self.array[i,j].temperature = exhaust.stagTemp
+                self.array[i,j].temperature = exhaust.stagTemp-Q_(5000,unitReg.degR)
                 self.array[i,j].velocity = Q_(0, unitReg.foot/unitReg.sec)
             if self.lineInCell(startPointU, startPointL, i, j):
                 break
 
-        self.array[iStart,jStart].material = DomainMaterial.COOLANT       
-
+        # plt.ion()
+        # plt.show()
+        print("Assinging straight flow")
         for oX, oR in zip(originX, originR):
             farAway1 = (oX - chamberWallRadius.magnitude*np.sin(flowAngle), oR + chamberWallRadius.magnitude*np.cos(flowAngle))
             farAway2 = (oX + chamberWallRadius.magnitude*np.sin(flowAngle), oR - chamberWallRadius.magnitude*np.cos(flowAngle))
-            startPointU = material.intersectPolyAt(chamber, (oX, oR), farAway1)
-            startPointL = material.intersectPolyAt(chamber, (oX, oR), farAway2)
-            # plt.plot([startPointU[0], startPointL[0]], [startPointU[1], startPointL[1]], 'rx-')
+            startPointU, _ = material.intersectPolyAt(chamber, (oX, oR), farAway1)
+            startPointL, _ = material.intersectPolyAt(chamber, (oX, oR), farAway2)
+
             area = np.pi/np.sin(phi) * (startPointU[1]**2 - startPointL[1]**2)
-            
+
+            AAstar = Q_(area, unitReg.inch**2)/Astar
+            mach = fsolve(lambda M: gas.Isentropic1DExpansion(M, exhaust.gammaTyp) - AAstar, .25)[0]
+            temperature = (gas.StagTempRatio(mach, exhaust) * exhaust.stagTemp)-Q_(5000,unitReg.degR)
+            velocity = mach * np.sqrt(exhaust.getVariableGamma(mach) * exhaust.Rgas * temperature)
+            startSet = False
+
+            for i in range(iStart, self.vpoints):
+                # fig.axes[0].clear()
+                # plt.plot([startPointU[0], startPointL[0]], [startPointU[1], startPointL[1]], 'rx-')
+                # plt.plot([self.array[i,j].x, self.array[i+1,j].x], [self.array[i,j].r, self.array[i+1,j].r], 'bo-')
+                # plt.plot([self.array[iStart, jStart].x], [self.array[iStart, jStart].r], 'go')
+                # self.ShowStatePlot(fig)
+                # fig.canvas.draw()
+                # fig.canvas.flush_events()
+                if self.array[i,j].material != DomainMaterial.CHAMBER and self.array[i+1,j].material != DomainMaterial.CHAMBER:
+                    break
+                for j in range(jStart, self.hpoints):
+                    if self.lineInCell(startPointU, startPointL, i, j):
+                        if self.array[i,j].material != DomainMaterial.CHAMBER:
+                            break
+                        if not startSet:
+                            iStart = i
+                            jStart = j
+                            startSet = True
+                        self.array[i,j].temperature = temperature
+                        self.array[i,j].velocity = velocity
+                        break
+        # curve section
+        print("assigning bend flow")
+        farAway = (endPoint[0], endPoint[1] - self.height)
+        intersect, indexPair = material.intersectPolyAt(chamber, endPoint, farAway)
+        plt.plot([intersect[0]], [intersect[1]], 'gx')
+
+        iiContourStart = indexPair[0]
+
+        angle = np.pi/2 + np.arctan2(chamber[iiContourStart+1].r - chamber[iiContourStart].r, chamber[iiContourStart+1].x - chamber[iiContourStart].x)
+        ii = iiContourStart
+        maxX = np.array([[p.x for p in row] for row in self.array]).max()
+        # ic(angle)
+        while angle <= (np.pi/2 + 1e-3):
+            lowerPoint = ((chamber[ii].x + chamber[ii+1].x)/2, (chamber[ii].r + chamber[ii+1].r)/2)
+
+            farAway = (lowerPoint[0] + chamberWallRadius.magnitude*np.cos(angle), lowerPoint[1] + chamberWallRadius.magnitude*np.sin(angle))
+            upperPoint, _ = material.intersectPolyAt(chamber, (lowerPoint[0], lowerPoint[1] + 1e-3), farAway)
+
+            # plt.plot([lowerPoint[0], upperPoint[0]], [lowerPoint[1], upperPoint[1]], '.b-')
+
+            area = np.pi/np.sin(angle) * (upperPoint[1]**2 - lowerPoint[1]**2)
+            # ic(area)
+
+            AAstar = Q_(area, unitReg.inch**2)/Astar
+            if AAstar < 1:
+                mach = 1
+            else:
+                mach = fsolve(lambda M: gas.Isentropic1DExpansion(M, exhaust.gammaTyp) - AAstar, .25)[0]
+            temperature = (gas.StagTempRatio(mach, exhaust) * exhaust.stagTemp)-Q_(5000,unitReg.degR)
+            velocity = mach * np.sqrt(exhaust.getVariableGamma(mach) * exhaust.Rgas * temperature)
+
+
+            for i in range(iStart, self.vpoints):
+                hasChamber = False
+                for j in range(jStart, self.hpoints):
+                    if self.array[i,j].material == DomainMaterial.CHAMBER:                            
+                        hasChamber = True
+                        if self.lineInCell(lowerPoint, upperPoint, i, j):
+                            self.array[i,j].temperature = temperature
+                            self.array[i,j].velocity = velocity
+                            break
+                    else:
+                        if self.array[i,j].x > maxX:
+                            break
+                if not hasChamber:
+                    break
+
+            ii += 1
+            if ii >= len(chamber) + 1:
+                ii = 0
+            angle = np.pi/2 + np.arctan2(chamber[ii+1].r - chamber[ii].r, chamber[ii+1].x - chamber[ii].x)
+
+
+
+        
+        
+
+
     def isInCell(self, point, row, col):
         xmin = self.array[row, col].x - self.xstep/2
         xmax = self.array[row, col].x + self.xstep/2

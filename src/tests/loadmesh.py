@@ -24,20 +24,20 @@ cowlC = plug.GenerateDimCowl(Rt, Tt, Re, straightLength, DESIGN.chamberInternalR
 chamberC, aimpoint = plug.GenerateDimChamber(Rt, Tt, Re, Q_(5, unitReg.inch), DESIGN.chamberInternalRadius, DESIGN.wallThickness, Q_(0.025, unitReg.inch), Q_(1.5, unitReg.inch))
 plots.PlotPlug(fig, plugC)
 plots.PlotPlug(fig, cowlC)
-plots.PlotPlug(fig, chamberC)
+plots.PlotPlug(fig, chamberC, '-r')
 
 
 coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("coolmesh.pkl")
 
 startingpoint = (-8, 2.6) # TODO use real point
 plt.plot([startingpoint[0], aimpoint[0]], [startingpoint[1], aimpoint[1]], 'rx-')
-coolmesh.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius)
+coolmesh.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius, DESIGN.chokeArea, fig)
 
 # fig2 = plots.CreateNonDimPlot()
 # cooling.ShowMaterialPlot(fig2)
 
-coolmesh.ShowMaterialPlot(fig)
-# coolmesh.ShowStatePlot(fig)
+# coolmesh.ShowMaterialPlot(fig)
+coolmesh.ShowStatePlot(fig)
 
 # coolmesh.ShowMaterialPlot(fig)
 

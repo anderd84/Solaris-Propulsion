@@ -47,7 +47,7 @@ def main():
 
     startingpoint = (-8, 2.6) # TODO use real point
     plt.plot([startingpoint[0], aimpoint[0]], [startingpoint[1], aimpoint[1]], 'rx-')
-    cooling2.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius)
+    cooling2.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius, DESIGN.chokeArea, fig)
 
     # fig2 = plots.CreateNonDimPlot()
     # cooling.ShowMaterialPlot(fig2)
