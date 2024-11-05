@@ -171,5 +171,97 @@ def GenerateDimCowl(throatRadius: Q_, throatTheta: Q_, Re: Q_, straightLength: Q
 
     final = np.array([nozzle.ContourPoint(0, Re)])
 
-
     return np.concatenate([lipArc, convergeArc, chamber, manifold, final], axis=0)
+
+def GenerateDimChamber(throatRadius: Q_, throatTheta: Q_, Re: Q_, chamberLength: Q_, chamberOuter: Q_, thickness: Q_, overchoke: Q_, baseRadius: Q_, circRes: int = 50):
+    designTable = DESIGN.plugDesignTable
+    designTable["throatArcRad"] = designTable["throatArcRadFactor"]*Re.to(unitReg.inch).magnitude
+    designTable["turnArcRad"] = designTable["turnArcRadFactor"]*Re.to(unitReg.inch).magnitude
+    designTable["manifoldDistance"] = designTable["manifoldDistanceFactor"]*Re.to(unitReg.inch).magnitude
+
+    chamberLength = chamberLength.to(unitReg.inch).magnitude
+    baseRadius = baseRadius.to(unitReg.inch).magnitude
+
+    throatRadius = throatRadius.to(unitReg.inch).magnitude
+    throatTheta = throatTheta.to(unitReg.radian).magnitude
+    Re = Re.to(unitReg.inch).magnitude
+    chamberOuter = chamberOuter.to(unitReg.inch).magnitude
+    thickness = thickness.to(unitReg.inch).magnitude
+
+    absThetaT = abs(throatTheta)
+    xt = (Re - throatRadius)*np.tan(throatTheta)
+
+    origin = np.array([nozzle.ContourPoint(0, Re)])
+
+    # thoat arc
+    ycTA = throatRadius - (np.sin(np.pi/2 - absThetaT)*designTable["throatArcRad"])
+    xcTA = xt - (np.cos(np.pi/2 - absThetaT)*designTable["throatArcRad"])
+    arcArr = np.linspace(np.pi/2 - absThetaT, np.pi/2 + np.deg2rad(designTable["convergeAngle"]), circRes)
+    throatArc = np.array([nozzle.ContourPoint(xcTA + designTable["throatArcRad"]*np.cos(a), ycTA + designTable["throatArcRad"]*np.sin(a)) for a in arcArr])
+
+    # converge line
+    x1CL = throatArc[-1].x
+    r1CL = throatArc[-1].r
+
+    r2CL = baseRadius + designTable["turnArcRad"]*(1 - np.cos(np.deg2rad(designTable["convergeAngle"])))
+    x2CL = x1CL - (r1CL - r2CL)/np.tan(np.deg2rad(designTable["convergeAngle"]))
+
+    # convergeLine = np.array([nozzle.ContourPoint(x1CL, r1CL), nozzle.ContourPoint(x2CL, r2CL)])
+
+    #converge arc
+    xcCA = x2CL - designTable["turnArcRad"]*np.sin(np.deg2rad(designTable["convergeAngle"]))
+    ycCA = r2CL + designTable["turnArcRad"]*np.cos(np.deg2rad(designTable["convergeAngle"]))
+    arcArr = np.linspace(np.deg2rad(designTable["convergeAngle"]), 0, circRes)
+    convergeArc = np.array([nozzle.ContourPoint(xcCA + designTable["turnArcRad"]*np.sin(a), ycCA - designTable["turnArcRad"]*np.cos(a)) for a in arcArr])
+
+    straightSection = np.array([nozzle.ContourPoint(x2CL - chamberLength, baseRadius)])
+
+    chamber = np.concatenate([throatArc, convergeArc, straightSection], axis=0)
+
+    straightLength = abs(xcTA - (x2CL - chamberLength))
+
+    #! New stuff
+    thetaL = np.deg2rad(designTable["lipAngle"])
+    thetal = np.deg2rad(90 - designTable["straightAngle"]) - absThetaT
+
+    sL = np.sin(thetaL)
+    cL = np.cos(thetaL)
+    sl = np.sin(thetal)
+    cl = np.cos(thetal)
+    cotl = 1/np.tan(thetal)
+    cscl = 1/np.sin(thetal)
+
+    o = overchoke.to(unitReg.inch).magnitude
+    Rinner = chamberOuter
+    Rmax = chamberOuter + thickness
+
+    xm = designTable["manifoldDistance"]
+
+    Amat = np.array([[0, 0, 1, 0, sL, 0, 0, 0, 0], 
+                    [0, 0, 0, 1, -cL, 0, 0, 0 ,0],
+                    [1, 1, 0, 0, 0, 0, 0, 0, 0], 
+                    [0, 0, 0, 0, 0, 1, 1, 0, 0],
+                    [0, -cl, 1, 0, -cl, 0, 0, -sl, 0],
+                    [1, sl, 0, -1, sl, 0, 0, -cl, 0],
+                    [0, 0, 0, 0, 0, 0, -sL, 0, cL],
+                    [0, 0, 0, 0, 0, 1, -cL, 0, -sL],
+                    [0, 0, cotl, 1, -cscl, 0, 0, 0, 0]])
+
+    bmat = np.array([0, Re, Rinner, Rmax, xcTA, 0, xm, Re, Re-o*cscl])
+
+    yc, rc, xf, yf, rf, ym, rm, l, L = np.linalg.solve(Amat, bmat)
+    #! New stuff
+
+    arcArr = np.linspace(-thetaL, np.pi/2 - thetal, circRes)
+    lipArc = np.array([nozzle.ContourPoint(xf - rf*np.sin(a), yf - rf*np.cos(a)) for a in arcArr])
+    
+    arcArr = np.linspace(thetal, np.pi/2, circRes)
+    convergeArc = np.array([nozzle.ContourPoint(xcTA + rc*np.cos(a), yc + rc*np.sin(a)) for a in arcArr])
+
+    chamberWall = np.array([nozzle.ContourPoint(xcTA, yc+rc), nozzle.ContourPoint(xcTA - straightLength, yc+rc)])
+
+    wall = np.concatenate([lipArc, convergeArc, chamberWall], axis=0)
+
+    aimpoint = (xcTA, (ycTA + designTable["throatArcRad"] + Rinner)/2)
+
+    return np.concatenate([wall, chamber[::-1], origin], axis=0), aimpoint
