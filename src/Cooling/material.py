@@ -44,6 +44,22 @@ def is_point_on_segment(Point, C, D):
 def ccw(A,B,C):
     return (C[1]-A[1]) * (B[0]-A[0]) > (B[1]-A[1]) * (C[0]-A[0])
 
+def intersectPolyAt(polygon, point1, point2):
+    Sx, Sy = point1
+    Tx, Ty = point2
+    for j in range(len(polygon) - 1):
+        a, b, c, d = polygon[j].x, polygon[j].r, polygon[j+1].x, polygon[j+1].r
+        mL = (Ty - Sy)/(Tx - Sx)
+        mC = (d - b)/(c - a)
+        Amat = np.array([[mL, -1], [mC, -1]])
+        bmat = np.array([[mL*Sx - Sy], [mC*a - b]])
+        X = np.linalg.solve(Amat, bmat)
+        Bx = X[0,0]
+        By = X[1,0]
+        if min(Sx,Tx) <= Bx <= max(Sx,Tx) and min(Sy,Ty) <= By <= max(Sy,Ty) and min(a,c) <= Bx <= max(a,c) and min(b,d) <= By <= max(b,d):
+            return (Bx, By)
+    return None
+
 def main():
     Points = 1000
 

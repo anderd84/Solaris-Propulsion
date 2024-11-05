@@ -13,41 +13,51 @@ from icecream import ic
 
 import pickle
 def main():
-    Re = Q_(3, unitReg.inch)
+    Re = Q_(3.2, unitReg.inch)
     exhaust = DESIGN.exhaustGas
 
     cont, field, outputData = plug.CreateRaoContour(exhaust, DESIGN.chamberPressure, DESIGN.designAmbientPressure, DESIGN.basePressure, Re, DESIGN.lengthMax)
     Rt = outputData["radiusThroat"]
     Tt = outputData["thetaThroat"]
+    Re = outputData["radiusLip"]
 
     fig = plots.CreateNonDimPlot()
     # plots.PlotContour(fig, cont, Rt, Tt, Re)
-    plugC = plug.GenerateDimPlug(cont, Rt, Tt, Re, Q_(5, unitReg.inch), Q_(1.5, unitReg.inch))
-    cowlC = plug.GenerateDimCowl(Rt, Tt, Re, Q_(8, unitReg.inch), DESIGN.maxRadius, DESIGN.wallThickness, Q_(0.025, unitReg.inch))
+    # plots.PlotField(fig, field, Re)
+    plugC, straightLength = plug.GenerateDimPlug(cont, Rt, Tt, Re, Q_(5, unitReg.inch), Q_(1.5, unitReg.inch))
+    cowlC = plug.GenerateDimCowl(Rt, Tt, Re, straightLength, DESIGN.chamberInternalRadius, DESIGN.wallThickness, Q_(0.025, unitReg.inch))
+    chamberC, aimpoint = plug.GenerateDimChamber(Rt, Tt, Re, Q_(5, unitReg.inch), DESIGN.chamberInternalRadius, DESIGN.wallThickness, Q_(0.025, unitReg.inch), Q_(1.5, unitReg.inch))
     plots.PlotPlug(fig, plugC)
     plots.PlotPlug(fig, cowlC)
+    plots.PlotPlug(fig, chamberC)
     # plt.show()
 
     tic2 = time.perf_counter()
     cooling2 = domain.DomainMC(-8.5, 4, 15, 4, .05)
-    cooling2.DefineMaterials(cowlC, np.array([]), np.array([]), plugC)
+    cooling2.DefineMaterials(cowlC, np.array([]), chamberC, plugC, 15)
     toc2 = time.perf_counter()
 
-    tic = time.perf_counter()
-    cooling = domain.Domain(-8.5, 4, 15, 4, .05, .05)
-    cooling.DefineMaterials(cowlC, np.array([]), np.array([]), plugC, fig)
-    toc = time.perf_counter()
+    cooling2.DumpFile("coolmesh.pkl")
 
-    cooling2.ShowMaterialPlot(fig)
+    # tic = time.perf_counter()
+    # cooling = domain.Domain(-8.5, 4, 15, 4, .05, .05)
+    # cooling.DefineMaterials(cowlC, np.array([]), chamberC, plugC, fig)
+    # toc = time.perf_counter()
+
+
+    startingpoint = (-8, 2.6) # TODO use real point
+    plt.plot([startingpoint[0], aimpoint[0]], [startingpoint[1], aimpoint[1]], 'rx-')
+    cooling2.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius)
 
     # fig2 = plots.CreateNonDimPlot()
     # cooling.ShowMaterialPlot(fig2)
 
-    cooling2.DumpFile("coolmesh.pkl")
+    cooling2.ShowMaterialPlot(fig)
+
 
     plt.show()
 
-    print(f"Time single: {toc - tic}")
+    # print(f"Time single: {toc - tic}")
     print(f"Time multi: {toc2 - tic2}")
 
 
