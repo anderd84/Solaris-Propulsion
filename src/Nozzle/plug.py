@@ -16,18 +16,20 @@ def CalcPlugLength(machLip: float, theta:float, exhaustGas: Gas, PbPc: float):
     _, _, length = rao.CalculatePlugMetrics(machLip, theta, rao.CalculateMachD(machLip, theta, exhaustGas.gammaTyp, PbPc), exhaustGas.gammaTyp)
     return length
 
-def CreateRaoContour(exhaustGas: Gas, chamberPressure: Q_, designAmbient: Q_, basePress: Q_, lipRadius: Q_, maxSpikeLength: Q_, resolution:int = 50):
+def CreateRaoContour(exhaustGas: Gas, chamberPressure: Q_, designAmbient: Q_, basePress: Q_, lipRadiusGuess: Q_, maxSpikeLength: Q_, resolution:int = 50):
     PbPc = basePress / chamberPressure
-    ic(PbPc)
     PambPc = designAmbient / chamberPressure
 
     machLip = fsolve(lambda m: gas.StagPressRatio(m, exhaustGas) - PambPc, 2)[0]
     
-    GUESS_T = -.05
+    GUESS_T = -.1
     length = CalcPlugLength(machLip, np.deg2rad(GUESS_T), exhaustGas, PbPc)
 
-    if length*lipRadius > maxSpikeLength:
-        thetaLip = fsolve(lambda t: CalcPlugLength(machLip, np.deg2rad(t), exhaustGas, PbPc) - maxSpikeLength/lipRadius, -5)[0]
+    ic(length)
+    ic(maxSpikeLength.magnitude)
+
+    if length > maxSpikeLength.magnitude:
+        thetaLip = fsolve(lambda t: CalcPlugLength(machLip, np.deg2rad(t), exhaustGas, PbPc) - maxSpikeLength.magnitude, -3)[0]
     else:
         thetaLip = GUESS_T
 
@@ -48,9 +50,12 @@ def CreateRaoContour(exhaustGas: Gas, chamberPressure: Q_, designAmbient: Q_, ba
 
     field = rao.PruneField(field)
 
-    formatContour = nozzle.RaoContourFormat(cont, lipRadius.to(unitReg.inch).magnitude)
+    phi = np.pi/2 + thetaThroat
+    lipRadChoke = np.sqrt(DESIGN.chokeArea * np.sin(phi) / (np.pi * (1 - radiusThroat**2)))
 
-    outputData = {"radiusThroat": Q_(radiusThroat*lipRadius, unitReg.inch), "thetaThroat": Q_(thetaThroat, unitReg.radian), "machLip": machLip, "thetaLip": Q_(thetaLip, unitReg.radian), "areaRatio": areaRatio, "Cf": Cf, "lengthRatio": lengthRatio, "rawContour": cont}
+    formatContour = nozzle.RaoContourFormat(cont, lipRadChoke.to(unitReg.inch).magnitude)
+
+    outputData = {"radiusLip": lipRadChoke, "radiusThroat": Q_(radiusThroat*lipRadChoke, unitReg.inch), "thetaThroat": Q_(thetaThroat, unitReg.radian), "machLip": machLip, "thetaLip": Q_(thetaLip, unitReg.radian), "areaRatio": areaRatio, "Cf": Cf, "lengthRatio": lengthRatio, "rawContour": cont}
 
     return formatContour, field, outputData
 
@@ -100,17 +105,18 @@ def GenerateDimPlug(contour: np.ndarray[nozzle.ContourPoint], throatRadius: Q_, 
     fullPlugContour = np.concatenate([contour[::-1], throatArc[1:], convergeArc, straightSection], axis=0)
     fullPlugContour = np.insert(fullPlugContour, 0, nozzle.ContourPoint(spiketipx, 0), axis=0)
 
-    return fullPlugContour
+    return fullPlugContour, Q_(abs(xcTA - (x2CL - chamberLength)), unitReg.inch)
 
-def GenerateDimCowl(throatRadius: Q_, throatTheta: Q_, Re: Q_, chamberLength: Q_, chamberOuter: Q_, thickness: Q_, overchoke: Q_, circRes: int = 50):
+def GenerateDimCowl(throatRadius: Q_, throatTheta: Q_, Re: Q_, straightLength: Q_, chamberOuter: Q_, thickness: Q_, overchoke: Q_, circRes: int = 50):
     designTable = DESIGN.plugDesignTable
     designTable["throatArcRad"] = designTable["throatArcRadFactor"]*Re.to(unitReg.inch).magnitude
     designTable["turnArcRad"] = designTable["turnArcRadFactor"]*Re.to(unitReg.inch).magnitude
+    designTable["manifoldDistance"] = designTable["manifoldDistanceFactor"]*Re.to(unitReg.inch).magnitude
 
     throatRadius = throatRadius.to(unitReg.inch).magnitude
     throatTheta = throatTheta.to(unitReg.radian).magnitude
     Re = Re.to(unitReg.inch).magnitude
-    chamberLength = chamberLength.to(unitReg.inch).magnitude
+    straightLength = straightLength.to(unitReg.inch).magnitude
     chamberOuter = chamberOuter.to(unitReg.inch).magnitude
     thickness = thickness.to(unitReg.inch).magnitude
 
@@ -131,12 +137,9 @@ def GenerateDimCowl(throatRadius: Q_, throatTheta: Q_, Re: Q_, chamberLength: Q_
 
     o = overchoke.to(unitReg.inch).magnitude
     Rinner = chamberOuter
-    ic(Rinner)
     Rmax = chamberOuter + thickness
-    ic(Rmax)
-    ic(xc)
 
-    xm = .05 #! make an input
+    xm = designTable["manifoldDistance"]
 
     Amat = np.array([[0, 0, 1, 0, sL, 0, 0, 0, 0], 
                     [0, 0, 0, 1, -cL, 0, 0, 0 ,0],
@@ -153,20 +156,15 @@ def GenerateDimCowl(throatRadius: Q_, throatTheta: Q_, Re: Q_, chamberLength: Q_
     yc, rc, xf, yf, rf, ym, rm, l, L = np.linalg.solve(Amat, bmat)
     #! New stuff
 
-    x1 = 0
-    r1 = Re
-
     arcArr = np.linspace(-thetaL, np.pi/2 - thetal, circRes)
     lipArc = np.array([nozzle.ContourPoint(xf - rf*np.sin(a), yf - rf*np.cos(a)) for a in arcArr])
-
-    plt.plot(0, Re, 'rx')
     
     # lipStraight = np.array([nozzle.ContourPoint(xf - rf*cl, yf - rf*sl), nozzle.ContourPoint(xc + rc*cl, yc + rc*sl)])
 
     arcArr = np.linspace(thetal, np.pi/2, circRes)
     convergeArc = np.array([nozzle.ContourPoint(xc + rc*np.cos(a), yc + rc*np.sin(a)) for a in arcArr])
 
-    chamber = np.array([nozzle.ContourPoint(xc, yc+rc), nozzle.ContourPoint(xc - chamberLength, yc+rc), nozzle.ContourPoint(xc - chamberLength, Rmax), nozzle.ContourPoint(xm, Rmax)])
+    chamber = np.array([nozzle.ContourPoint(xc, yc+rc), nozzle.ContourPoint(xc - straightLength, yc+rc), nozzle.ContourPoint(xc - straightLength, Rmax), nozzle.ContourPoint(xm, Rmax)])
 
     arcArr = np.linspace(np.pi/2, -np.pi/2 + thetaL, circRes)
     manifold = np.array([nozzle.ContourPoint(xm + rm*np.cos(a), ym + rm*np.sin(a)) for a in arcArr])

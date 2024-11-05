@@ -1,14 +1,17 @@
 import numpy as np
+np.product = np.prod
 from dataclasses import dataclass
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from scipy.optimize import fsolve
 import fluids.gas as gas
 from fluids.gas import MachAngle, mach2machStar, machStar2mach, Gas
+import General.design as DESIGN
 import Nozzle.nozzle as nozzle
 from icecream import ic
 import Nozzle.config as config
 from General.units import Q_, unitReg
+import matrix_viewer as mv
 import logging
 from General.setenv import setupLogging
 setupLogging()
@@ -22,6 +25,7 @@ class CharacteristicPoint:
     s: float = 0
     mach: float = 0
     alpha: float = 0
+    terminate: bool = False
 
     F: float = 0
     G: float = 0
@@ -32,7 +36,11 @@ class CharacteristicPoint:
         return f"CP @ ({self.x:.3f}, {self.r:.3f}), theta: {np.rad2deg(self.theta):.3f}, s: {self.s:.3f}, mach: {self.mach:.3f}"
 
     def clone(self):
-        return CharacteristicPoint(self.x, self.r, self.theta, self.machStar, self.s, self.mach, self.alpha)
+        return CharacteristicPoint(self.x, self.r, self.theta, self.machStar, self.s, self.mach, self.alpha, terminate=self.terminate)
+
+    def setTerminate(self):
+        self.terminate = True
+        return self
 
     def CalculateRightVariant(self, gas: Gas) -> 'CharacteristicPoint': # I characteristic
         Rgas = gas.Rgas.magnitude
@@ -137,12 +145,12 @@ class CharacteristicPoint:
         logging.debug(f"Solid Did not converge in 30 iterations")
         return N
 
-    @staticmethod #TODO Make this iterative
+    @staticmethod
     def ApproxSolidReflect(PV: 'CharacteristicPoint', isRight: bool, contour: np.ndarray[nozzle.ContourPoint], PbPc: float, workingGas: Gas) -> 'CharacteristicPoint':
         # ic(PV)
         intersect, theta = CharacteristicPoint.CalculateSolidBoundaryIntersect(PV, contour, isRight)
         if intersect is None:
-            return PV.clone()#CharacteristicPoint.CalculateGasReflect(point, isRight, PbPc, workingGas)
+            return PV.clone().setTerminate()#CharacteristicPoint.CalculateGasReflect(point, isRight, PbPc, workingGas)
         
         x = intersect[0]
         r = intersect[1]
@@ -171,7 +179,7 @@ class CharacteristicPoint:
         logging.debug(f"Gas Did not converge in 30 iterations")
         return N
 
-    @staticmethod #TODO make this iterative
+    @staticmethod
     def ApproxGasReflect(PV: 'CharacteristicPoint', isRight, PambPc, workingGas: Gas, streamline: np.ndarray['CharacteristicPoint']) -> 'CharacteristicPoint':
         machInf = np.sqrt((PambPc**(-1/workingGas.gammaTyp[5]) - 1)/workingGas.gammaTyp[2])
         streamPoint: CharacteristicPoint = streamline[-1]
@@ -191,7 +199,7 @@ class CharacteristicPoint:
         return CharacteristicPoint(x, r, theta, machStar, s, machStar2mach(machStar, workingGas.gammaTyp), MachAngle(machStar2mach(machStar, workingGas.gammaTyp)))
 
     @staticmethod
-    def CaclulateBaseReflect():
+    def CaclulateBaseReflect(point: 'CharacteristicPoint', isRight: bool, PbPc: float, workingGas: Gas, streamline: np.ndarray['CharacteristicPoint'], tol = 1e-6) -> 'CharacteristicPoint':
         pass
 
     @staticmethod
@@ -213,7 +221,9 @@ class CharacteristicPoint:
                 return (Bx, By), np.atan2((d - b),(c - a))
         return None, None
 
-def CalculateComplexField(contour, PambPc, PbPc, workingGas: Gas, Mt, Tt, scale = 1, Rsteps = 20, Lsteps = 0, reflections = 3):
+def CalculateComplexField(contour, Pamb, workingGas: Gas, Mt, Tt, scale = 1, Rsteps = 20, Lsteps = 0, reflections = 3):
+    PbPc = DESIGN.basePressure/DESIGN.chamberPressure
+    PambPc = Pamb/DESIGN.chamberPressure
     gamma = workingGas.gammaTyp
     Me = np.sqrt((PambPc**(-1/gamma[5]) - 1)/gamma[2])
     thetaExit = Tt + gas.PrandtlMeyerFunction(Me, gamma) - gas.PrandtlMeyerFunction(Mt, gamma)
@@ -225,8 +235,6 @@ def CalculateComplexField(contour, PambPc, PbPc, workingGas: Gas, Mt, Tt, scale 
 
     rLines[:, 0] = np.transpose(GenerateExpansionFan(Me, Mt, Tt, workingGas, Rsteps, scale))
     lLines[:, 0] = np.transpose(GenerateExpansionFan(Me, Mt, Tt, workingGas, Lsteps, scale))
-
-    ic(rLines)
 
     for i in range(reflections):
         PropogateRegionAll(rLines, lLines, workingGas, i)
@@ -278,6 +286,9 @@ def ReflectionRegion(lines: np.ndarray[CharacteristicPoint], X0, Y0, contour, Pa
     for i in range(1, X0+1):
         for j in range(1, i+1):
             isRight = not (reflection % 2 == 0) ^ startAsRight
+            if region[i, j-1].terminate:
+                region[i,j] = region[i-1,j].clone()
+                continue
             if i == j:
                 reflectOrigin = region[i, j-1] # previous point in the same line
                 region[i,j] = CharacteristicPoint.CalculateSolidReflect(reflectOrigin, isRight, contour, PbPc, workingGas) if isRight else CharacteristicPoint.CalculateGasReflect(reflectOrigin, isRight, PambPc, workingGas, streamline)
@@ -336,7 +347,10 @@ def GridifyComplexField(rlines: np.ndarray, llines: np.ndarray) -> np.ndarray:
         i, j = (0, r + 1)
         rline = True
         for c, point in enumerate(row):
-            gridField[i, j] = point.clone()
+            if gridField[i, j] is None:
+                gridField[i, j] = point.clone()
+            elif gridField[i, j].terminate or point.terminate:
+                gridField[i, j].setTerminate()
             if pos == (R0 + L0):
                 rline = not rline
                 pos = 0
@@ -359,3 +373,45 @@ def GridifyComplexField(rlines: np.ndarray, llines: np.ndarray) -> np.ndarray:
             j += 1 if not rline else 0
             pos += 1
     return gridField
+
+def CalculateThrust(exhaust: Gas, Pamb, Tt: Q_, Rt: Q_, Re: Q_, gridfield, lastContourPoint): # TODO trail termaination when can no longer continue
+    phi = np.pi/2 + Tt
+    Astar = np.pi/np.sin(phi) * (Re**2 - Rt**2)
+    
+    exitV = gas.MachToVelocity(1, exhaust)
+    exitVx = exitV * np.cos(-Tt)
+    momThrust = DESIGN.totalmdot * exitVx
+    ic(exitV.to(unitReg.feet/unitReg.second))
+    ic(momThrust.to(unitReg.pound_force))
+
+    pressThrust = (gas.StagPressRatio(1, exhaust) * exhaust.stagPress - Pamb) * Astar * np.cos(-Tt)
+    ic(pressThrust.to(unitReg.pound_force))
+
+    xt: Q_ = (Re - Rt)*np.tan(Tt)
+
+    contPoints = [CharacteristicPoint(xt.to(unitReg.inch).magnitude, Rt.to(unitReg.inch).magnitude, Tt, 1, 0, 1, 0)]
+    for row in gridfield[1:,:]:
+        for point in row:
+            if point is not None:
+                if not point.terminate:
+                    contPoints.append(point)
+                break
+    contPoints.append(lastContourPoint)
+    
+    for point in contPoints:
+        plt.plot(point.x, point.r, 'or')
+    
+    pressures = [gas.StagPressRatio(p.mach, exhaust)*exhaust.stagPress for p in contPoints[:-1]]
+    thrusts = []
+
+    for i in range(len(contPoints[:-1])):
+        angle = np.pi - np.arctan2(contPoints[i].r - contPoints[i+1].r, contPoints[i].x - contPoints[i+1].x)
+        area = Q_(np.pi / np.sin(angle) * (contPoints[i].r**2 - contPoints[i+1].r**2), unitReg.inch**2)
+        pressure = gas.StagPressRatio(contPoints[i].mach, exhaust)*exhaust.stagPress
+        thrusts.append((pressure - Pamb) * area * np.cos(angle))
+    pressureIntegral = sum(thrusts)
+    ic(pressureIntegral.to(unitReg.pound_force))
+
+    total = momThrust + pressThrust + pressureIntegral
+    ic(total.to(unitReg.pound_force))
+    return total

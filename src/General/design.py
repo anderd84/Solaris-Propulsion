@@ -14,12 +14,12 @@ OFratio = 2
 
 # geometry
 chamberPressure = Q_(300, unitReg.psi)
-totalmdot = Q_(8, unitReg.pound / unitReg.sec)
-maxRadius = Q_(7/2, unitReg.inch)
-wallThickness = Q_(0.35, unitReg.inch)
+totalmdot = Q_(7.5, unitReg.pound / unitReg.sec)
+chamberInternalRadius = Q_(3.825, unitReg.inch)
+wallThickness = Q_(0.125, unitReg.inch)
+maxRadius = chamberInternalRadius + wallThickness
 
 # injector inputs
-chamberInternalRadius = maxRadius - wallThickness #Internal Diameter of Chamber
 Spacing = Q_(0.55, unitReg.inch)  #Spacing between centear of impingement Holes
 oxHoleRadius = Q_(1.25, unitReg.inch)  #Radial distance between centerline and LOX hole
 percentFilmCooling = 0.15 #Outer Film Cooling Percentage
@@ -36,8 +36,8 @@ designAltitude = Q_(20000, unitReg.feet)
 designAtm = Atmosphere(designAltitude.to(unitReg.meter).magnitude)
 
 designAmbientPressure = Q_(designAtm.pressure[0], unitReg.pascal)
-lengthMax = Q_(5.5, unitReg.inch)
-basePressure = Q_(20, unitReg.psi)
+lengthMax = Q_(1.75, unitReg.inch)
+basePressure = Q_(5, unitReg.psi)
 
 # chamber derived
 Combustion=CEA_Obj(oxName=oxName, fuelName=fuelName);
@@ -53,4 +53,5 @@ exhaustGas = Gas(gamma, R_throat, P0=chamberPressure, T0=chamberTemp)
 chokeArea = exhaustGas.getChokedArea(totalmdot).to(unitReg.inch**2)
 
 # nozzle design table
-plugDesignTable = {"throatArcRadFactor": .1, "convergeAngle": 25, "turnArcRadFactor": 2, "straightAngle": 10, "lipAngle":15}
+plugDesignTable = {"throatArcRadFactor": .1, "convergeAngle": 25, "turnArcRadFactor": 2, "straightAngle": 10, "lipAngle":15, "manifoldDistanceFactor": .1}
+# plugDesignTable = {"throatArcRadFactor": .1, "convergeAngle": 45, "turnArcRadFactor": 1.75, "straightAngle": 10, "lipAngle":15, "manifoldDistanceFactor": .1}
