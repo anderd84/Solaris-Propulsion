@@ -3,3 +3,4 @@
 .vscode/*
 logs/*
 src/*.egg-info/*
+*.pkl
