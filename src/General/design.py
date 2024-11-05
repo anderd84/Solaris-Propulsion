@@ -21,7 +21,7 @@ maxRadius = chamberInternalRadius + wallThickness
 
 # injector inputs
 Spacing = Q_(0.55, unitReg.inch)  #Spacing between centear of impingement Holes
-oxHoleRadius = Q_(1.25, unitReg.inch)  #Radial distance between centerline and LOX hole
+oxHoleRadius = Q_(2, unitReg.inch)  #Radial distance between centerline and LOX hole
 percentFilmCooling = 0.15 #Outer Film Cooling Percentage
 filmCoolingSpacing = Q_(0.60, unitReg.inch) #inches Outer
 oxDoubletDiameter = Q_(0.0625, unitReg.inch)  #Design choise for DOublet Diameter size (Need to look more properly into it as 1/4 holes might make vaporization time too long)\

@@ -3,33 +3,25 @@ from Injector.Doublet_Functions import spike_contour
 from Injector.InjectorCad import injector_cad_write
 from Injector.Drill import drill_approximation
 from scipy.optimize import fsolve
-import matplotlib.pyplot as plt
-from fluids.fluid import CD_drill, Pressure_Drop_Fuel, Pressure_Drop_Lox, PROPFLOWS, Chamber_Press
+from fluids.fluid import  PROPFLOWS
 import numpy as np
 from icecream import ic
 from General.units import Q_, unitReg
-import General.design as DESIGN
 from texttable import Texttable
 
-"""
-    Shit that needs to get done still in this code:
-        have A seperate figure for a 2D sketch of the hgoles to make visualization much much easier
-"""
 
-def InjectorParameters(di: float ,Spacing: float , Rgamma_lox: float, Film_Cooling: float, FilmCoolingSpacing: float, Pressure_Chamber: float,Doublet_Diameter_LOX: float
-                       , oxImpingeAngle:float, fuelInitalImpingeAngle:float, filmImpingeAngle:float,Lox_Dewar_Pressure: float, AirTemperature: float, AirPressure: float ,FuelName, spike_contour: float, Points: float):
-    ri = di / 2 #Internal Radius of Chamber
-    # -------------- Prop Initialization -------------- #
-    OX_CORE,FUEL_CORE,OUT_FILM_C,viscosity_f, specific_heat_p_f, thermal_conductivity_f, SurfaceTens_f = PROPFLOWS(Film_Cooling,oxImpingeAngle, fuelInitalImpingeAngle, filmImpingeAngle,Lox_Dewar_Pressure, AirTemperature, AirPressure ,  FuelName)
+def initialize_prop_flows(Film_Cooling, oxImpingeAngle, fuelInitalImpingeAngle, filmImpingeAngle,
+                          Lox_Dewar_Pressure, CD_drill,Pressure_Drop_Lox, Pressure_Drop_Fuel, AirTemperature, AirPressure, FuelName, Pressure_Chamber: float):
+    """Initialize oxidizer and fuel core properties."""
 
-    # -------------- Function in DOublet to make my version of the SHitty Spike Contour -------------- #
-    x_profile,y_profile = spike_contour(Points)
-
-    # -------------- Code to Find Peaks (Largest diameter)  for Spike COntour (Will work with davids 2d code) -------------- #
-    Peaky, Peak_Point = max(y_profile), np.argmax(y_profile)
-    Peakx = x_profile[Peak_Point]
+    OX_CORE,FUEL_CORE,OUT_FILM_C,viscosity_f, specific_heat_p_f, thermal_conductivity_f, SurfaceTens_f = PROPFLOWS(
+        Film_Cooling,oxImpingeAngle, fuelInitalImpingeAngle, filmImpingeAngle,Lox_Dewar_Pressure, AirTemperature, AirPressure ,  FuelName)
     OX_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Lox)
     FUEL_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Fuel)
+    return OX_CORE,FUEL_CORE,OUT_FILM_C,viscosity_f, specific_heat_p_f, thermal_conductivity_f, SurfaceTens_f
+# Calculation of fuel Impingement angle
+def calculate_fuel_impinge_angle(OX_CORE, FUEL_CORE, AimY, Rgamma_lox, Spacing, AimX):
+    """Calculate the fuel impinge angle based on physical constraints."""
     # -------------- Code to numericlaly find Fuel gamma based on the physical constraints and Ox gamma choice -------------- #
     def func(gamma_FUEL):
         """Numerically solving function that has Momentum Balance on one side, and Tan Resultant angle in terms of gammas and physical Dimensions
@@ -40,21 +32,20 @@ def InjectorParameters(di: float ,Spacing: float , Rgamma_lox: float, Film_Cooli
         Returns:
             float: Returns what the numerical solver goes for A.K.A zero
         """    
-        return \
-        -((ri.magnitude + Peaky)/2 - Rgamma_lox.magnitude -Spacing.magnitude * np.sin(np.pi/2 + gamma_FUEL) / np.sin(np.radians(OX_CORE.gamma.magnitude) - gamma_FUEL) * np.cos(np.radians(90 - (OX_CORE.gamma.magnitude))))/ \
-        (Peakx - Spacing.magnitude * np.sin(np.pi/2 + gamma_FUEL) / np.sin(np.radians(OX_CORE.gamma.magnitude) - gamma_FUEL) * np.sin(np.radians(90 - (OX_CORE.gamma.magnitude)))) +\
-        (OX_CORE.mdot.magnitude * OX_CORE.Velocity_init.magnitude * np.sin(np.deg2rad(OX_CORE.gamma.magnitude)) \
-        + FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity_init.magnitude * np.sin(gamma_FUEL))/ \
-        (OX_CORE.mdot.magnitude * OX_CORE.Velocity_init.magnitude * np.cos(np.deg2rad(OX_CORE.gamma.magnitude)) \
-        + FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity_init.magnitude * np.cos(gamma_FUEL))    
-
-
+        Num = -(AimY - Rgamma_lox.magnitude -Spacing.magnitude * np.sin(np.pi/2 + gamma_FUEL) / np.sin(np.radians(OX_CORE.gamma.magnitude) - gamma_FUEL) * np.cos(np.radians(90 - (OX_CORE.gamma.magnitude))))
+        Den1 = (AimX - Spacing.magnitude * np.sin(np.pi/2 + gamma_FUEL) / np.sin(np.radians(OX_CORE.gamma.magnitude) - gamma_FUEL) * np.sin(np.radians(90 - (OX_CORE.gamma.magnitude)))) 
+        Num2 = (OX_CORE.mdot.magnitude * OX_CORE.Velocity_init.magnitude * np.sin(np.deg2rad(OX_CORE.gamma.magnitude))) 
+        Num3 = (FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity_init.magnitude * np.sin(gamma_FUEL))
+        Den2 = (OX_CORE.mdot.magnitude * OX_CORE.Velocity_init.magnitude * np.cos(np.deg2rad(OX_CORE.gamma.magnitude)))
+        Den3 = (FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity_init.magnitude * np.cos(gamma_FUEL))
+        
+        return Num/(Den1)  + (Num2 + Num3)/(Den2 + Den3)
     gamma_FUEL_original = fsolve(func, np.deg2rad(5)) 
     gamma_FUEL_original = Q_(np.rad2deg(gamma_FUEL_original[0]), unitReg.degrees) 
     FUEL_CORE.gamma = Q_(round(gamma_FUEL_original.magnitude * 2)/2, unitReg.degrees) 
-
-
-    # -------------- Main Doublets Holes -------------- #
+    return gamma_FUEL_original, FUEL_CORE
+def calculate_fuel_diameters(OX_CORE, FUEL_CORE, Pressure_Chamber, Doublet_Diameter_LOX, CD_drill, Pressure_Drop_Fuel, Pressure_Drop_Lox):
+        # -------------- Main Doublets Holes -------------- #
     # Initialize variables to track the closest match
     OX_CORE.Number(Doublet_Diameter_LOX, CD_drill, Pressure_Chamber * Pressure_Drop_Lox)
     FUEL_CORE_Diameter = np.sqrt((FUEL_CORE.Area(CD_drill, Pressure_Chamber * Pressure_Drop_Fuel) / OX_CORE.Hole_Number.magnitude) * 4 / np.pi)
@@ -91,6 +82,8 @@ def InjectorParameters(di: float ,Spacing: float , Rgamma_lox: float, Film_Cooli
     OX_CORE.Actual(Doublet_Diameter_LOX, OX_CORE.Hole_Number)
     FUEL_CORE.Actual(closest_diameter, OX_CORE.Hole_Number)
     fuel_Doublet = [ Original_Fuel_Diameter, closest_diameter, drill_size]
+    return fuel_Doublet
+def calculate_film_cooling_diameters(OUT_FILM_C, FilmCoolingSpacing, Pressure_Chamber, CD_drill, Pressure_Drop_Fuel, ri):
 
 
 
@@ -133,6 +126,9 @@ def InjectorParameters(di: float ,Spacing: float , Rgamma_lox: float, Film_Cooli
     # Initialize the actual values for the selected diameter
     OUT_FILM_C.Actual(closest_diameter, OUT_FILM_C.Hole_Number)
     film_Cool_Doublet = [Original_Film_Cooling_Diameter, closest_diameter, drill_size]
+    return film_Cool_Doublet
+def droplet_sizing(FUEL_CORE, OX_CORE, Doublet_Diameter_Fuel, Doublet_Diameter_LOX, viscosity_f, SurfaceTens_f):
+    """Calculate droplet sizes using Dickerson and NASA methods."""
 
     # DROPLET SIZING
     # R. A. DlCKERSON method
@@ -158,7 +154,10 @@ def InjectorParameters(di: float ,Spacing: float , Rgamma_lox: float, Film_Cooli
         np.power(P_D, 0.165) * np.power(Doublet_Diameter_Fuel.magnitude, 0.293) *
         np.power(Doublet_Diameter_LOX.magnitude / Doublet_Diameter_Fuel.magnitude, 0.023) * K_prop,
         unitReg.micron)
-    # VAPORIZATION TIME & CHAMBER LENGTH
+    return D_f_Dickerson, D_f_NASA
+def calculate_vaporization_time_and_chamber_length(OX_CORE, FUEL_CORE, specific_heat_p_f, thermal_conductivity_f,
+                                                   D_f_Dickerson, D_f_NASA):
+    """Calculate vaporization time and chamber length for given droplet sizes."""
     B = 26.8 # B for most hydrocarbon fuels are between 5 & 20.
     Vaporize_time_Dickerson = (FUEL_CORE.rho * specific_heat_p_f * (D_f_Dickerson/2)**2 / (2* thermal_conductivity_f * np.log(1 + B))).to(unitReg.second)
     Vaporize_time_NASA = (FUEL_CORE.rho * specific_heat_p_f * (D_f_NASA/2)**2 / (2* thermal_conductivity_f * np.log(1 + B))).to(unitReg.second)
@@ -179,28 +178,8 @@ def InjectorParameters(di: float ,Spacing: float , Rgamma_lox: float, Film_Cooli
     Chamber_Length_NASA = Travel_Length_NASA * np.cos(Resultant_angle)
     Dickerson = [D_f_Dickerson, Vaporize_time_Dickerson, Travel_Length_Dickerson, Chamber_Length_Dickerson]
     NASA = [D_f_NASA, Vaporize_time_NASA, Travel_Length_NASA, Chamber_Length_NASA]
- 
-    return OX_CORE, FUEL_CORE, OUT_FILM_C, Dickerson, NASA, fuel_Doublet, film_Cool_Doublet, Doublet_Diameter_Fuel, gamma_FUEL_original, x_profile, y_profile, Peakx, Peaky
-
-def main():
-    # -------------- Design Inputs -------------- #    
-    di = DESIGN.chamberInternalRadius #Internal Diameter of Chamber
-    Spacing = DESIGN.Spacing  #Spacing between centear of impingement Holes
-    Rgamma_lox = DESIGN.oxHoleRadius  #Radial distance between centerline and LOX hole
-    Film_Cooling = DESIGN.percentFilmCooling #Outer Film Cooling Percentage
-    FilmCoolingSpacing = DESIGN.filmCoolingSpacing #inches Outer
-    Pressure_Chamber = DESIGN.chamberPressure #Chamber Pressure Pretty Obvious
-    Doublet_Diameter_LOX = DESIGN.oxDoubletDiameter  #Design choise for DOublet Diameter size (Need to look more properly into it as 1/4 holes might make vaporization time too long)\
-    oxImpingeAngle, fuelInitalImpingeAngle, filmImpingeAngle = DESIGN.oxImpingeAngle,0,DESIGN.filmImpingeAngle #Lox, fuel, outer FC  #All Angles from axial
-    Lox_Dewar_Pressure = DESIGN.oxDewarPressure
-    AirTemperature = DESIGN.prescottAmbientTemp
-    AirPressure = DESIGN.prescottAmbientPressure
-    FuelName = DESIGN.fuelName
-    Points = 1000 #also used in other plots if this section ends up getting deleted
-           
-    OX_CORE, FUEL_CORE, OUT_FILM_C, Dickerson, NASA, fuel_Doublet, film_Cool_Doublet, Doublet_Diameter_Fuel, gamma_FUEL_original, x_profile, y_profile, Peakx, Peaky = InjectorParameters(di ,Spacing, Rgamma_lox, Film_Cooling, FilmCoolingSpacing, Pressure_Chamber,Doublet_Diameter_LOX, oxImpingeAngle, fuelInitalImpingeAngle, filmImpingeAngle,Lox_Dewar_Pressure, AirTemperature, AirPressure ,FuelName, spike_contour,Points)
-    ri = di/2
-
+    return Dickerson, NASA
+def table_results(fuel_Doublet, film_Cool_Doublet, Dickerson, NASA, Doublet_Diameter_LOX, OX_CORE, FUEL_CORE,OUT_FILM_C,FuelName,gamma_FUEL_original):
     Original_Fuel_Diameter, closest_Fuel_Diameter, fuel_Doublet_Drill = fuel_Doublet
     Original_Film_Cooling_Diameter, closest_Film_Cool_Diameter, film_Cool_Doublet_Drill = film_Cool_Doublet
     [D_f_Dickerson, Vaporize_time_Dickerson, Travel_Length_Dickerson, Chamber_Length_Dickerson] = Dickerson
@@ -235,12 +214,12 @@ def main():
     print(Injector_Parameters.draw())
     print(rounded_Table.draw())
     print(Vaporization.draw())
+def plot_results(OX_CORE, FUEL_CORE,OUT_FILM_C,Spacing,Rgamma_lox, ri, FilmCoolingSpacing, AimX, AimY, x_profile, y_profile, Chamber_ContourX, Chamber_ContourY):
+    Points = 1000 #also used in other plots if this section ends up getting deleted
 
     # -------------- Constants and parameters -------------- #
     gamma_lox = OX_CORE.gamma.magnitude  # degrees and making the variables work below since i made the matlab version of this first and converted to python with ChatGPT
     gamma_fuel = FUEL_CORE.gamma.magnitude  # degrees
-    Chamber_Cowl_r = 0.5  # in
-    Past_Peak = 1.15 #some terrible constant for shitty chamber I made drawn
 
 
     # -------------- Plotting the aerospike nozzle contour -------------- #
@@ -253,8 +232,8 @@ def main():
     x = Spacing.magnitude * np.sin(np.radians(90 + gamma_fuel)) / np.sin(np.radians(gamma_lox - gamma_fuel)) * np.sin(np.radians(90 - gamma_lox)) 
     y = Spacing.magnitude * np.sin(np.radians(90 + gamma_fuel)) / np.sin(np.radians(gamma_lox - gamma_fuel)) * np.cos(np.radians(90 - gamma_lox)) + Rgamma_lox.magnitude
     plt.plot(x, y, "o")
-    yprime = (ri.magnitude + Peaky) / 2
-    xprime = Peakx
+    yprime = AimY
+    xprime = AimX
     plt.plot(xprime, yprime, "o")
 
 
@@ -263,16 +242,8 @@ def main():
     x_angled_lines = np.linspace(0, x, Points)  # Up to the impingement point for FUEL line
     #print(FilmCoolingSpacing[0]* np.tan( np.pi / 2  - np.radians(IN_FILM_C.gamma.magnitude)))
     x_filmcooling_outer = np.linspace(0, FilmCoolingSpacing.magnitude* np.tan( np.pi / 2  - np.abs(np.radians(OUT_FILM_C.gamma.magnitude))), Points)
-    thetaRange4 = np.linspace(np.radians(90), 0, Points)
-
 
     # -------------- Making and Plotting a Shitty Chamber Drawing  -------------- 
-    ChamberX = x_graph / x_graph[-1] * Peakx * Past_Peak
-    ChamberY = np.ones(len(ChamberX)) * ri.magnitude
-    ChamberArcX = ChamberX[-1] + Chamber_Cowl_r * np.cos(thetaRange4)
-    ChamberArcY = ChamberY[-1] + Chamber_Cowl_r * (-1 + np.sin(thetaRange4))
-    Chamber_ContourX = np.concatenate([ChamberX, ChamberArcX])
-    Chamber_ContourY = np.concatenate([ChamberY, ChamberArcY])
     plt.plot(Chamber_ContourX, Chamber_ContourY, "k", linewidth=2)
 
     # -------------- Plotting Horizontal Lines axial lines (References for angles) -------------- #
@@ -298,7 +269,7 @@ def main():
         (OX_CORE.mdot.magnitude * OX_CORE.Velocity_Actual.magnitude * np.cos(np.deg2rad(OX_CORE.gamma.magnitude)) \
         + FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity_Actual.magnitude * np.cos(np.deg2rad(FUEL_CORE.gamma.magnitude))) 
     resultant_y_intercept = y - tan_resultant * x
-    ResultantX = x_graph / x_graph[-1] * (xprime - x) * Past_Peak + x
+    ResultantX = x_graph / x_graph[-1] * (xprime - x) + x
     ResultantY = tan_resultant * ResultantX + resultant_y_intercept
     plt.plot(ResultantX, ResultantY, "y", linewidth=2)
 
@@ -359,5 +330,6 @@ def main():
     plt.show()
 
 
-if __name__ == "__main__":
-    main()
+
+
+
