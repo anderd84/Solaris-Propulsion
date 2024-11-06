@@ -1,6 +1,7 @@
 [project]
 name = "SolarisCode"
-dependencies = ["numpy",
+dependencies = [
+"numpy",
 "matplotlib",
 "scipy",
 "CoolProp",
@@ -14,7 +15,8 @@ dependencies = ["numpy",
 "rocketprops",
 "pyyaml",
 "ambiance",
-"PyQt6"
+"PyQt6",
+"joblib"
 ]
 version = "0.1.0"
 description = "A package for aerospike engine calculations"
