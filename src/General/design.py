@@ -18,6 +18,7 @@ totalmdot = Q_(7.5, unitReg.pound / unitReg.sec)
 chamberInternalRadius = Q_(3.825, unitReg.inch)
 wallThickness = Q_(0.125, unitReg.inch)
 maxRadius = chamberInternalRadius + wallThickness
+plugBaseRadius = Q_(2, unitReg.inch)
 
 # injector inputs
 Spacing = Q_(0.55, unitReg.inch)  #Spacing between centear of impingement Holes

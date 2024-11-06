@@ -32,34 +32,31 @@ def main():
     plots.PlotPlug(fig, chamberC)
     # plt.show()
 
-    tic2 = time.perf_counter()
-    cooling2 = domain.DomainMC(-8.5, 4, 15, 4, .05)
-    cooling2.DefineMaterials(cowlC, np.array([]), chamberC, plugC, 15)
-    toc2 = time.perf_counter()
+    cooling2 = domain.DomainMC(-8.5, 4, 15, 4, .01)
+    cooling2.DefineMaterials(cowlC, np.array([]), chamberC, plugC, 8)
 
-    cooling2.DumpFile("coolmesh.pkl")
+    cooling2.DumpFile("coolmesh.msh")
 
     # tic = time.perf_counter()
     # cooling = domain.Domain(-8.5, 4, 15, 4, .05, .05)
     # cooling.DefineMaterials(cowlC, np.array([]), chamberC, plugC, fig)
     # toc = time.perf_counter()
 
-
     startingpoint = (-8, 2.6) # TODO use real point
     plt.plot([startingpoint[0], aimpoint[0]], [startingpoint[1], aimpoint[1]], 'rx-')
-    cooling2.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius, DESIGN.chokeArea, fig)
+    cooling2.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius, DESIGN.plugBaseRadius, DESIGN.chokeArea, fig)
 
     # fig2 = plots.CreateNonDimPlot()
     # cooling.ShowMaterialPlot(fig2)
 
-    cooling2.ShowMaterialPlot(fig)
+    # cooling2.ShowMaterialPlot(fig)
+    cooling2.ShowStatePlot(fig)
+
 
 
     plt.show()
 
     # print(f"Time single: {toc - tic}")
-    print(f"Time multi: {toc2 - tic2}")
-
 
 if __name__ == "__main__":
     main()
