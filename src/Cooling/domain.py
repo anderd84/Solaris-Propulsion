@@ -31,85 +31,11 @@ class DomainPoint:
     r: float
     area: float
     material: DomainMaterial = DomainMaterial.FREE
+    border: bool = False
     temperature: Q_ = Q_(70, unitReg.degF)
     velocity: Q_ = Q_(0, unitReg.ft/unitReg.s)
     hydraulicDiameter: Q_ = Q_(0, unitReg.inch)
 
-@dataclass
-class Domain:
-    array: np.ndarray
-    x0: float
-    r0: float
-    width: float
-    height: float
-    xstep: float
-    rstep: float
-    hpoints: int
-    vpoints: int
-
-    def __init__(self, x0, r0, width, height, dx=.1, dy=.1):
-        hpoints = int(width/dx) + 1
-        vpoints = int(height/dy) + 1
-        self.array = np.empty((hpoints, vpoints), dtype=DomainPoint)
-        self.x0 = x0
-        self.r0 = r0
-        self.width = width
-        self.height = height
-        self.hpoints = hpoints
-        self.vpoints = vpoints
-        self.xstep = width/(hpoints-1)
-        self.rstep = height/(vpoints-1)
-        for i in range(hpoints):
-            for j in range(vpoints):
-                self.array[i][j] = DomainPoint(x0 + i*self.xstep, r0 - j*self.rstep, DomainMaterial.FREE, 0, self.xstep*self.rstep)
-
-    def DefineMaterials(self, cowl: np.ndarray, coolant: np.ndarray, chamber: np.ndarray, plug: np.ndarray, fig: plt.Figure):
-        prevPercent = 0
-        # plt.ion()
-        # plt.show()
-
-        for i in range(self.hpoints):
-            for j in range(self.vpoints):
-
-                if prevPercent < int(i * j / (self.hpoints * self.vpoints) * 200):
-                    prevPercent = int(i * j / (self.hpoints * self.vpoints) * 200)
-                    print(f"Progress: {prevPercent/2}%")
-                    # fig.axes[0].clear()
-                    # plots.PlotPlug(fig, plug)
-                    # plots.PlotPlug(fig, cowl)
-                    # self.ShowMaterialPlot(fig)
-                    # fig.canvas.draw()
-                    # fig.canvas.flush_events()
-
-                if material.isIntersect(self.array[i][j], coolant, (self.width, self.height)):
-                    self.array[i,j].material = DomainMaterial.COOLANT
-                    continue
-                if material.isIntersect(self.array[i][j], cowl, (self.width, self.height)):
-                    self.array[i,j].material = DomainMaterial.COWL
-                    continue
-                if material.isIntersect(self.array[i][j], chamber, (self.width, self.height)):
-                    self.array[i,j].material = DomainMaterial.CHAMBER
-                    continue
-                if material.isIntersect(self.array[i][j], plug, (self.width, self.height)):
-                    self.array[i,j].material = DomainMaterial.PLUG
-                    continue
-
-
-    def ShowMaterialPlot(self, fig: plt.Figure):
-        xarr = np.array([[point.x for point in row] for row in self.array])
-        rarr = np.array([[point.r for point in row] for row in self.array])
-        matarr = np.transpose(np.array([[point.material.value for point in row] for row in self.array]))
-
-        ax = fig.axes[0]
-        # contf = ax.contourf(xarr, rarr, matarr, levels=[0, 1, 4] , colors=['white', 'blue', 'red'])
-        # contf = ax.contourf(xarr, rarr, matarr)
-        ax.imshow(matarr, extent=(self.x0, self.x0 + self.width, self.r0 - self.height, self.r0), origin='upper', cmap='jet')
-        xcells = np.linspace(self.x0 - self.xstep/2, self.x0 + self.width + self.xstep/2, self.hpoints+1)
-        rcells = np.linspace(self.r0 + self.rstep/2, self.r0 - self.height - self.rstep/2, self.vpoints+1)
-        xl, rl = np.meshgrid(xcells, rcells)
-        # ax.plot(xl, rl, 'k', linewidth=0.25)
-        # ax.plot(np.transpose(xl), np.transpose(rl), 'k', linewidth=0.25)
-@dataclass
 class DomainMC:
     array: np.ndarray
     x0: float
@@ -167,7 +93,7 @@ class DomainMC:
             print(f"Starting parallel computation with {MAX_CORES} cores")
             jump = int(len(q)/MAX_CORES)
             for i in range(MAX_CORES):
-                futures.append(executor.submit(EvalProcess, i, shm, self.array.shape, (self.width, self.height), coolant, cowl, chamber, plug))
+                futures.append(executor.submit(EvalMaterialProcess, i, shm, self.array.shape, (self.width, self.height), coolant, cowl, chamber, plug))
                 # futures.append(executor.submit(EvalProcess, MAX_CORES - i - 1, q[i*jump:(i+1)*jump], self.shm, self.array.shape, (self.width, self.height), coolant, cowl, chamber, plug))
             print("Tasks submitted")
             for future in concurrent.futures.as_completed(futures):
@@ -175,11 +101,14 @@ class DomainMC:
                 for i, j, mat in res:
                     self.array[i,j].material = mat
 
-        toc = time.perf_counter()
         print("Parallel computation done")
-        print(f"Time to define materials: {toc - tic}")
         shm.close()
         shm.unlink()
+        print("assigning borders")
+        self.AssignBorders()
+        toc = time.perf_counter()
+        print("material defined")
+        print(f"Time to define materials: {toc - tic}")
 
     def ShowMaterialPlot(self, fig: plt.Figure):
         xarr = np.array([[point.x for point in row] for row in self.array])
@@ -199,18 +128,41 @@ class DomainMC:
         ax.plot(np.transpose(xl), np.transpose(rl), 'k', linewidth=0.25)
 
     def ShowStatePlot(self, fig: plt.Figure):
+        print("state plot!")
         xarr = np.array([[point.x for point in row] for row in self.array])
+        print("xarr done!")
         rarr = np.array([[point.r for point in row] for row in self.array])
-        matarr = np.array([[point.hydraulicDiameter.to(unitReg.inch).magnitude for point in row] for row in self.array])
+        print("rarr done!")
+        
+        matarr = np.array([[point.velocity.to(unitReg.foot/unitReg.sec).magnitude for point in row] for row in self.array])
+        print("matarr done!")
 
         ax = fig.axes[0]
         contf = ax.contourf(xarr, rarr, matarr, 100, cmap='jet')
         fig.colorbar(contf, ax=ax)
+        # xcells = np.linspace(self.x0 - self.xstep/2, self.x0 + self.width + self.xstep/2, self.hpoints+1)
+        # rcells = np.linspace(self.r0 + self.rstep/2, self.r0 - self.height - self.rstep/2, self.vpoints+1)
+        # xl, rl = np.meshgrid(xcells, rcells)
+        print("done!")
+        # ax.plot(xl, rl, 'k', linewidth=0.25)
+        # ax.plot(np.transpose(xl), np.transpose(rl), 'k', linewidth=0.25)
+
+    def ShowBorderPlot(self, fig: plt.Figure):
+        xarr = np.array([[point.x for point in row] for row in self.array])
+        rarr = np.array([[point.r for point in row] for row in self.array])
+        matarr = np.array([[int(point.border) for point in row] for row in self.array])
+
+        # extent = [xarr[0,0]-self.xstep, xarr[-1,-1]+self.xstep, rarr[-1,-1]-self.rstep, rarr[0,0]+self.rstep]
+        extent = [xarr[0,0]-self.xstep/2, xarr[-1,-1]+self.xstep/2, rarr[-1,-1]-self.rstep/2, rarr[0,0]+self.rstep/2]
+        ax = fig.axes[0]
+        # contf = ax.contourf(xarr, rarr, matarr, levels=[0, 1, 4] , colors=['white', 'blue', 'red'])
+        # contf = ax.contourf(xarr, rarr, matarr)
+        ax.imshow(matarr, extent=extent, origin='upper', cmap='jet')
         xcells = np.linspace(self.x0 - self.xstep/2, self.x0 + self.width + self.xstep/2, self.hpoints+1)
         rcells = np.linspace(self.r0 + self.rstep/2, self.r0 - self.height - self.rstep/2, self.vpoints+1)
         xl, rl = np.meshgrid(xcells, rcells)
-        ax.plot(xl, rl, 'k', linewidth=0.25)
-        ax.plot(np.transpose(xl), np.transpose(rl), 'k', linewidth=0.25)
+        # ax.plot(xl, rl, 'k', linewidth=0.25)
+        # ax.plot(np.transpose(xl), np.transpose(rl), 'k', linewidth=0.25)
 
     def AssignChamberTemps(self, chamber: np.ndarray, exhaust: Gas, startPoint: tuple, endPoint: tuple, chamberWallRadius: Q_, plugBase: Q_, Astar: Q_, fig):
         tic = time.perf_counter()
@@ -223,8 +175,8 @@ class DomainMC:
         startPointU, _ = material.intersectPolyAt(chamber, startPoint, farAway1)
         startPointL, _ = material.intersectPolyAt(chamber, startPoint, farAway2)
 
-        originX = np.linspace(startPoint[0], endPoint[0], int(2*self.hpoints/3))
-        originR = np.linspace(startPoint[1], endPoint[1], int(2*self.hpoints/3))
+        originX = np.linspace(startPoint[0], endPoint[0], int(self.hpoints))
+        originR = np.linspace(startPoint[1], endPoint[1], int(self.hpoints))
 
         iStart, jStart = self.ChamberStartCell()
 
@@ -333,6 +285,19 @@ class DomainMC:
         toc = time.perf_counter()
         print(f"Time to assign chamber temps: {toc - tic}")
         
+    def AssignBorders(self):
+        finalI = self.vpoints - 1
+        finalJ = self.hpoints - 1
+
+        for i in range(self.vpoints):
+            for j in range(self.hpoints):
+                lowI = max(i - 1, 0)
+                lowJ = max(j - 1, 0)
+                highI = min(i + 1, finalI)
+                highJ = min(j + 1, finalJ)
+                checks = [self.array[lowI, j].material, self.array[highI, j].material, self.array[i, lowJ].material, self.array[i, highJ].material]
+                self.array[i, j].border = not(checks[0] == checks[1] and checks[1] == checks[2] and checks[2] == checks[3])
+
     def cellsOnLine(self, point1, point2):
         linedx = point2[0] - point1[0]
         linedr = point2[1] - point1[1]
@@ -384,7 +349,7 @@ class DomainMC:
     def LoadFile(filename):
         return joblib.load(filename + '.z')
 
-def EvalProcess(pn, shm, shape, size, coolant, cowl, chamber, plug):
+def EvalMaterialProcess(pn, shm, shape, size, coolant, cowl, chamber, plug):
     res = []
     domain = np.ndarray(shape, dtype=DomainPoint, buffer=shm.buf)
     print(f"Starting process {pn + 1}")
