@@ -8,6 +8,7 @@ from General.units import Q_, unitReg
 
 Re = Q_(3.2, unitReg.inch)
 exhaust = DESIGN.exhaustGas
+print(exhaust.stagTemp)
 
 cont, field, outputData = plug.CreateRaoContour(exhaust, DESIGN.chamberPressure, DESIGN.designAmbientPressure, DESIGN.basePressure, Re, DESIGN.lengthMax)
 Rt = outputData["radiusThroat"]
