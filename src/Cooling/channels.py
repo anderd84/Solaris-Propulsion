@@ -7,8 +7,8 @@ from icecream import ic
 from fluids.fluid import CD_drill, Pressure_Drop_Fuel, \
                          Pressure_Drop_Lox,  pm, get_fluid_properties, CP
 from General.units import Q_, unitReg
-from cooling2d import combustion_convection
-from domain import DomainPoint
+from Cooling.cooling2d import combustion_convection
+from Cooling.domain import DomainPoint
 
 def channel_area_sizing(point: DomainPoint):
     # Chooses a channel area based on the temperature of the inner nozzle wall
