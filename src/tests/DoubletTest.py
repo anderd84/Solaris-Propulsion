@@ -26,12 +26,19 @@ FuelName = DESIGN.fuelName
 Points = 1000 #also used in other plots if this section ends up getting deleted
 AimX = 8
 AimY = 3.66
-
+chamberatInjectorRadius = DESIGN.chamberatInjectorRadius
 OX_CORE,FUEL_CORE,OUT_FILM_C,viscosity_f, specific_heat_p_f, thermal_conductivity_f, SurfaceTens_f = doublet.initialize_prop_flows(
     Film_Cooling, oxImpingeAngle, fuelInitalImpingeAngle, filmImpingeAngle,Lox_Dewar_Pressure, CD_drill, Pressure_Drop_Lox,  Pressure_Drop_Fuel, AirTemperature, AirPressure, FuelName, Pressure_Chamber)
 gamma_FUEL_original, FUEL_CORE = doublet.calculate_fuel_impinge_angle(OX_CORE, FUEL_CORE, AimY, Rgamma_lox, Spacing, AimX)
 fuel_Doublet = doublet.calculate_fuel_diameters(OX_CORE, FUEL_CORE, Pressure_Chamber, Doublet_Diameter_LOX, CD_drill, Pressure_Drop_Fuel, Pressure_Drop_Lox)
-film_Cool_Doublet = doublet.calculate_film_cooling_diameters(OUT_FILM_C, FilmCoolingSpacing, Pressure_Chamber, CD_drill, Pressure_Drop_Fuel, ri)
+manual_override = [0 , 51] # wheteher you actual override the cell or not, The new hole number if you need to
+film_Cool_Doublet= doublet.calculate_film_cooling_diameters(OUT_FILM_C, FilmCoolingSpacing, Pressure_Chamber, CD_drill, Pressure_Drop_Fuel, chamberatInjectorRadius,manual_override)
+ic(OUT_FILM_C.Area_Actual / FUEL_CORE.Area_Actual)
+
+
+OUT_FILM_C, FUEL_CORE, OX_CORE = doublet.reinitialize_fuel(OUT_FILM_C, FUEL_CORE, OX_CORE, film_Cool_Doublet)
+
+#fuel_Doublet = doublet.calculate_fuel_diameters(OX_CORE, FUEL_CORE, Pressure_Chamber, Doublet_Diameter_LOX, CD_drill, Pressure_Drop_Fuel, Pressure_Drop_Lox)
 D_f_Dickerson, D_f_NASA =doublet.droplet_sizing(FUEL_CORE, OX_CORE, fuel_Doublet[1], Doublet_Diameter_LOX, viscosity_f, SurfaceTens_f)
 Dickerson, NASA = doublet.calculate_vaporization_time_and_chamber_length(OX_CORE, FUEL_CORE, specific_heat_p_f, thermal_conductivity_f,D_f_Dickerson, D_f_NASA)
 doublet.table_results(fuel_Doublet, film_Cool_Doublet, Dickerson, NASA, Doublet_Diameter_LOX, OX_CORE, FUEL_CORE,OUT_FILM_C,FuelName,gamma_FUEL_original)
@@ -49,4 +56,4 @@ ChamberArcY = ChamberY[-1] + Chamber_Cowl_r * (-1 + np.sin(thetaRange4))
 Chamber_ContourX = np.concatenate([ChamberX, ChamberArcX])
 Chamber_ContourY = np.concatenate([ChamberY, ChamberArcY])
 
-doublet.plot_results(OX_CORE, FUEL_CORE,OUT_FILM_C,Spacing,Rgamma_lox, ri, FilmCoolingSpacing, AimX, AimY, x_profile, y_profile, Chamber_ContourX, Chamber_ContourY)
+#doublet.plot_results(OX_CORE, FUEL_CORE,OUT_FILM_C,Spacing,Rgamma_lox, ri, FilmCoolingSpacing, AimX, AimY, x_profile, y_profile, Chamber_ContourX, Chamber_ContourY)

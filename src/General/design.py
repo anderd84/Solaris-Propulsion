@@ -14,21 +14,25 @@ OFratio = 2
 
 # geometry
 chamberPressure = Q_(300, unitReg.psi)
+percentFilmCooling = 0.15 #Outer Film Cooling Percentage
 totalmdot = Q_(7.5, unitReg.pound / unitReg.sec)
+Fuel_Total = totalmdot /(1+percentFilmCooling + OFratio)
+Oxidizer_Total = totalmdot - Fuel_Total
+
 chamberInternalRadius = Q_(3.825, unitReg.inch)
 wallThickness = Q_(0.125, unitReg.inch)
 maxRadius = chamberInternalRadius + wallThickness
+chamberatInjectorRadius = Q_(6.25/2, unitReg.inch)
 
 # injector inputs
 Spacing = Q_(0.55, unitReg.inch)  #Spacing between centear of impingement Holes
-oxHoleRadius = Q_(2, unitReg.inch)  #Radial distance between centerline and LOX hole
-percentFilmCooling = 0.15 #Outer Film Cooling Percentage
-filmCoolingSpacing = Q_(0.60, unitReg.inch) #inches Outer
+oxHoleRadius = Q_(1.75, unitReg.inch)  #Radial distance between centerline and LOX hole
+filmCoolingSpacing = Q_(0.45, unitReg.inch) #inches Outer
 oxDoubletDiameter = Q_(0.0625, unitReg.inch)  #Design choise for DOublet Diameter size (Need to look more properly into it as 1/4 holes might make vaporization time too long)\
 oxImpingeAngle = Q_(25, unitReg.degrees)
-filmImpingeAngle = Q_(25, unitReg.degrees)
+filmImpingeAngle = Q_(35, unitReg.degrees)
 oxDewarPressure = Q_(22, unitReg.psi)
-prescottAmbientTemp = Q_(70, unitReg.degF)
+prescottAmbientTemp = Q_(70, unitReg.degF)  
 prescottAmbientPressure = Q_(12.2, unitReg.force_pound / unitReg.inch**2)
 
 # Nozzle inputs

@@ -8,7 +8,11 @@ import numpy as np
 from icecream import ic
 from General.units import Q_, unitReg
 from texttable import Texttable
+import General.design as DESIGN
 
+OF = DESIGN.OFratio
+TotalMdot = DESIGN.totalmdot
+Chamber_Press = DESIGN.chamberPressure
 
 def initialize_prop_flows(Film_Cooling, oxImpingeAngle, fuelInitalImpingeAngle, filmImpingeAngle,
                           Lox_Dewar_Pressure, CD_drill,Pressure_Drop_Lox, Pressure_Drop_Fuel, AirTemperature, AirPressure, FuelName, Pressure_Chamber: float):
@@ -19,6 +23,8 @@ def initialize_prop_flows(Film_Cooling, oxImpingeAngle, fuelInitalImpingeAngle, 
     OX_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Lox)
     FUEL_CORE.Velocity(CD_drill, Pressure_Chamber * Pressure_Drop_Fuel)
     return OX_CORE,FUEL_CORE,OUT_FILM_C,viscosity_f, specific_heat_p_f, thermal_conductivity_f, SurfaceTens_f
+
+
 # Calculation of fuel Impingement angle
 def calculate_fuel_impinge_angle(OX_CORE, FUEL_CORE, AimY, Rgamma_lox, Spacing, AimX):
     """Calculate the fuel impinge angle based on physical constraints."""
@@ -44,6 +50,8 @@ def calculate_fuel_impinge_angle(OX_CORE, FUEL_CORE, AimY, Rgamma_lox, Spacing, 
     gamma_FUEL_original = Q_(np.rad2deg(gamma_FUEL_original[0]), unitReg.degrees) 
     FUEL_CORE.gamma = Q_(round(gamma_FUEL_original.magnitude * 2)/2, unitReg.degrees) 
     return gamma_FUEL_original, FUEL_CORE
+
+
 def calculate_fuel_diameters(OX_CORE, FUEL_CORE, Pressure_Chamber, Doublet_Diameter_LOX, CD_drill, Pressure_Drop_Fuel, Pressure_Drop_Lox):
         # -------------- Main Doublets Holes -------------- #
     # Initialize variables to track the closest match
@@ -83,13 +91,16 @@ def calculate_fuel_diameters(OX_CORE, FUEL_CORE, Pressure_Chamber, Doublet_Diame
     FUEL_CORE.Actual(closest_diameter, OX_CORE.Hole_Number)
     fuel_Doublet = [ Original_Fuel_Diameter, closest_diameter, drill_size]
     return fuel_Doublet
-def calculate_film_cooling_diameters(OUT_FILM_C, FilmCoolingSpacing, Pressure_Chamber, CD_drill, Pressure_Drop_Fuel, ri):
+
+
+def calculate_film_cooling_diameters(OUT_FILM_C, FilmCoolingSpacing, Pressure_Chamber, CD_drill, Pressure_Drop_Fuel, chamberatInjectorRadius, manual_override):
 
 
 
     # -------------- Outer Film Cooling Holes -------------- #
-    RFilmCooling = ri - FilmCoolingSpacing
-    OuterFC_Number_Guess = np.ceil(2 * np.pi * RFilmCooling / Q_(0.3, unitReg.inch))  # NASA spec: 0.3 inches between holes
+    RFilmCooling = chamberatInjectorRadius - FilmCoolingSpacing 
+    ic(RFilmCooling)
+    OuterFC_Number_Guess = np.ceil(2 * np.pi * RFilmCooling / Q_(0.35, unitReg.inch))  # NASA spec: 0.3 inches between holes
    # Initial estimate for Outer Film Cooling hole diameter
     OuterFC_Diameter = np.sqrt((OUT_FILM_C.Area(CD_drill, Pressure_Chamber * Pressure_Drop_Fuel) / OuterFC_Number_Guess) * 4 / np.pi)
     Original_Film_Cooling_Diameter = OuterFC_Diameter
@@ -124,9 +135,22 @@ def calculate_film_cooling_diameters(OUT_FILM_C, FilmCoolingSpacing, Pressure_Ch
     # After loop, set the closest diameter found
     OUT_FILM_C.Number(closest_diameter, CD_drill, Pressure_Chamber * Pressure_Drop_Fuel)
     # Initialize the actual values for the selected diameter
-    OUT_FILM_C.Actual(closest_diameter, OUT_FILM_C.Hole_Number)
-    film_Cool_Doublet = [Original_Film_Cooling_Diameter, closest_diameter, drill_size]
+    if manual_override[0] == 0:
+        Actual_hole_number = OUT_FILM_C.Hole_Number
+    else:
+        Actual_hole_number = manual_override[1]
+    OUT_FILM_C.Actual(closest_diameter, Actual_hole_number)
+    film_Cool_Doublet = [Original_Film_Cooling_Diameter, closest_diameter, drill_size, Actual_hole_number]
     return film_Cool_Doublet
+
+
+def reinitialize_fuel(OUT_FILM_C, FUEL_CORE, OX_CORE, film_Cool_Doublet):
+    Actual_percentage = OUT_FILM_C.Area_Actual / FUEL_CORE.Area_Actual
+    OUT_FILM_C.mdot = (TotalMdot - OX_CORE.mdot) * Actual_percentage
+    FUEL_CORE.mdot = TotalMdot - OX_CORE.mdot - OUT_FILM_C.mdot
+    OUT_FILM_C.Actual(film_Cool_Doublet[1], film_Cool_Doublet[3])
+    return OUT_FILM_C, FUEL_CORE, OX_CORE
+
 def droplet_sizing(FUEL_CORE, OX_CORE, Doublet_Diameter_Fuel, Doublet_Diameter_LOX, viscosity_f, SurfaceTens_f):
     """Calculate droplet sizes using Dickerson and NASA methods."""
 
@@ -155,6 +179,8 @@ def droplet_sizing(FUEL_CORE, OX_CORE, Doublet_Diameter_Fuel, Doublet_Diameter_L
         np.power(Doublet_Diameter_LOX.magnitude / Doublet_Diameter_Fuel.magnitude, 0.023) * K_prop,
         unitReg.micron)
     return D_f_Dickerson, D_f_NASA
+
+
 def calculate_vaporization_time_and_chamber_length(OX_CORE, FUEL_CORE, specific_heat_p_f, thermal_conductivity_f,
                                                    D_f_Dickerson, D_f_NASA):
     """Calculate vaporization time and chamber length for given droplet sizes."""
@@ -179,9 +205,11 @@ def calculate_vaporization_time_and_chamber_length(OX_CORE, FUEL_CORE, specific_
     Dickerson = [D_f_Dickerson, Vaporize_time_Dickerson, Travel_Length_Dickerson, Chamber_Length_Dickerson]
     NASA = [D_f_NASA, Vaporize_time_NASA, Travel_Length_NASA, Chamber_Length_NASA]
     return Dickerson, NASA
+
+
 def table_results(fuel_Doublet, film_Cool_Doublet, Dickerson, NASA, Doublet_Diameter_LOX, OX_CORE, FUEL_CORE,OUT_FILM_C,FuelName,gamma_FUEL_original):
     Original_Fuel_Diameter, closest_Fuel_Diameter, fuel_Doublet_Drill = fuel_Doublet
-    Original_Film_Cooling_Diameter, closest_Film_Cool_Diameter, film_Cool_Doublet_Drill = film_Cool_Doublet
+    Original_Film_Cooling_Diameter, closest_Film_Cool_Diameter, film_Cool_Doublet_Drill, _ = film_Cool_Doublet
     [D_f_Dickerson, Vaporize_time_Dickerson, Travel_Length_Dickerson, Chamber_Length_Dickerson] = Dickerson
     [D_f_NASA, Vaporize_time_NASA, Travel_Length_NASA, Chamber_Length_NASA] = NASA
     _, LOX_doublet_drill_size, _ = drill_approximation(Doublet_Diameter_LOX.magnitude)
@@ -214,6 +242,8 @@ def table_results(fuel_Doublet, film_Cool_Doublet, Dickerson, NASA, Doublet_Diam
     print(Injector_Parameters.draw())
     print(rounded_Table.draw())
     print(Vaporization.draw())
+
+
 def plot_results(OX_CORE, FUEL_CORE,OUT_FILM_C,Spacing,Rgamma_lox, ri, FilmCoolingSpacing, AimX, AimY, x_profile, y_profile, Chamber_ContourX, Chamber_ContourY):
     Points = 1000 #also used in other plots if this section ends up getting deleted
 
