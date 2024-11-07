@@ -4,6 +4,7 @@ from ambiance import Atmosphere
 from General.units import Q_, unitReg
 from General.units import R_UNIVERSAL
 from fluids.gas import Gas
+from icecream import ic
 
 # eninge inputs
 
@@ -36,6 +37,9 @@ oxDewarPressure = Q_(22, unitReg.psi)
 prescottAmbientTemp = Q_(70, unitReg.degF)  
 prescottAmbientPressure = Q_(12.2, unitReg.force_pound / unitReg.inch**2)
 
+
+
+
 # Nozzle inputs
 designAltitude = Q_(20000, unitReg.feet)
 designAtm = Atmosphere(designAltitude.to(unitReg.meter).magnitude)
@@ -44,9 +48,23 @@ designAmbientPressure = Q_(designAtm.pressure[0], unitReg.pascal)
 lengthMax = Q_(1.75, unitReg.inch)
 basePressure = Q_(5, unitReg.psi)
 
+
+#Cooling inputs
+epsilon = Q_(0.05, unitReg.inch)
+
+
 # chamber derived
 Combustion=CEA_Obj(oxName=oxName, fuelName=fuelName);
 chamberTemp = Q_(Combustion.get_Tcomb(Pc=chamberPressure.magnitude, MR=OFratio), unitReg.degR)
+heat_capacity, viscosity, _, Prandtl = Combustion.get_Chamber_Transport(Pc=chamberPressure.magnitude, MR=OFratio, eps=1, frozen=0)
+heat_capacity_chamber = Q_(heat_capacity, unitReg.BTU / (unitReg.pound * unitReg.degR))  # Heat capacity in BTU/(lbm·°R)
+viscosity_chamber = Q_(viscosity, unitReg.millipoise)  # Viscosity in millipoise
+Prandtl_chamber = Q_(Prandtl)  # Dimensionless, so no conversion needed
+c_star = Combustion.get_Cstar(Pc=chamberPressure.magnitude, MR=OFratio)
+c_star = Q_(c_star, unitReg.foot/unitReg.second)
+
+
+
 
 # throat derived
 _, _, _, molarWeightThroat, gamma = Combustion.get_IvacCstrTc_ThtMwGam(Pc=chamberPressure.magnitude, MR=OFratio, eps=1)

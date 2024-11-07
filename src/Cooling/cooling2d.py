@@ -11,6 +11,19 @@ from Injector.Doublet_Functions import spike_contour
 from Injector.InjectorCad import injector_cad_write
 from Injector.Drill import drill_approximation
 from General.units import Q_, unitReg
+import General.design as DESIGN
+
+
+epsilon = DESIGN.epsilon
+fuelname = DESIGN.fuelName
+pressure_stagnation = DESIGN.chamberPressure
+temperature_stagnation = DESIGN.chamberTemp
+specific_heat_stagnation = DESIGN.heat_capacity_chamber
+viscosity_stagnation = DESIGN.viscosity_chamber 
+Prandtl_stagnation = DESIGN.Prandtl_chamber
+cstar = DESIGN.c_star
+R_gas = DESIGN.R_throat #TODO gotta make this better so it's not constant R assumption
+gamma = DESIGN.gamma #TODO gotta make this better so it's not constant R assumption
 
 #First step always is to update doublet.py file and run beforehand to grab all mdot and density values at injector side
 
@@ -19,31 +32,41 @@ NumberofChannels = 30
 ChannelShape =  np.array([.25, .25]) #inches Width,Height
 
 
-def wall_thermal_conductivity(T):
-    # Returns thermal conductivity of GR-COP-42 based on temperature
-    T = T.to(unitReg.degK)
-    return -9E-05*T^2 + 0.091*T + 327.88    # W/m/K
+
+def conduction(Temp):
+    Temp = Temp.to(unitReg.degK)
+    conduction_coefficient = Q_(-9E-05*Temp^2 + 0.091*Temp + 327.88 , unitReg.watt / (unitReg.meter * unitReg.degK))    # W/m/K
+    return conduction_coefficient.to(unitReg.BTU / unitReg.foot / unitReg.hour / unitReg.degR)
 
 # Code for generating convection coefficients
 
-def combustion_convection(mu, c_p, Pr, P_0, c_star, D_star, A_star, A, r_c,
-                          Ma, T_wg, T_0g, gamma):
+def calculate_nozzle_area(A_star, M, gamma):
+    # Calculate area A using the rearranged equation
+    A = A_star * ((gamma + 1) / 2) ** (- (gamma + 1) / (2 * (gamma - 1))) * (1 + (gamma - 1) / 2 * M**2) ** ((gamma + 1) / (2 * (gamma - 1))) * (1 / M)
+    return A
+
+def combustion_convection(Node_Temp, Velocity):
+    
+    Temp = temperature_stagnation.to(unitReg.degR)
+    sonic_velocity = (gamma * R_gas * Node_Temp).to(unitReg.foot/unitReg.second)
+    Mach = Velocity / sonic_velocity
+    A = calculate_nozzle_area(A_star, Mach, gamma) #TODO need to have A_star from DESIGN i guess?
     # Bartz's Correlation for combustion side
     # Inputs (Combustion gases)
-    mu = mu.to(unitReg.pound / unitReg.foot / unitReg.second)  # Dynamic viscosity at stagnation conditions
-    c_p = c_p.to(unitReg.BTU / unitReg.pound / unitReg.degR)    # Specific heat at stagnation conditions
-    # Pr = 2.45       # Prandtl number at stagnation conditions
-    P_0 = P_0.to(unitReg.pound / unitReg.inch**2)   # Stagnation pressure
-    c_star = c_star.to(unitReg.feet / unitReg.s) # Characteristic velocity
-    D_star = D_star.to(unitReg.feet)      # Throat diameter (as hydraulic diameter, 4*A_c/P)
-    A_star = A_star.to(unitReg.inch**2)      # Throat area
+    mu = viscosity_stagnation.to(unitReg.pound / unitReg.foot / unitReg.second)  # Dynamic viscosity at stagnation conditions
+    c_p = specific_heat_stagnation.to(unitReg.BTU / unitReg.pound / unitReg.degR)    # Specific heat at stagnation conditions
+    Pr = Prandtl_stagnation       # Prandtl number at stagnation conditions
+    P_0 = pressure_stagnation.to(unitReg.pound / unitReg.inch**2)   # Stagnation pressure
+    c_star = c_star.to(unitReg.foot / unitReg.s) # Characteristic velocity
+    D_star = D_star.to(unitReg.foot)      # Throat diameter (as hydraulic diameter, 4*A_c/P)  #TODO
+    A_star = A_star.to(unitReg.inch**2)      # Throat area  #TODO
     A = A.to(unitReg.inch**2)           # Nozzle area at location of interest
-    r_c = r_c.to(unitReg.inch)   # Throat radius of curvature
-    # Ma = 0          # Local Mach number
-    T_wg = T_wg.to(unitReg.degR)     # Hot side wall temperature
-    T_0g = T_0g.to(unitReg.degR)  # Hot gas stagnation temperature
+    r_c = r_c.to(unitReg.inch)   # Throat radius of curvature  #TODO
+    Ma = Mach          # Local Mach number
+    T_wg = Node_Temp.to(unitReg.degR)     # Hot side wall temperature
+    T_0g = Temp  # Hot gas stagnation temperature
     omega = 0.6     # for diatomic gases
-    # gamma = 1.145   # Ratio of specific heats, assumed to be constant
+    gamma = 1.145   # Ratio of specific heats, assumed to be constant #TODO get the gamma as a function of temperature here
 
     # Calculations
     sigma = 1 / ((1 / 2 * T_wg / T_0g * (1 + (gamma - 1) / 2 * Ma**2) + 1 / 2)**(0.8 - 0.2 * omega) * (1 + (gamma - 1) / 2 * Ma**2)**(0.2 * omega))
@@ -59,7 +82,7 @@ def internal_flow_convection(epsilon, m_dot_c, NumberofChannels, rho, v, A_c, P,
     epsilon = epsilon.to(unitReg.inch)     # Surface roughness
     m_dot_c = m_dot_c.to(unitReg.pound / unitReg.second) / NumberofChannels     # Coolant mass flow rate through one channel
     rho = rho.to(unitReg.pound / unitReg.inch**3)  # Coolant density
-    v = v.to(unitReg.feet / unitReg.s)      # Coolant velocity along channel
+    v = v.to(unitReg.foot / unitReg.s)      # Coolant velocity along channel
     D_h = D_h.to(unitReg.inch)     # Hydraulic diameter of cooling channel
     # Pr = 1      # Prandtl number (likely an array)
     mu = mu.to(unitReg.pound / unitReg.foot / unitReg.second)   # Dynamic viscosity (likely an array)
@@ -90,7 +113,7 @@ def free_convection(beta, T_s, T_infinity, P_atm, D_outer):
     T_infinity = T_infinity.to(unitReg.degR)
     P_atm = P_atm.to(unitReg.pound / unitReg.inch**2)
     D_outer = D_outer.to(unitReg.inch)
-    g = Q_(32.174, unitReg.feet / unitReg.s**2)
+    g = Q_(32.174, unitReg.foot / unitReg.s**2)
     (viscosity, _, _, k_f, density, Pr, _, _, _) = get_fluid_properties('Air', T_infinity, P_atm)
     nu = viscosity/density  # Dynamic viscosity, air property lookup
     # Calculations
@@ -109,11 +132,7 @@ def lambda_equation(Lambda, *data):
     Re_g = data
     return 1.930*np.log10(Re_g*np.sqrt(Lambda)) - 1/np.sqrt(Lambda)
 
-def conduction(Temp):
-    Temp = Temp.to(unitReg.degR)
-    
-    conduction_coefficient = Q_(341, unitReg.watt / (unitReg.meter * unitReg.degK))
-    return conduction_coefficient.to(unitReg.BTU / unitReg.foot / unitReg.hour / unitReg.degR)
+
 
 
 
