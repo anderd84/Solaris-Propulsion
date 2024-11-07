@@ -33,10 +33,10 @@ coolmesh.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.c
 
 # fig2 = plots.CreateNonDimPlot()
 # cooling.ShowMaterialPlot(fig2)
+coolmesh.DumpFile("coolmesh2.msh")
 
 # coolmesh.ShowMaterialPlot(fig)
 coolmesh.ShowStatePlot(fig)
-
 # coolmesh.ShowMaterialPlot(fig)
 
 

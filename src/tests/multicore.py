@@ -32,8 +32,8 @@ def main():
     plots.PlotPlug(fig, chamberC)
     # plt.show()
 
-    cooling2 = domain.DomainMC(-8.5, 4, 15, 4, .01)
-    cooling2.DefineMaterials(cowlC, np.array([]), chamberC, plugC, 8)
+    cooling2 = domain.DomainMC(-9, 4.5, 10.5, 5, .01)
+    cooling2.DefineMaterials(cowlC, np.array([]), chamberC, plugC, 15)
 
     cooling2.DumpFile("coolmesh.msh")
 
