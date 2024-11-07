@@ -481,11 +481,15 @@ def CalculateThrust(exhaust: Gas, Pamb, Tt: Q_, Rt: Q_, Re: Q_, innerStreamline,
             break
     
     contPoints = innerStreamline[:i]
+    for point in contPoints:
+        if type(point.x) == Q_:
+            point.x = point.x.magnitude
+        if type(point.r) == Q_:
+            point.r = point.r.magnitude
 
     for point in contPoints:
         plt.plot(point.x, point.r, 'or')
     
-    pressures = [gas.StagPressRatio(p.mach, exhaust)*exhaust.stagPress for p in contPoints[:-1]]
     thrusts = []
 
     for i in range(len(contPoints[:-1])):

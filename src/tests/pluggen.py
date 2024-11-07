@@ -1,3 +1,4 @@
+from General import units
 from Nozzle import plug
 from fluids import gas
 from Nozzle import plots
@@ -57,7 +58,7 @@ plt.plot([cont[-1].x], [cont[-1].r], 'ro')
 # cowlC = plug.GenerateDimCowl(Rt, Tt, Re, straightLength, DESIGN.chamberInternalRadius, DESIGN.wallThickness, Q_(0.025, unitReg.inch))
 # plots.PlotPlug(fig, plugC)
 # plots.PlotPlug(fig, cowlC)
-rlines, llines, streams = analysis.CalculateComplexField(cont, Q_(.01, unitReg.psi), exhaust, 1, Tt, Rt, Re.magnitude, 100, 0, 1)
+rlines, llines, streams = analysis.CalculateComplexField(cont, units.PRESCOTT_PRESSURE, exhaust, 1, Tt, Rt, Re.magnitude, 50, 0, 3)
 istream = streams[0]
 fig.axes[0].plot([p.x for p in istream], [p.r for p in istream], '--b', linewidth=1.5)
 ostream = streams[1]
@@ -76,7 +77,7 @@ term = np.array([[p.terminate for p in row] for row in rlines])
 
 # mv.show()
 
-analysis.CalculateThrust(exhaust, Q_(1, unitReg.psi), Tt, Rt, Re, istream, cont[-1].r)
+analysis.CalculateThrust(exhaust, units.PRESCOTT_PRESSURE, Tt, Rt, Re, istream, cont[-1].r)
 plt.show()
 
 # plots.WriteContourTXT(plugC, "plug.txt")
