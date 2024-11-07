@@ -134,7 +134,7 @@ class DomainMC:
         rarr = np.array([[point.r for point in row] for row in self.array])
         print("rarr done!")
         
-        matarr = np.array([[point.velocity.to(unitReg.foot/unitReg.sec).magnitude for point in row] for row in self.array])
+        matarr = np.array([[point.temperature.to(unitReg.degR).magnitude for point in row] for row in self.array])
         print("matarr done!")
 
         ax = fig.axes[0]
@@ -187,7 +187,7 @@ class DomainMC:
                 if self.lineInCell(startPointU, startPointL, i, j):
                     jStart = j if i == iStart else jStart
                     continue
-                self.array[i,j].temperature = exhaust.stagTemp-Q_(5000,unitReg.degR)
+                self.array[i,j].temperature = exhaust.stagTemp
                 self.array[i,j].velocity = Q_(1, unitReg.foot/unitReg.sec)
                 self.array[i,j].hydraulicDiameter = 2*(chamberWallRadius - plugBase)
             if self.lineInCell(startPointU, startPointL, i, j):
@@ -213,7 +213,7 @@ class DomainMC:
 
             AAstar = Q_(area, unitReg.inch**2)/Astar
             mach = fsolve(lambda M: gas.Isentropic1DExpansion(M, exhaust.gammaTyp) - AAstar, .25)[0]
-            temperature = (gas.StagTempRatio(mach, exhaust) * exhaust.stagTemp)-Q_(5000,unitReg.degR)
+            temperature = (gas.StagTempRatio(mach, exhaust) * exhaust.stagTemp)
             velocity = mach * np.sqrt(exhaust.getVariableGamma(mach) * exhaust.Rgas * temperature)
             hydroD = Q_(2*np.sqrt((startPointU[0] - startPointL[0])**2 + (startPointU[1] - startPointL[1])**2), unitReg.inch)
 
@@ -263,7 +263,7 @@ class DomainMC:
                     mach = 1
                 else:
                     mach = fsolve(lambda M: gas.Isentropic1DExpansion(M, exhaust.gammaTyp) - AAstar, .25)[0]
-                temperature = (gas.StagTempRatio(mach, exhaust) * exhaust.stagTemp)-Q_(5000,unitReg.degR)
+                temperature = (gas.StagTempRatio(mach, exhaust) * exhaust.stagTemp)
                 velocity = mach * np.sqrt(exhaust.getVariableGamma(mach) * exhaust.Rgas * temperature)
                 hydroD = Q_(2*np.sqrt((upperPoint[0] - lowerPoint[0])**2 + (upperPoint[1] - lowerPoint[1])**2), unitReg.inch)
 

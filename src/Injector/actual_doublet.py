@@ -38,7 +38,7 @@ def calculate_fuel_impinge_angle(OX_CORE, FUEL_CORE, AimY, Rgamma_lox, Spacing, 
         Returns:
             float: Returns what the numerical solver goes for A.K.A zero
         """    
-        Num = -(AimY - Rgamma_lox.magnitude -Spacing.magnitude * np.sin(np.pi/2 + gamma_FUEL) / np.sin(np.radians(OX_CORE.gamma.magnitude) - gamma_FUEL) * np.cos(np.radians(90 - (OX_CORE.gamma.magnitude))))
+        Num  = -(AimY - Rgamma_lox.magnitude -Spacing.magnitude * np.sin(np.pi/2 + gamma_FUEL) / np.sin(np.radians(OX_CORE.gamma.magnitude) - gamma_FUEL) * np.cos(np.radians(90 - (OX_CORE.gamma.magnitude))))
         Den1 = (AimX - Spacing.magnitude * np.sin(np.pi/2 + gamma_FUEL) / np.sin(np.radians(OX_CORE.gamma.magnitude) - gamma_FUEL) * np.sin(np.radians(90 - (OX_CORE.gamma.magnitude)))) 
         Num2 = (OX_CORE.mdot.magnitude * OX_CORE.Velocity_init.magnitude * np.sin(np.deg2rad(OX_CORE.gamma.magnitude))) 
         Num3 = (FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity_init.magnitude * np.sin(gamma_FUEL))
@@ -46,6 +46,7 @@ def calculate_fuel_impinge_angle(OX_CORE, FUEL_CORE, AimY, Rgamma_lox, Spacing, 
         Den3 = (FUEL_CORE.mdot.magnitude * FUEL_CORE.Velocity_init.magnitude * np.cos(gamma_FUEL))
         
         return Num/(Den1)  + (Num2 + Num3)/(Den2 + Den3)
+    
     gamma_FUEL_original = fsolve(func, np.deg2rad(5)) 
     gamma_FUEL_original = Q_(np.rad2deg(gamma_FUEL_original[0]), unitReg.degrees) 
     FUEL_CORE.gamma = Q_(round(gamma_FUEL_original.magnitude * 2)/2, unitReg.degrees) 
@@ -53,37 +54,44 @@ def calculate_fuel_impinge_angle(OX_CORE, FUEL_CORE, AimY, Rgamma_lox, Spacing, 
 
 
 def calculate_fuel_diameters(OX_CORE, FUEL_CORE, Pressure_Chamber, Doublet_Diameter_LOX, CD_drill, Pressure_Drop_Fuel, Pressure_Drop_Lox):
-        # -------------- Main Doublets Holes -------------- #
+    # -------------- Main Doublets Holes -------------- #
     # Initialize variables to track the closest match
     OX_CORE.Number(Doublet_Diameter_LOX, CD_drill, Pressure_Chamber * Pressure_Drop_Lox)
     FUEL_CORE_Diameter = np.sqrt((FUEL_CORE.Area(CD_drill, Pressure_Chamber * Pressure_Drop_Fuel) / OX_CORE.Hole_Number.magnitude) * 4 / np.pi)
     Original_Fuel_Diameter = FUEL_CORE_Diameter
     target_hole_number = OX_CORE.Hole_Number.magnitude  # Target number of holes
+    
     # Set initial values for the closest diameter match
     closest_diameter = FUEL_CORE_Diameter
     FUEL_CORE.Number(closest_diameter, CD_drill, Pressure_Chamber * Pressure_Drop_Fuel)
     closest_hole_diff = 10
     iterated = 100
+
     while iterated > 0:
         # Calculate new diameter and corresponding hole count
         Doublet_Diameter_Fuel, drill_size, closest_index = drill_approximation(FUEL_CORE_Diameter.magnitude)
         Doublet_Diameter_Fuel = Q_(Doublet_Diameter_Fuel, unitReg.inch)
         FUEL_CORE.Number(Doublet_Diameter_Fuel, CD_drill, Pressure_Chamber * Pressure_Drop_Fuel)
+        
         # Calculate current difference in hole numbers
         hole_diff = np.abs(FUEL_CORE.Hole_Number.magnitude - target_hole_number)
+        
         # Update the closest match if this iteration is better
         if hole_diff < closest_hole_diff:
             closest_diameter = Doublet_Diameter_Fuel
             closest_hole_diff = hole_diff
+        
         # Break if exact match is found
         if hole_diff == 0:
             break
+        
         # Adjust diameter based on hole count difference
         if FUEL_CORE.Hole_Number.magnitude > target_hole_number:
             FUEL_CORE_Diameter += Q_(0.0005, unitReg.inch)
         else:
             FUEL_CORE_Diameter -= Q_(0.0005, unitReg.inch)
         iterated -= 1
+    
     # After exiting loop, set FUEL_CORE to the closest diameter found
     # Initialize the actual values for the selected diameter
     FUEL_CORE.Number(closest_diameter, CD_drill, Pressure_Chamber * Pressure_Drop_Fuel)
@@ -358,8 +366,3 @@ def plot_results(OX_CORE, FUEL_CORE,OUT_FILM_C,Spacing,Rgamma_lox, ri, FilmCooli
     plt.title('Side View Contour of an Aerospike Nozzle')
     plt.grid(True)
     plt.show()
-
-
-
-
-
