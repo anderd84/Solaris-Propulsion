@@ -2,7 +2,7 @@ from matplotlib import pyplot as plt, patches
 from Injector.Doublet_Functions import spike_contour
 from Injector.InjectorCad import injector_cad_write
 from Injector.Drill import drill_approximation
-from Injector import ActualDoublet as doublet
+from Injector import actual_doublet as doublet
 from scipy.optimize import fsolve
 from fluids.fluid import CD_drill, Pressure_Drop_Fuel, Pressure_Drop_Lox
 import numpy as np
