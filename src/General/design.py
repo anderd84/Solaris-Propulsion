@@ -22,6 +22,7 @@ Oxidizer_Total = totalmdot - Fuel_Total
 chamberInternalRadius = Q_(3.825, unitReg.inch)
 wallThickness = Q_(0.125, unitReg.inch)
 maxRadius = chamberInternalRadius + wallThickness
+plugBaseRadius = Q_(2, unitReg.inch)
 chamberatInjectorRadius = Q_(6.25/2, unitReg.inch)
 
 # injector inputs

@@ -5,8 +5,6 @@ from Nozzle import plots
 import General.design as DESIGN
 from Nozzle import plug
 from General.units import Q_, unitReg
-import sys
-from pympler.asizeof import asizeof
 
 Re = Q_(3.2, unitReg.inch)
 exhaust = DESIGN.exhaustGas
@@ -27,11 +25,11 @@ plots.PlotPlug(fig, cowlC)
 plots.PlotPlug(fig, chamberC, '-r')
 
 
-coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("coolmesh.pkl")
+coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("coolmesh.msh")
 
 startingpoint = (-8, 2.6) # TODO use real point
-plt.plot([startingpoint[0], aimpoint[0]], [startingpoint[1], aimpoint[1]], 'rx-')
-coolmesh.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius, DESIGN.chokeArea, fig)
+# plt.plot([startingpoint[0], aimpoint[0]], [startingpoint[1], aimpoint[1]], 'rx-')
+coolmesh.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius, DESIGN.plugBaseRadius, DESIGN.chokeArea, fig)
 
 # fig2 = plots.CreateNonDimPlot()
 # cooling.ShowMaterialPlot(fig2)
