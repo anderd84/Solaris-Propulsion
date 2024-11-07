@@ -63,12 +63,12 @@ def uppernodeborder(coolmesh,i,j):
             case DomainMaterial.CHAMBER:
                 conduct = cooling_func.conduction(coolmesh.array[i, j + 1].temperature)
                 
-                # Cylindrical conduction calculation using updated r_i and r_o
+                # Define inner and outer radii for cylindrical conduction
                 r_i = coolmesh.array[i, j].r  # Inner radius at [i, j]
                 r_o = coolmesh.array[i, j + 1].r  # Outer radius at [i, j+1]
                 l = coolmesh.xstep  # Axial length
 
-                # Apply the cylindrical conduction formula
+                # Cylindrical conduction calculation
                 upper_node_wo_T = np.log(r_o / r_i) / (2 * np.pi * conduct * l)
                 deltaT_U = upper_node_wo_T * coolmesh.array[i, j + 1].temperature
     return upper_node_wo_T, deltaT_U
