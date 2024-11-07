@@ -5,8 +5,11 @@ from Nozzle import analysis
 import matplotlib.pyplot as plt
 from icecream import ic
 import numpy as np
+np.product = np.prod
 import General.design as DESIGN
 from General.units import Q_, unitReg
+import matrix_viewer as mv
+
 # import pint
 
 # ureg = pint.UnitRegistry()
@@ -47,18 +50,33 @@ ic(Cf)
 
 
 fig = plots.CreateNonDimPlot()
-# plots.PlotContour(fig, cont, Rt, Tt, Re)
+plots.PlotContour(fig, cont, Rt, Tt, Re)
+plt.plot([cont[-1].x], [cont[-1].r], 'ro')
 # plots.PlotField(fig, field, Re)
-plugC, straightLength = plug.GenerateDimPlug(cont, Rt, Tt, Re, Q_(5, unitReg.inch), Q_(1.5, unitReg.inch))
-cowlC = plug.GenerateDimCowl(Rt, Tt, Re, straightLength, DESIGN.chamberInternalRadius, DESIGN.wallThickness, Q_(0.025, unitReg.inch))
-plots.PlotPlug(fig, plugC)
-plots.PlotPlug(fig, cowlC)
-mat, stream = analysis.CalculateComplexField(cont, Q_(1, unitReg.psi), exhaust, 1, Tt, Re.magnitude, 25, 0, 1)
-fig.axes[0].plot([p.x for p in stream], [p.r for p in stream], '--b', linewidth=1.5)
-fieldGrid = analysis.GridifyComplexField(mat, np.array([]))
+# plugC, straightLength = plug.GenerateDimPlug(cont, Rt, Tt, Re, Q_(5, unitReg.inch), Q_(1.5, unitReg.inch))
+# cowlC = plug.GenerateDimCowl(Rt, Tt, Re, straightLength, DESIGN.chamberInternalRadius, DESIGN.wallThickness, Q_(0.025, unitReg.inch))
+# plots.PlotPlug(fig, plugC)
+# plots.PlotPlug(fig, cowlC)
+rlines, llines, streams = analysis.CalculateComplexField(cont, Q_(.01, unitReg.psi), exhaust, 1, Tt, Rt, Re.magnitude, 100, 0, 1)
+istream = streams[0]
+fig.axes[0].plot([p.x for p in istream], [p.r for p in istream], '--b', linewidth=1.5)
+ostream = streams[1]
+fig.axes[0].plot([p.x for p in ostream], [p.r for p in ostream], '--b', linewidth=1.5)
+fieldGrid = analysis.GridifyComplexField(rlines, llines)
 analysis.PlotFieldData(fig, fieldGrid)
-analysis.PlotCharacteristicLines(fig, mat)
-analysis.CalculateThrust(exhaust, Q_(1, unitReg.psi), Tt, Rt, Re, fieldGrid, cont[-1])
+analysis.PlotCharacteristicLines(fig, np.concatenate((rlines, llines), axis=0))
+
+x = np.array([[p.x for p in row] for row in rlines])
+r = np.array([[p.r for p in row] for row in rlines])
+term = np.array([[p.terminate for p in row] for row in rlines])
+
+# mv.view(x)
+# mv.view(r)
+# mv.view(term)
+
+# mv.show()
+
+analysis.CalculateThrust(exhaust, Q_(1, unitReg.psi), Tt, Rt, Re, istream, cont[-1].r)
 plt.show()
 
 # plots.WriteContourTXT(plugC, "plug.txt")

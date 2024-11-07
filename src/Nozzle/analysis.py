@@ -2,8 +2,6 @@ import numpy as np
 np.product = np.prod
 from dataclasses import dataclass
 import matplotlib.pyplot as plt
-from matplotlib.collections import LineCollection
-from scipy.optimize import fsolve
 import fluids.gas as gas
 from fluids.gas import MachAngle, mach2machStar, machStar2mach, Gas
 import General.design as DESIGN
@@ -58,7 +56,7 @@ class CharacteristicPoint:
         LV = self.clone()
         LV.F = np.tan(LV.theta + LV.alpha)
         LV.G = -1/np.tan(LV.alpha)/LV.machStar
-        LV.H = np.sin(LV.theta)*np.sin(LV.alpha)/(LV.r*np.cos(LV.theta + LV.alpha))
+        LV.H = np.sin(LV.theta)*np.sin(LV.alpha)/(LV.r*np.cos(LV.theta + LV.alpha)) # makes L.H nan from LV.r
         LV.J = -np.sin(LV.alpha)*np.cos(LV.alpha)/(Rgas * gamma)
         return LV
     
@@ -77,6 +75,26 @@ class CharacteristicPoint:
         nextPoint.setCoefficients(newF, newG, newH, newJ)
 
         return nextPoint
+
+    # Field Point Calculations
+    @staticmethod
+    def CalculateSolidBoundaryIntersect(point: 'CharacteristicPoint', contour: np.ndarray[nozzle.ContourPoint], isRight: bool) -> tuple[float, float] | None:        
+        Sx, Sy = point.x, point.r
+        angle = point.theta - point.alpha if isRight else point.theta + point.alpha
+
+        for j in range(len(contour) - 1):
+            a, b, c, d = contour[j].x, contour[j].r, contour[j+1].x, contour[j+1].r
+            mL = np.tan(angle)
+            mC = (d - b)/(c - a)
+            Amat = np.array([[mL, -1], [mC, -1]])
+            bmat = np.array([[mL*Sx - Sy], [mC*a - b]])
+            X = np.linalg.solve(Amat, bmat)
+            if a <= X[0,0] <= c:
+                Bx = X[0,0]
+                By = X[1,0]
+                # plt.plot([a, c], [b, d], '-or', linewidth=1)
+                return (Bx, By), np.atan2((d - b),(c - a))
+        return None, None
 
     @staticmethod
     def CalculateFieldPoint(L: 'CharacteristicPoint', R: 'CharacteristicPoint', workingGas: Gas, tol = 1e-6) -> 'CharacteristicPoint':
@@ -115,8 +133,13 @@ class CharacteristicPoint:
         s = (R.s - L.s) / (nl + nr)
         s = R.s + s*nr
 
-        Amat = np.array([[1, R.G], [1, L.G]])
-        b = np.array([[R.theta + R.G*R.machStar - R.H*(r - R.r) - R.J*(s - R.s)], [L.theta + L.G*L.machStar - L.H*(x - L.x) - L.J*(s - L.s)]])
+        if abs(L.r) > 1e-4: # L is not on axis
+            Amat = np.array([[1, R.G], [1, L.G]])
+            b = np.array([[R.theta + R.G*R.machStar - R.H*(r - R.r) - R.J*(s - R.s)], [L.theta + L.G*L.machStar - L.H*(x - L.x) - L.J*(s - L.s)]])
+        else:
+            Amat = np.array([[1, R.G], [2, L.G]])
+            b = np.array([[R.theta + R.G*R.machStar - R.H*(r - R.r) - R.J*(s - R.s)], [L.theta + L.G*L.machStar - L.J*(s - L.s)]])
+        
         X = np.linalg.solve(Amat, b)
         theta = X[0, 0]
         machStar = X[1, 0]
@@ -126,15 +149,18 @@ class CharacteristicPoint:
         return CharacteristicPoint(x, r, theta, machStar, s, mach, alpha)
 
     @staticmethod
-    def CalculateSolidReflect(point: 'CharacteristicPoint', isRight: bool, contour: np.ndarray[nozzle.ContourPoint], PbPc: float, workingGas: Gas, tol = 1e-6) -> 'CharacteristicPoint':
+    def CalculateSolidReflect(point: 'CharacteristicPoint', isRight: bool, contour: np.ndarray[nozzle.ContourPoint], workingGas: Gas, tol = 1e-6) -> 'CharacteristicPoint':
         PV = point.CalculateRightVariant(workingGas) if isRight else point.CalculateLeftVariant(workingGas)
-        N = CharacteristicPoint.ApproxSolidReflect(PV, isRight, contour, PbPc, workingGas)
-
+        N = CharacteristicPoint.ApproxSolidReflect(PV, isRight, contour, workingGas)
+        if N is None:
+            return None
         for i in range(30):
             N2 = N.CalculateRightVariant(workingGas) if isRight else N.CalculateLeftVariant(workingGas)
             N2 = PV.NextIterationPoint(N2)
 
-            NN = CharacteristicPoint.ApproxSolidReflect(N2, isRight, contour, PbPc, workingGas)
+            NN = CharacteristicPoint.ApproxSolidReflect(N2, isRight, contour, workingGas)
+            if NN is None:
+                return None
             if np.abs((NN.theta - N.theta)/(NN.theta)) < tol:
                 logging.debug(f"Solid Converged in {i} iterations")
                 return NN
@@ -146,16 +172,19 @@ class CharacteristicPoint:
         return N
 
     @staticmethod
-    def ApproxSolidReflect(PV: 'CharacteristicPoint', isRight: bool, contour: np.ndarray[nozzle.ContourPoint], PbPc: float, workingGas: Gas) -> 'CharacteristicPoint':
+    def ApproxSolidReflect(PV: 'CharacteristicPoint', isRight: bool, contour: np.ndarray[nozzle.ContourPoint], workingGas: Gas) -> 'CharacteristicPoint':
         # ic(PV)
         intersect, theta = CharacteristicPoint.CalculateSolidBoundaryIntersect(PV, contour, isRight)
         if intersect is None:
-            return PV.clone().setTerminate()#CharacteristicPoint.CalculateGasReflect(point, isRight, PbPc, workingGas)
+            return None#CharacteristicPoint.CalculateGasReflect(point, isRight, PbPc, workingGas)
         
         x = intersect[0]
         r = intersect[1]
-        s = 0
-        machStar = PV.machStar + (-(theta - PV.theta) - PV.H*(r - PV.r) - PV.J*(s - PV.s))/PV.G
+        s = 0 # TODO entropy of contour streamline
+
+        Hfact = (r - PV.r) if isRight else (x - PV.x)
+
+        machStar = PV.machStar + (-(theta - PV.theta) - PV.H*Hfact - PV.J*(s - PV.s))/PV.G
 
         return CharacteristicPoint(x, r, theta, machStar, s, machStar2mach(machStar, workingGas.gammaTyp), MachAngle(machStar2mach(machStar, workingGas.gammaTyp)))
 
@@ -194,53 +223,80 @@ class CharacteristicPoint:
         r = X[1, 0]
         s = streamPoint.s
         machStar = mach2machStar(machInf, workingGas.gammaTyp)
-        theta = PV.theta - PV.G*(machStar - PV.machStar) - PV.H*(x - PV.x) - PV.J*(s - PV.s)
+        Hfact = (r - PV.r) if isRight else (x - PV.x)
+        theta = PV.theta - PV.G*(machStar - PV.machStar) - PV.H*Hfact - PV.J*(s - PV.s)
+
+        return CharacteristicPoint(x, r, theta, machStar, s, machStar2mach(machStar, workingGas.gammaTyp), MachAngle(machStar2mach(machStar, workingGas.gammaTyp)))
+    
+    @staticmethod
+    def CaclulateAxisReflect(point: 'CharacteristicPoint', isRight: bool, workingGas, tol = 1e-6) -> 'CharacteristicPoint':
+        PV = point.CalculateRightVariant(workingGas) if isRight else point.CalculateLeftVariant(workingGas)
+        N = CharacteristicPoint.ApproxAxisReflect(PV, isRight, workingGas)
+
+        return N
+
+        for i in range(30):
+            N2 = N.CalculateRightVariant(workingGas) if isRight else N.CalculateLeftVariant(workingGas)
+            N2 = PV.NextIterationPoint(N2)
+
+            NN = CharacteristicPoint.ApproxAxisReflect(N2, isRight, workingGas)
+            if np.abs((NN.mach - N.mach)/(NN.mach)) < tol: # mach not theta because theta is 0
+                logging.debug(f"Axis converged in {i} iterations")
+                return NN
+            else:
+                N = NN.clone()
+                del NN, N2
+
+        logging.debug(f"Axis did not converge in 30 iterations")
+        return N
+    
+    @staticmethod
+    def ApproxAxisReflect(PV: 'CharacteristicPoint', isRight: bool, workingGas: Gas) -> 'CharacteristicPoint':
+        r = 0
+        theta = 0
+
+        x = (r - PV.r)/PV.F + PV.x
+        ic(x)
+
+        s = 0 # TODO entropy of contour streamline
+        Hfact = (r - PV.r) if isRight else (x - PV.x)
+        machStar = (-(theta - PV.theta) - PV.H*Hfact - PV.J*(s - PV.s))/PV.G + PV.machStar
 
         return CharacteristicPoint(x, r, theta, machStar, s, machStar2mach(machStar, workingGas.gammaTyp), MachAngle(machStar2mach(machStar, workingGas.gammaTyp)))
 
-    @staticmethod
-    def CaclulateBaseReflect(point: 'CharacteristicPoint', isRight: bool, PbPc: float, workingGas: Gas, streamline: np.ndarray['CharacteristicPoint'], tol = 1e-6) -> 'CharacteristicPoint':
-        pass
-
-    @staticmethod
-    def CalculateSolidBoundaryIntersect(point: 'CharacteristicPoint', contour: np.ndarray[nozzle.ContourPoint], isRight: bool) -> tuple[float, float] | None:        
-        Sx, Sy = point.x, point.r
-        angle = point.theta - point.alpha if isRight else point.theta + point.alpha
-
-        for j in range(len(contour) - 1):
-            a, b, c, d = contour[j].x, contour[j].r, contour[j+1].x, contour[j+1].r
-            mL = np.tan(angle)
-            mC = (d - b)/(c - a)
-            Amat = np.array([[mL, -1], [mC, -1]])
-            bmat = np.array([[mL*Sx - Sy], [mC*a - b]])
-            X = np.linalg.solve(Amat, bmat)
-            if a <= X[0,0] <= c:
-                Bx = X[0,0]
-                By = X[1,0]
-                # plt.plot([a, c], [b, d], '-or', linewidth=1)
-                return (Bx, By), np.atan2((d - b),(c - a))
-        return None, None
-
-def CalculateComplexField(contour, Pamb, workingGas: Gas, Mt, Tt, scale = 1, Rsteps = 20, Lsteps = 0, reflections = 3):
+def CalculateComplexField(contour, Pamb: Q_, workingGas: Gas, Mt: float, Tt: float, Rt: Q_, scale = 1, Rsteps = 20, Lsteps = 0, reflections = 3):
     PbPc = DESIGN.basePressure/DESIGN.chamberPressure
     PambPc = Pamb/DESIGN.chamberPressure
     gamma = workingGas.gammaTyp
+    Rt = Rt.to(unitReg.inch).magnitude
+    xt = (scale - Rt)*np.tan(Tt)
     Me = np.sqrt((PambPc**(-1/gamma[5]) - 1)/gamma[2])
     thetaExit = Tt + gas.PrandtlMeyerFunction(Me, gamma) - gas.PrandtlMeyerFunction(Mt, gamma)
 
     outerStreamLine = np.array([CharacteristicPoint(0, scale, thetaExit, mach2machStar(Me, gamma), 0, Me, MachAngle(Me))])
+    innerStreamLine = np.array([CharacteristicPoint(xt, Rt, Tt, mach2machStar(Mt, gamma), 0, Mt, MachAngle(Mt))])
 
     rLines = np.empty((Rsteps, 1 + (Lsteps + Rsteps)*reflections), dtype=CharacteristicPoint)
     lLines = np.empty((Lsteps, 1 + (Lsteps + Rsteps)*reflections), dtype=CharacteristicPoint)
 
     rLines[:, 0] = np.transpose(GenerateExpansionFan(Me, Mt, Tt, workingGas, Rsteps, scale))
-    lLines[:, 0] = np.transpose(GenerateExpansionFan(Me, Mt, Tt, workingGas, Lsteps, scale))
+    lLines[:, 0] = np.transpose(GenerateStartLine(Rt, Mt, Tt, workingGas, Lsteps, scale))
+
+    streamlines = (innerStreamLine, outerStreamLine)
 
     for i in range(reflections):
-        PropogateRegionAll(rLines, lLines, workingGas, i)
-        rlines, lines, outerStreamLine = ReflectionRegionAll(rLines, lLines, contour, PambPc, PbPc, outerStreamLine, workingGas, i)
+        rLines, lLines = PropogateRegionAll(rLines, lLines, workingGas, i)
+        rLines, lLines, streamlines = ReflectionRegionAll(rLines, lLines, contour, PambPc, PbPc, streamlines, workingGas, i)
 
-    return np.concatenate((rLines, lLines), axis=0), outerStreamLine
+    return rLines, lLines, streamlines
+
+def GenerateStartLine(Rt: float, machT, thetaT, workingGas: Gas, arraySize: int, scale = 1):
+    xt: Q_ = (scale - Rt)*np.tan(thetaT)
+
+    x = np.linspace(xt, 0, arraySize)
+    r = np.linspace(Rt, scale, arraySize)
+    startline = np.array([CharacteristicPoint(x[i], r[i], thetaT, mach2machStar(machT, workingGas.gammaTyp), 0, machT, MachAngle(machT)) for i in range(arraySize)])
+    return startline
 
 def GenerateExpansionFan(machE: float, machT: float, thetaT: float, workingGas: Gas, arraySize: int, scale = 1):
     gamma = workingGas.gammaTyp
@@ -269,15 +325,21 @@ def PropogateRegionAll(rLines: np.ndarray[CharacteristicPoint], lLines: np.ndarr
     rLines[:,start:start+L0] = region[1:,1:]
     lLines[:,start:start+R0] = np.transpose(region[1:,1:])
 
-def ReflectionRegionAll(rLines: np.ndarray[CharacteristicPoint], lLines: np.ndarray[CharacteristicPoint], contour, PambPc, PbPc, streamline, workingGas: Gas, reflection: int):
+    return rLines, lLines
+
+def ReflectionRegionAll(rLines: np.ndarray[CharacteristicPoint], lLines: np.ndarray[CharacteristicPoint], contour, PambPc, PbPc, streamlines, workingGas: Gas, reflection: int):
     R0: int = rLines.shape[0]
     L0: int = lLines.shape[0]
+    innerStreamline, outerStreamline = streamlines
     
-    rlines, streamline = ReflectionRegion(rLines, R0, L0, contour, PambPc, PbPc, streamline, workingGas, reflection, True)
-    llines, streamline = ReflectionRegion(lLines, L0, R0, contour, PambPc, PbPc, streamline, workingGas, reflection, False)
-    return rlines, llines, streamline
+    rlines, innerStreamline, outerStreamline = ReflectionRegion(rLines, R0, L0, contour, PambPc, PbPc, innerStreamline, outerStreamline, workingGas, reflection, True)
+    llines, innerStreamline, outerStreamline = ReflectionRegion(lLines, R0, L0, contour, PambPc, PbPc, innerStreamline, outerStreamline, workingGas, reflection, False)
 
-def ReflectionRegion(lines: np.ndarray[CharacteristicPoint], X0, Y0, contour, PambPc, PbPc, streamline, workingGas: Gas, reflection, startAsRight: bool): # startAsRight is true if region is being calculated in rlines
+    return rlines, llines, (innerStreamline, outerStreamline)
+
+def ReflectionRegion(lines: np.ndarray[CharacteristicPoint], R0, L0, contour, PambPc, PbPc, innerStreamline, outerStreamline, workingGas: Gas, reflection, startAsRight: bool): # startAsRight is true if region is being calculated in rlines
+    X0 = R0 if startAsRight else L0
+    Y0 = L0 if startAsRight else R0
     start = 1 + Y0 + (reflection)*(X0 + Y0) # reflection should start at 0
     region = np.empty((X0+1, X0+1), dtype=CharacteristicPoint)
     region[1:,0] = lines[:,start-1]
@@ -291,15 +353,40 @@ def ReflectionRegion(lines: np.ndarray[CharacteristicPoint], X0, Y0, contour, Pa
                 continue
             if i == j:
                 reflectOrigin = region[i, j-1] # previous point in the same line
-                region[i,j] = CharacteristicPoint.CalculateSolidReflect(reflectOrigin, isRight, contour, PbPc, workingGas) if isRight else CharacteristicPoint.CalculateGasReflect(reflectOrigin, isRight, PambPc, workingGas, streamline)
-                if not isRight:
-                    streamline = np.append(streamline, region[i,j])
+                region[i,j], innerStreamline, outerStreamline = DoReflect(reflectOrigin, isRight, innerStreamline, outerStreamline, contour, PambPc, PbPc, workingGas)
             else:
                 region[i,j] = CharacteristicPoint.CalculateFieldPoint(region[i-1,j], region[i,j-1], workingGas) if isRight else CharacteristicPoint.CalculateFieldPoint(region[i,j-1], region[i-1,j], workingGas)
                 region[j, i] = region[i, j].clone()
 
     lines[:, start:start+X0] = region[1:,1:]
-    return lines, streamline
+    return lines, innerStreamline, outerStreamline
+
+def DoReflect(point: CharacteristicPoint, isRight: bool, innerStreamline: np.ndarray, outerStreamline: np.ndarray, contour: np.ndarray, PambPc: float, PbPc: float, workingGas: Gas):
+    if isRight:
+        newPoint = None
+        doInnerLine = innerStreamline[-1].r > 0
+        doIntersect = innerStreamline[-1].r > contour[-1].r
+        if doInnerLine and doIntersect:
+            newPoint = CharacteristicPoint.CalculateSolidReflect(point, isRight, contour, workingGas)
+        if newPoint is None and doInnerLine: # it missed the contour
+            if doIntersect:
+                newAngle = np.atan2(contour[-1].r - innerStreamline[-1].r, contour[-1].x - innerStreamline[-1].x)
+                innerStreamline[-1].theta = newAngle
+            newPoint = CharacteristicPoint.CalculateGasReflect(point, isRight, PbPc, workingGas, innerStreamline)
+        if newPoint is None or newPoint.r < 0: #missed the axis
+            newPoint = CharacteristicPoint.CaclulateAxisReflect(point, isRight, workingGas)
+        if newPoint.r > 1e-3:
+            innerStreamline = np.append(innerStreamline, newPoint) # append to streamline
+        return newPoint, innerStreamline, outerStreamline
+    newPoint = CharacteristicPoint.CalculateGasReflect(point, isRight, PambPc, workingGas, outerStreamline)
+    outerStreamline = np.append(outerStreamline, newPoint)
+    return newPoint, innerStreamline, outerStreamline
+
+
+
+
+
+
 
 def PlotCharacteristicLines(fig: plt.Figure, field: np.ndarray) -> plt.Figure:
     field = np.transpose(field)
@@ -330,7 +417,7 @@ def PlotFieldData(fig: plt.Figure, fieldGrid: np.ndarray[CharacteristicPoint], l
     machContours = ax.contourf(x, r, mach, levels=100, cmap='jet')
     fig.colorbar(machContours, orientation='vertical')
 
-    # ax.quiver(qx, qy, thetaVx, thetaVy, scale=25, scale_units='xy', angles='xy', headwidth=3, headlength=5, width=.002, color='black')
+    ax.quiver(qx, qy, thetaVx, thetaVy, scale=25, scale_units='xy', angles='xy', headwidth=3, headlength=5, width=.002, color='black')
 
 
 def GridifyComplexField(rlines: np.ndarray, llines: np.ndarray) -> np.ndarray:
@@ -339,7 +426,7 @@ def GridifyComplexField(rlines: np.ndarray, llines: np.ndarray) -> np.ndarray:
 
     reflections = (rlines.shape[1] - 1) / (R0 + L0)
 
-    size = int(1 + (R0 + L0)*(reflections + 1)//2)
+    size = int(100 + (R0 + L0)*(reflections + 1)//2)
     X0 = R0
     gridField = np.empty((size, size), dtype=CharacteristicPoint)
     for r, row in enumerate(rlines):
@@ -374,7 +461,7 @@ def GridifyComplexField(rlines: np.ndarray, llines: np.ndarray) -> np.ndarray:
             pos += 1
     return gridField
 
-def CalculateThrust(exhaust: Gas, Pamb, Tt: Q_, Rt: Q_, Re: Q_, gridfield, lastContourPoint): # TODO trail termaination when can no longer continue
+def CalculateThrust(exhaust: Gas, Pamb, Tt: Q_, Rt: Q_, Re: Q_, innerStreamline, baseRadius): # TODO trail termaination when can no longer continue
     phi = np.pi/2 + Tt
     Astar = np.pi/np.sin(phi) * (Re**2 - Rt**2)
     
@@ -389,15 +476,12 @@ def CalculateThrust(exhaust: Gas, Pamb, Tt: Q_, Rt: Q_, Re: Q_, gridfield, lastC
 
     xt: Q_ = (Re - Rt)*np.tan(Tt)
 
-    contPoints = [CharacteristicPoint(xt.to(unitReg.inch).magnitude, Rt.to(unitReg.inch).magnitude, Tt, 1, 0, 1, 0)]
-    for row in gridfield[1:,:]:
-        for point in row:
-            if point is not None:
-                if not point.terminate:
-                    contPoints.append(point)
-                break
-    contPoints.append(lastContourPoint)
+    for i in range(len(innerStreamline)):
+        if innerStreamline[i].r < baseRadius:
+            break
     
+    contPoints = innerStreamline[:i]
+
     for point in contPoints:
         plt.plot(point.x, point.r, 'or')
     
