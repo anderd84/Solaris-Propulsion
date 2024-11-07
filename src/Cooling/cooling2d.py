@@ -100,6 +100,14 @@ def free_convection(beta, T_s, T_infinity, P_atm, D_outer):
     return Nu_D*k_f/D_outer
 
 
+def conduction(Temp):
+    Temp = Temp.to(unitReg.degR)
+    
+    conduction_coefficient = Q_(341, unitReg.watt / (unitReg.meter * unitReg.degK))
+    return conduction_coefficient.to(unitReg.BTU / unitReg.foot / unitReg.hour / unitReg.degR)
+
+
+
 # Testing
 # """ temperature_R = 700 * unitReg.degR  # Temperature in Rankine (~80°F)
 # pressure_psi = 14.7 * unitReg.psi  # Pressure in psi (1 atmosphere)
