@@ -31,20 +31,62 @@ coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("coolmesh2.msh")
 def getconductivity(coolmesh,i,j):
     match coolmesh.array[i,j].material:
         case DomainMaterial.COWL:
-
-        case DomainMaterial.CHAMBER:
-
+            cooling_func.conduction_grcop(coolmesh.array[i,j].temperature)
         case DomainMaterial.COOLANT:
-   
+            cooling_func.conduction_rp1(coolmesh.array[i,j].temperature)
         case DomainMaterial.PLUG:
-                          
+            cooling_func.conduction_grcop(coolmesh.array[i,j].temperature)                          
 
 def getcore(coolmesh,i,j):
-    getconductivity(coolmesh,i,j)
+    #* Left Node
+    if not(i==0) :
+        C_left = getconductivity(coolmesh,i-1,j) #TODO make thise the actual one
+        T_left = coolmesh.array[i-1,j].temperature
+    else:
+        C_left =0
+        T_left =0
+    #* Upper Node
+    if not(j==0):
+        conduct_upper = getconductivity(coolmesh,i,j+1)
+        r_i = coolmesh.array[i, j].r  # Inner radius at [i, j]
+        r_o = coolmesh.array[i, j + 1].r  # Outer radius at [i, j+1]
+        l = coolmesh.xstep  # Axial length
+        cylindricalconduct = np.log(r_o / r_i) / (2 * np.pi * conduct_upper * l)
+        C_upper = (1/cylindricalconduct) 
+        T_upper = coolmesh.array[i,j-1].temperature
+    else:
+        C_upper = 0
+        T_upper = 0
+    #* Bottom Node
+    if not(j==coolmesh.hpoints-1):
+
+        conduct_bottom = getconductivity(coolmesh,i,j-1)
+        r_i = coolmesh.array[i, j - 1].r  # Inner radius at [i, j-1]
+        r_o = coolmesh.array[i, j].r      # Outer radius at [i, j]
+        l = coolmesh.xstep                # Axial length
+
+        cylindricalconduct = np.log(r_o / r_i) / (2 * np.pi * conduct_bottom * l)
+        C_bottom = (1/cylindricalconduct)
+        T_bottom = coolmesh.array[i,j-1].temperature
+    else:
+        C_bottom = 0
+        T_bottom = 0
+    #* Right Node
+    if not(i==coolmesh.vpoints-1):
+        C_right = getconductivity(coolmesh,i-1,j) #TODO make thise the actual one
+        T_right = coolmesh.array[i-1,j].temperature
+    else:
+        C_right = 0
+        T_right = 0
+
+   
+    return C_left, C_upper, C_bottom, C_right, T_left, T_upper, T_bottom, T_right
+
+
 def getleft(coolmesh,i,j):              
 def getupper(coolmesh,i,j):           
 def getbottom(coolmesh,i,j): 
-def getright(coolmesh,i,j) :
+def getright(coolmesh,i,j):
 
 
 for i in range(coolmesh.vpoints):
