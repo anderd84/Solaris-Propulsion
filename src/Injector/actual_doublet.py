@@ -192,9 +192,10 @@ def droplet_sizing(FUEL_CORE, OX_CORE, Doublet_Diameter_Fuel, Doublet_Diameter_L
 def calculate_vaporization_time_and_chamber_length(OX_CORE, FUEL_CORE, specific_heat_p_f, thermal_conductivity_f,
                                                    D_f_Dickerson, D_f_NASA):
     """Calculate vaporization time and chamber length for given droplet sizes."""
-    B = 26.8 # B for most hydrocarbon fuels are between 5 & 20.
+    B = ((Q_(5800, unitReg.degR) - Q_(525, unitReg.degF)) * Q_(0.475,  unitReg.BTU / unitReg.pound / unitReg.degR) / Q_(125,  unitReg.BTU / unitReg.pound )).to(unitReg.inch / unitReg.inch)
+    #B = 26.8 # B for most hydrocarbon fuels are between 5 & 20.
     Vaporize_time_Dickerson = (FUEL_CORE.rho * specific_heat_p_f * (D_f_Dickerson/2)**2 / (2* thermal_conductivity_f * np.log(1 + B))).to(unitReg.second)
-    Vaporize_time_NASA = (FUEL_CORE.rho * specific_heat_p_f * (D_f_NASA/2)**2 / (2* thermal_conductivity_f * np.log(1 + B))).to(unitReg.second)
+    Vaporize_time_NASA = (FUEL_CORE.rho * specific_heat_p_f * (D_f_NASA/2)**2 / (2* thermal_conductivity_f * np.log(1 + B.magnitude))).to(unitReg.second)
     gamma_lox_rad = np.deg2rad(OX_CORE.gamma.magnitude)
     gamma_fuel_rad = np.deg2rad(FUEL_CORE.gamma.magnitude)
     # Calculate momentum components

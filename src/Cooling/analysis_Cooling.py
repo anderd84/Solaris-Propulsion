@@ -7,6 +7,11 @@ from General.units import Q_, unitReg
 from Cooling import cooling2d as cooling_func
 from Cooling.material import DomainMaterial 
 import numpy as np
+from icecream import ic
+
+
+
+
 
 
 Re = Q_(3.2, unitReg.inch)
@@ -40,7 +45,7 @@ def getconductivity(coolmesh,i,j):
 def getcore(coolmesh,i,j):
     #* Left Node
     if not(i==0) :
-        C_left = getconductivity(coolmesh,i-1,j) #TODO make thise the actual one
+        C_left = getconductivity(coolmesh,i-1,j) * coolmesh.rstep / coolmesh.xstep
         T_left = coolmesh.array[i-1,j].temperature
     else:
         C_left =0
@@ -73,7 +78,7 @@ def getcore(coolmesh,i,j):
         T_bottom = 0
     #* Right Node
     if not(i==coolmesh.vpoints-1):
-        C_right = getconductivity(coolmesh,i-1,j) #TODO make thise the actual one
+        C_right = getconductivity(coolmesh,i-1,j) * coolmesh.rstep / coolmesh.xstep
         T_right = coolmesh.array[i-1,j].temperature
     else:
         C_right = 0
@@ -82,28 +87,251 @@ def getcore(coolmesh,i,j):
    
     return C_left, C_upper, C_bottom, C_right, T_left, T_upper, T_bottom, T_right
 
+def horizontalcool(coolmesh,i,j):
+    if not(i==0) :
+        match coolmesh.array[i-1,j].material:
+            case DomainMaterial.COWL:
+                conductance_conduction_left = getconductivity(coolmesh,i-1,j) * coolmesh.rstep / (coolmesh.xstep/2)            
+                convect = cooling_func.internal_flow_convection(coolmesh.array[i,j].temperature,coolmesh.array[i,j].velocity)
+                conductance_convection_left = convect * coolmesh.rstep            
+                C_left = 1/(1/conductance_conduction_left + 1/conductance_convection_left)
+                T_left = coolmesh.array[i-1,j].temperature                
+            case DomainMaterial.COOLANT:
+                C_left = getconductivity(coolmesh,i-1,j) * coolmesh.rstep / coolmesh.xstep
+                T_left = coolmesh.array[i-1,j].temperature
 
-def getleft(coolmesh,i,j):              
-def getupper(coolmesh,i,j):           
-def getbottom(coolmesh,i,j): 
-def getright(coolmesh,i,j):
+    else:
+        C_left =0
+        T_left =0
+    if not(i==coolmesh.vpoints-1) :
+        match coolmesh.array[i+1,j].material:
+            case DomainMaterial.COWL:
+                conductance_conduction_right = getconductivity(coolmesh,i+1,j) * coolmesh.rstep / (coolmesh.xstep/2)            
+                convect = cooling_func.internal_flow_convection(coolmesh.array[i,j].temperature,coolmesh.array[i,j].velocity)
+                conductance_convection_right = convect * coolmesh.rstep            
+                C_right = 1/(1/conductance_conduction_right + 1/conductance_convection_right)
+                T_right = coolmesh.array[i+1,j].temperature                
+            case DomainMaterial.COOLANT:
+                C_right = getconductivity(coolmesh,i+1,j) * coolmesh.rstep / coolmesh.xstep
+                T_right = coolmesh.array[i+1,j].temperature
+ 
+    else:
+        C_right =0
+        T_right =0    
+    
+    return C_left, T_left, C_right, T_right
+
+def horizontalcond(coolmesh,i,j):
+    if not(i==0) :
+        match coolmesh.array[i-1,j].material:
+            case DomainMaterial.COWL:
+                C_left = getconductivity(coolmesh,i-1,j) * coolmesh.rstep / coolmesh.xstep
+                T_left = coolmesh.array[i-1,j].temperaturee                
+            case DomainMaterial.COOLANT:
+                conductance_conduction_left = getconductivity(coolmesh,i,j) * coolmesh.rstep / (coolmesh.xstep/2)            
+                convect = cooling_func.internal_flow_convection(coolmesh.array[i-1,j].temperature,coolmesh.array[i-1,j].velocity)
+                conductance_convection_left = convect * coolmesh.rstep            
+                C_left = 1/(1/conductance_conduction_left + 1/conductance_convection_left)
+                T_left = coolmesh.array[i-1,j].temperature  
+            case DomainMaterial.PLUG:
+                C_left = getconductivity(coolmesh,i-1,j) * coolmesh.rstep / coolmesh.xstep
+                T_left = coolmesh.array[i-1,j].temperature
+            case DomainMaterial.CHAMBER:
+                conductance_conduction_left = getconductivity(coolmesh,i,j) * coolmesh.rstep / (coolmesh.xstep/2)            
+                convect = cooling_func.combustion_convection(coolmesh.array[i-1,j].temperature,coolmesh.array[i-1,j].velocity)
+                conductance_convection_left = convect * coolmesh.rstep            
+                C_left = 1/(1/conductance_conduction_left + 1/conductance_convection_left)
+                T_left = coolmesh.array[i-1,j].temperature 
+    else:
+        C_left =0
+        T_left =0
+    if not(i==coolmesh.vpoints-1) :
+        match coolmesh.array[i+1,j].material:
+            case DomainMaterial.COWL:
+                C_right = getconductivity(coolmesh,i+1,j) * coolmesh.rstep / coolmesh.xstep
+                T_right = coolmesh.array[i+1,j].temperature               
+            case DomainMaterial.COOLANT:
+                conductance_conduction_right = getconductivity(coolmesh,i,j) * coolmesh.rstep / (coolmesh.xstep/2)            
+                convect = cooling_func.internal_flow_convection(coolmesh.array[i+1,j].temperature,coolmesh.array[i+1,j].velocity)
+                conductance_convection_right = convect * coolmesh.rstep            
+                C_right = 1/(1/conductance_conduction_right + 1/conductance_convection_right)
+                T_right = coolmesh.array[i+1,j].temperature 
+            case DomainMaterial.PLUG:
+                C_right = getconductivity(coolmesh,i+1,j) * coolmesh.rstep / coolmesh.xstep
+                T_right = coolmesh.array[i+1,j].temperature
+            case DomainMaterial.CHAMBER:
+                conductance_conduction_right = getconductivity(coolmesh,i,j) * coolmesh.rstep / (coolmesh.xstep/2)            
+                convect = cooling_func.combustion_convection(coolmesh.array[i+1,j].temperature,coolmesh.array[i+1,j].velocity)
+                conductance_convection_right = convect * coolmesh.rstep            
+                C_right = 1/(1/conductance_conduction_right + 1/conductance_convection_right)
+                T_right = coolmesh.array[i+1,j].temperature 
+    else:
+        C_right =0
+        T_right =0    
+    
+    return C_left, T_left, C_right, T_right
+
+def verticalcool(coolmesh,i,j):
+    if not(j==0) :
+        match coolmesh.array[i,j+1].material:
+            case DomainMaterial.COWL:
+                conductance_conduction_left = getconductivity(coolmesh,i-1,j) * coolmesh.rstep / (coolmesh.xstep/2)            
+                convect = cooling_func.combustion_convection(coolmesh.array[i,j].temperature,coolmesh.array[i,j].velocity)
+                conductance_convection_left = convect * coolmesh.rstep            
+                C_upper = 1/(1/conductance_conduction_left + 1/conductance_convection_left)
+                T_upper = coolmesh.array[i-1,j].temperature                
+            case DomainMaterial.COOLANT:
+                C_upper = getconductivity(coolmesh,i-1,j) * coolmesh.rstep / coolmesh.xstep
+                T_upper = coolmesh.array[i-1,j].temperature
+            case DomainMaterial.PLUG:
+                conductance_conduction_left = getconductivity(coolmesh,i-1,j) * coolmesh.rstep / (coolmesh.xstep/2)            
+                convect = cooling_func.combustion_convection(coolmesh.array[i,j].temperature,coolmesh.array[i,j].velocity)
+                conductance_convection_left = convect * coolmesh.rstep            
+                C_upper = 1/(1/conductance_conduction_left + 1/conductance_convection_left)
+                T_upper = coolmesh.array[i-1,j].temperature 
+    else:
+        C_upper =0
+        T_upper =0
+    if not(j==coolmesh.hpoints-1) :
+        match coolmesh.array[i+1,j].material:
+            case DomainMaterial.COWL:
+                conductance_conduction_right = getconductivity(coolmesh,i+1,j) * coolmesh.rstep / (coolmesh.xstep/2)            
+                convect = cooling_func.combustion_convection(coolmesh.array[i,j].temperature,coolmesh.array[i,j].velocity)
+                conductance_convection_right = convect * coolmesh.rstep            
+                C_bottom = 1/(1/conductance_conduction_right + 1/conductance_convection_right)
+                T_bottom = coolmesh.array[i+1,j].temperature                
+            case DomainMaterial.COOLANT:
+                C_bottom = getconductivity(coolmesh,i+1,j) * coolmesh.rstep / coolmesh.xstep
+                T_bottom = coolmesh.array[i+1,j].temperature
+            case DomainMaterial.PLUG:
+                conductance_conduction_right = getconductivity(coolmesh,i+1,j) * coolmesh.rstep / (coolmesh.xstep/2)            
+                convect = cooling_func.combustion_convection(coolmesh.array[i,j].temperature,coolmesh.array[i,j].velocity)
+                conductance_convection_right = convect * coolmesh.rstep            
+                C_bottom = 1/(1/conductance_conduction_right + 1/conductance_convection_right)
+                T_bottom = coolmesh.array[i+1,j].temperature 
+    else:
+        C_bottom =0
+        T_bottom =0  
+    
+
+    return C_upper, T_upper, C_bottom, T_bottom
+
+
+
+
+
+
+    #* Upper Node 
+    if j==0:
+        left_node_wo_T_U = Q_(0, unitReg.degR)
+        deltaT_U = left_node_wo_T_U * coolmesh.array[i,j].temperature
+    else:
+        match coolmesh.array[i, j + 1].material:
+            case DomainMaterial.COWL:
+                conduct = cooling_func.conduction(coolmesh.array[i, j + 1].temperature)
+                
+                # Define inner and outer radii for cylindrical conduction
+                r_i = coolmesh.array[i, j].r  # Inner radius at [i, j]
+                r_o = coolmesh.array[i, j + 1].r  # Outer radius at [i, j+1]
+                l = coolmesh.xstep  # Axial length
+
+                cylindricalconduct = np.log(r_o / r_i) / (2 * np.pi * conduct * l)
+                upper_node_wo_T = 1/(coolmesh.xstep/(cylindricalconduct * coolmesh.rstep))
+                deltaT_U = upper_node_wo_T * coolmesh.array[i, j + 1].temperature
+            case DomainMaterial.CHAMBER:
+                conduct = cooling_func.conduction(coolmesh.array[i, j + 1].temperature)
+                
+                # Define inner and outer radii for cylindrical conduction
+                r_i = coolmesh.array[i, j].r  # Inner radius at [i, j]
+                r_o = coolmesh.array[i, j + 1].r  # Outer radius at [i, j+1]
+                l = coolmesh.xstep  # Axial length
+
+                cylindricalconduct = np.log(r_o / r_i) / (2 * np.pi * conduct * l)
+                convect = cooling_func.combustion_convection(coolmesh.array[i,j+1].temperature,coolmesh.array[i,j+1].velocity)           
+                upper_node_wo_T = 1/(coolmesh.xstep/(cylindricalconduct * coolmesh.rstep) + 1/(convect * coolmesh.rstep))
+                deltaT_U = upper_node_wo_T * coolmesh.array[i, j + 1].temperature
+            case DomainMaterial.COOLANT:
+                conduct = cooling_func.conduction(coolmesh.array[i, j + 1].temperature)
+                
+                # Define inner and outer radii for cylindrical conduction
+                r_i = coolmesh.array[i, j].r  # Inner radius at [i, j]
+                r_o = coolmesh.array[i, j + 1].r  # Outer radius at [i, j+1]
+                l = coolmesh.xstep  # Axial length
+
+                cylindricalconduct = np.log(r_o / r_i) / (2 * np.pi * conduct * l)
+                convect = cooling_func.internal_flow_convection(coolmesh.array[i,j+1].temperature,coolmesh.array[i,j+1].velocity)           
+                upper_node_wo_T = 1/(coolmesh.xstep/(cylindricalconduct * coolmesh.rstep) + 1/(convect * coolmesh.rstep))
+                deltaT_U = upper_node_wo_T * coolmesh.array[i, j + 1].temperature
+            case DomainMaterial.PLUG:
+                conduct = cooling_func.conduction(coolmesh.array[i, j + 1].temperature)
+                
+                # Define inner and outer radii for cylindrical conduction
+                r_i = coolmesh.array[i, j].r  # Inner radius at [i, j]
+                r_o = coolmesh.array[i, j + 1].r  # Outer radius at [i, j+1]
+                l = coolmesh.xstep  # Axial length
+
+                cylindricalconduct = np.log(r_o / r_i) / (2 * np.pi * conduct * l)
+                upper_node_wo_T = 1/(coolmesh.xstep/(cylindricalconduct * coolmesh.rstep))
+                deltaT_U = upper_node_wo_T * coolmesh.array[i, j + 1].temperature
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def verticalcond(coolmesh,i,j):
+    pass #TODO still doing the thing not actuall pass
+    return C_bottom, T_bottom, C_right, T_right
+
+def getleftright(coolmesh,i,j):    
+    if (coolmesh.array[i,j].material == DomainMaterial.COOLANT):
+        C_left, T_left, C_right, T_right = horizontalcool(coolmesh,i,j)
+    else:
+        C_left, T_left, C_right, T_right = horizontalcond(coolmesh,i,j)    
+    return C_left, T_left, C_right, T_right
+            
+
+def getupperbottom(coolmesh,i,j):           
+    if (coolmesh.array[i,j].material == DomainMaterial.COOLANT):
+        C_upper, T_upper, C_bottom, T_bottom = verticalcool(coolmesh,i,j)
+    else:
+        C_upper, T_upper, C_bottom, T_bottom = verticalcond(coolmesh,i,j)    
+    return C_upper, T_upper, C_bottom, T_bottom
 
 
 for i in range(coolmesh.vpoints):
     for j in range(coolmesh.hpoints):
         #*Finding all options for barrier
-        if not(coolmesh.array[i,j].border):
-            C_left, C_upper, C_bottom, C_right, T_left, T_upper, T_bottom, T_right = getcore(coolmesh,i,j)
-            
-        else:
-            C_left, T_left = getleft(coolmesh,i,j)                
-            C_upper, T_upper = getupper(coolmesh,i,j)            
-            C_bottom, T_bottom = getbottom(coolmesh,i,j)            
-            C_right, T_right = getright(coolmesh,i,j)            
-            
-        Num = (C_left * T_left + C_upper * T_upper + C_bottom * T_bottom + C_right*  T_right)
-        Denom = (C_left + C_upper + C_bottom + C_right)
-        coolmesh.array[i,j].temperature = (Num/Denom).to(unitReg.degR)
+        if not(coolmesh.array[i,j].material == DomainMaterial.CHAMBER):
+            if not(coolmesh.array[i,j].border):
+                C_left, C_upper, C_bottom, C_right, T_left, T_upper, T_bottom, T_right = getcore(coolmesh,i,j)
+
+            else:
+                C_left, T_left, C_right, T_right = getleftright(coolmesh,i,j)                
+                C_upper, T_upper, C_bottom, T_bottom = getupperbottom(coolmesh,i,j)                        
+
+            Num = (C_left * T_left + C_upper * T_upper + C_bottom * T_bottom + C_right*  T_right)
+            Denom = (C_left + C_upper + C_bottom + C_right)
+            coolmesh.array[i,j].temperature = (Num/Denom).to(unitReg.degR)
+        
 
 
 
