@@ -33,7 +33,15 @@ ChannelShape =  np.array([.25, .25]) #inches Width,Height
 
 
 
-def conduction(Temp):
+
+def conduction_rp1(Temp):
+    (_, _, _, thermal_conductivity, _,_, _, _, _) =get_fluid_properties(fuelname, Temp.to(unitReg.degR), pressure_stagnation.to(unitReg.psi))
+    return thermal_conductivity
+
+
+
+
+def conduction_grcop(Temp):
     Temp = Temp.to(unitReg.degK)
     conduction_coefficient = Q_(-9E-05*Temp^2 + 0.091*Temp + 327.88 , unitReg.watt / (unitReg.meter * unitReg.degK))    # W/m/K
     return conduction_coefficient.to(unitReg.BTU / unitReg.foot / unitReg.hour / unitReg.degR)
