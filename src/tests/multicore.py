@@ -32,7 +32,7 @@ def main():
     plots.PlotPlug(fig, chamberC)
     # plt.show()
 
-    cooling2 = domain.DomainMC(-9, 4.5, 10.5, 5, .01)
+    cooling2 = domain.DomainMC(-9, 4.5, 10.5, 5, .1)
     cooling2.DefineMaterials(cowlC, np.array([]), chamberC, plugC, 15)
 
     cooling2.DumpFile("coolmesh.msh")
@@ -46,8 +46,8 @@ def main():
     plt.plot([startingpoint[0], aimpoint[0]], [startingpoint[1], aimpoint[1]], 'rx-')
     cooling2.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius, DESIGN.plugBaseRadius, DESIGN.chokeArea, fig)
 
-    # fig2 = plots.CreateNonDimPlot()
-    # cooling.ShowMaterialPlot(fig2)
+    fig2 = plots.CreateNonDimPlot()
+    cooling2.ShowMaterialPlot(fig2)
 
     # cooling2.ShowMaterialPlot(fig)
     cooling2.ShowStatePlot(fig)
