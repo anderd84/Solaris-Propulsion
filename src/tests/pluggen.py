@@ -58,26 +58,26 @@ plt.plot([cont[-1].x], [cont[-1].r], 'ro')
 # cowlC = plug.GenerateDimCowl(Rt, Tt, Re, straightLength, DESIGN.chamberInternalRadius, DESIGN.wallThickness, Q_(0.025, unitReg.inch))
 # plots.PlotPlug(fig, plugC)
 # plots.PlotPlug(fig, cowlC)
-rlines, llines, streams = analysis.CalculateComplexField(cont, units.PRESCOTT_PRESSURE, exhaust, 1, Tt, Rt, Re.magnitude, 50, 0, 3)
+rlines, llines, streams = analysis.CalculateComplexField(cont, Q_(4, unitReg.psi), exhaust, 1, Tt, Rt, Re.magnitude, 25, 5, 2, fig)
 istream = streams[0]
 fig.axes[0].plot([p.x for p in istream], [p.r for p in istream], '--b', linewidth=1.5)
 ostream = streams[1]
 fig.axes[0].plot([p.x for p in ostream], [p.r for p in ostream], '--b', linewidth=1.5)
 fieldGrid = analysis.GridifyComplexField(rlines, llines)
-analysis.PlotFieldData(fig, fieldGrid)
+analysis.PlotFieldData(fig, fieldGrid, 10, 10)
 analysis.PlotCharacteristicLines(fig, np.concatenate((rlines, llines), axis=0))
 
-x = np.array([[p.x for p in row] for row in rlines])
-r = np.array([[p.r for p in row] for row in rlines])
-term = np.array([[p.terminate for p in row] for row in rlines])
+x = np.array([[p.x if not np.isnan(p.x) else 0 for p in row] for row in rlines])
+r = np.array([[p.r if not np.isnan(p.r) else 0 for p in row] for row in rlines])
+term = np.array([[p.mach if not np.isnan(p.mach) else 0 for p in row] for row in rlines])
 
-# mv.view(x)
-# mv.view(r)
-# mv.view(term)
+mv.view(x)
+mv.view(r)
+mv.view(term)
 
-# mv.show()
+mv.show()
 
-analysis.CalculateThrust(exhaust, units.PRESCOTT_PRESSURE, Tt, Rt, Re, istream, cont[-1].r)
+# analysis.CalculateThrust(exhaust, units.PRESCOTT_PRESSURE, Tt, Rt, Re, istream, cont[-1].r)
 plt.show()
 
 # plots.WriteContourTXT(plugC, "plug.txt")
