@@ -12,6 +12,8 @@ from Injector.InjectorCad import injector_cad_write
 from Injector.Drill import drill_approximation
 from General.units import Q_, unitReg
 import General.design as DESIGN
+from General.design import exhaustGas
+
 
 
 epsilon = DESIGN.epsilon
@@ -23,8 +25,8 @@ viscosity_stagnation = DESIGN.viscosity_chamber
 Prandtl_stagnation = DESIGN.Prandtl_chamber
 cstar = DESIGN.c_star
 R_gas = DESIGN.R_throat #TODO gotta make this better so it's not constant R assumption
-gamma = DESIGN.gamma #TODO gotta make this better so it's not constant R assumption
-
+gamma_throat = DESIGN.gamma #TODO gotta make this better so it's not constant R assumption
+A_star = DESIGN.chokeArea
 #First step always is to update doublet.py file and run beforehand to grab all mdot and density values at injector side
 
 # -------------- Design Inputs -------------- #
@@ -34,17 +36,41 @@ ChannelShape =  np.array([.25, .25]) #inches Width,Height
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#temp = Q_(5800, unitReg.degR)
+#ic(exhaustGas.SimpleHarmonicGamma(temp).g)
+
+
 def conduction_rp1(Temp):
+    Temp = Q_(Temp.magnitude, unitReg.degR)
     (_, _, _, thermal_conductivity, _,_, _, _, _) =get_fluid_properties(fuelname, Temp.to(unitReg.degR), pressure_stagnation.to(unitReg.psi))
     return thermal_conductivity
 
 
 
-
 def conduction_grcop(Temp):
     Temp = Temp.to(unitReg.degK)
-    conduction_coefficient = Q_(-9E-05*Temp^2 + 0.091*Temp + 327.88 , unitReg.watt / (unitReg.meter * unitReg.degK))    # W/m/K
+    if Temp.magnitude>1000:
+        Temp = Q_(1000, unitReg.degK)
+    conduction_coefficient = Q_(-9E-05*Temp.magnitude**2 + 0.091*Temp.magnitude + 327.88 , unitReg.watt / (unitReg.meter * unitReg.degK))    # W/m/K
     return conduction_coefficient.to(unitReg.BTU / unitReg.foot / unitReg.hour / unitReg.degR)
+
 
 # Code for generating convection coefficients
 
@@ -53,32 +79,58 @@ def calculate_nozzle_area(A_star, M, gamma):
     A = A_star * ((gamma + 1) / 2) ** (- (gamma + 1) / (2 * (gamma - 1))) * (1 + (gamma - 1) / 2 * M**2) ** ((gamma + 1) / (2 * (gamma - 1))) * (1 / M)
     return A
 
-def combustion_convection(Node_Temp, Velocity):
-    
-    Temp = temperature_stagnation.to(unitReg.degR)
-    sonic_velocity = (gamma * R_gas * Node_Temp).to(unitReg.foot/unitReg.second)
-    Mach = Velocity / sonic_velocity
-    A = calculate_nozzle_area(A_star, Mach, gamma) #TODO need to have A_star from DESIGN i guess?
-    # Bartz's Correlation for combustion side
-    # Inputs (Combustion gases)
-    mu = viscosity_stagnation.to(unitReg.pound / unitReg.foot / unitReg.second)  # Dynamic viscosity at stagnation conditions
-    c_p = specific_heat_stagnation.to(unitReg.BTU / unitReg.pound / unitReg.degR)    # Specific heat at stagnation conditions
-    Pr = Prandtl_stagnation       # Prandtl number at stagnation conditions
-    P_0 = pressure_stagnation.to(unitReg.pound / unitReg.inch**2)   # Stagnation pressure
-    c_star = c_star.to(unitReg.foot / unitReg.s) # Characteristic velocity
-    D_star = D_star.to(unitReg.foot)      # Throat diameter (as hydraulic diameter, 4*A_c/P)  #TODO
-    A_star = A_star.to(unitReg.inch**2)      # Throat area  #TODO
-    A = A.to(unitReg.inch**2)           # Nozzle area at location of interest
-    r_c = r_c.to(unitReg.inch)   # Throat radius of curvature  #TODO
-    Ma = Mach          # Local Mach number
-    T_wg = Node_Temp.to(unitReg.degR)     # Hot side wall temperature
-    T_0g = Temp  # Hot gas stagnation temperature
-    omega = 0.6     # for diatomic gases
-    gamma = 1.145   # Ratio of specific heats, assumed to be constant #TODO get the gamma as a function of temperature here
 
-    # Calculations
-    sigma = 1 / ((1 / 2 * T_wg / T_0g * (1 + (gamma - 1) / 2 * Ma**2) + 1 / 2)**(0.8 - 0.2 * omega) * (1 + (gamma - 1) / 2 * Ma**2)**(0.2 * omega))
-    return 0.026 / D_star**0.2 * mu**0.2 / Pr**0.6 * c_p * (P_0 / c_star)**0.8 * (D_star / r_c)**0.1 * (A_star / A)**0.9 * sigma  # Convective heat transfer coefficient
+
+def combustion_convection(Node_Temp, Velocity):
+    Node_Temp = Q_(Node_Temp.magnitude, unitReg.degR)
+    Velocity = Q_(Velocity.magnitude, unitReg.foot / unitReg.second)
+    gamma = exhaustGas.SimpleHarmonicGamma(Node_Temp).g
+    Temp = temperature_stagnation.to(unitReg.degR)
+    sonic_velocity = np.sqrt((gamma * R_gas * Node_Temp)).to(unitReg.foot / unitReg.second)
+    Mach = Velocity / sonic_velocity
+
+    # Define constants and convert variables with units
+    mu = viscosity_stagnation.to(unitReg.pound / (unitReg.foot * unitReg.second))  # Dynamic viscosity at stagnation conditions
+    c_p = specific_heat_stagnation.to(unitReg.BTU / (unitReg.pound * unitReg.degR))  # Specific heat at stagnation conditions
+    Pr = Prandtl_stagnation  # Prandtl number (dimensionless)
+    P_0 = pressure_stagnation.to(unitReg.pound_force / unitReg.ft**2)  # Convert pressure to lbf/ft²
+    c_star = cstar.to(unitReg.foot / unitReg.second)  # Characteristic velocity in ft/s
+    A_star = DESIGN.chokeArea.to(unitReg.ft**2)  # Convert throat area to ft²
+
+    #TODO make this section use the actual R_e and R_t
+    R_E = Q_(3.5, unitReg.inch).to(unitReg.ft)  # Convert to feet
+    R_T = Q_(3.0, unitReg.inch).to(unitReg.ft)  # Convert to feet
+    P_T = 2 * np.pi * (R_T + R_E)  # Perimeter in feet
+    D_star = (4 * A_star / P_T).to(unitReg.ft)  # Throat diameter as hydraulic diameter in feet
+
+    # Calculate the nozzle area at the location of interest and convert to ft²
+    A = calculate_nozzle_area(A_star, Mach, gamma).to(unitReg.ft**2)
+    r_c = Q_(0.1, unitReg.inch).to(unitReg.ft)  # Throat radius of curvature in feet#TODO make it way more accurate
+
+    # Local wall and gas stagnation temperatures
+    T_wg = Node_Temp.to(unitReg.degR)  # Hot side wall temperature
+    T_0g = Temp  # Hot gas stagnation temperature
+    omega = 0.6  # for diatomic gases
+
+    # Calculate sigma correction factor
+    sigma = 1 / ((0.5 * T_wg / T_0g * (1 + (gamma - 1) / 2 * Mach**2) + 0.5)**(0.8 - 0.2 * omega) *
+                 (1 + (gamma - 1) / 2 * Mach**2)**(0.2 * omega))
+
+    g_c = Q_(32.174, unitReg.pound * unitReg.ft / (unitReg.pound_force * unitReg.s**2))  # Gravity constant to convert lbf to lbm
+
+    h_g = (0.026 / D_star**0.2 * mu**0.2 / Pr**0.6 * c_p * (P_0 / (c_star * g_c))**0.8 *
+           (D_star / r_c)**0.1 * (A_star / A)**0.9 * sigma)
+
+    # Return h_g in the desired heat transfer coefficient units
+    return h_g.to(unitReg.BTU / (unitReg.foot**2) / unitReg.hour / unitReg.degR)
+
+
+
+
+#Velocity_test = Q_(3000, unitReg.foot / unitReg.second)
+#Temp_test = Q_(5800, unitReg.degR)
+#ic(combustion_convection2(Temp_test,Velocity_test))
+
 
 def f_equation(f, *data):
     epsilon, D_h, Re_D = data

@@ -33,7 +33,7 @@ startingpoint = (-8, 2.6) # TODO use real point
 coolmesh.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius, DESIGN.plugBaseRadius, DESIGN.chokeArea, fig)
 
 
-
+coolmesh.DumpFile("coolmesh.msh")
 
 
 
