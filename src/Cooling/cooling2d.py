@@ -5,6 +5,7 @@ from scipy.optimize import fsolve
 from icecream import ic
 
 #from Doublet import OX_CORE, FUEL_CORE
+import General.design as DESIGN
 from fluids.fluid import CD_drill, Pressure_Drop_Fuel, \
                          Pressure_Drop_Lox,  pm, get_fluid_properties, CP
 from Injector.Doublet_Functions import spike_contour
@@ -53,6 +54,7 @@ def f_equation(f, *data):
     epsilon, D_h, Re_D = data
     return -2*np.log10(epsilon/D_h/3.7 + 2.51/(Re_D*np.sqrt(f))) - 1/np.sqrt(f)
 
+# TO DO: design file epsilon, pull properties using temperature as a function argument
 def internal_flow_convection(epsilon, m_dot_c, NumberofChannels, rho, v, A_c, P, Pr, mu, k_c, mu_s):
     # Gnielinski/Sieder & Tate for channel side
     # Inputs (Cooling channel)
@@ -110,9 +112,12 @@ def lambda_equation(Lambda, *data):
     return 1.930*np.log10(Re_g*np.sqrt(Lambda)) - 1/np.sqrt(Lambda)
 
 def film_cooling(m_dot_g, m_dot_c, u_g, u_c, P_cc, D_cc, c_p_g, mu_g, Pr_g, 
-                 rho_g, M_g, mu_c, c_c_l, h_fg, T_c_1, T_c_sat, rho_c_l, 
-                 M_c, sigma_c, h_g, D_c):
+                 rho_g, M_g, sigma_g, mu_c, c_c_l, h_fg, T_c_1, T_c_sat, rho_c_l, 
+                 M_c, h_g, D_c):
     # Inputs
+    # viscosity, specific_heat_p, gamma, thermal_conductivity, density, prandtl, alpha, thermal_diffusivity, SurfaceTens
+    mu_c, c_c_l, gamma, _, rho_c_l, _, _, _, _ = get_fluid_properties(DESIGN.fuelName, temperature_R, pressure_psi)
+    mu_g, c_p_g, gamma, _, density, Pr_g, alpha, _, sigma_g = get_fluid_properties(DESIGN.oxName, temperature_R, pressure_psi)
     # m_dot_g   Combustion gas mass flow rate
     # m_dot_c   Film coolant mass flow rate
     # u_g       Combustion gas velocity
@@ -124,6 +129,7 @@ def film_cooling(m_dot_g, m_dot_c, u_g, u_c, P_cc, D_cc, c_p_g, mu_g, Pr_g,
     # Pr_g      Combustion gas Prandtl number
     # rho_g     Combustion gas density
     # M_g       Combustion gas molecular weight
+    # sigma_g   Combustion gas surface tension
     # mu_c      Film coolant dynamic viscosity
     # c_c_l     Film coolant specific heat as liquid
     # h_fg      Film coolant enthalpy of vaporization
@@ -137,7 +143,7 @@ def film_cooling(m_dot_g, m_dot_c, u_g, u_c, P_cc, D_cc, c_p_g, mu_g, Pr_g,
     G_mean = G_g*(u_g - u_c)/u_g    # Mean mass velocity
     Re_g = G_mean*D_cc/mu_g # Combustion gas Reynolds number
     data = Re_g
-    Lambda = fsolve(lambda_equation, 300000, args=data) # Friction factor
+    Lambda = fsolve(lambda_equation, 0.1, args=data) # Friction factor
     e_t = 0.1   # Must be found from testing data?
     K_t = 1 + 4*e_t # Corrective turbulence factor
     St = Lambda/2/(1.20 + 11.8*np.sqrt(Lambda/2)*(Pr_g - 1)*(Pr_g)^(-1/3))  # Stanton number
@@ -149,18 +155,18 @@ def film_cooling(m_dot_g, m_dot_c, u_g, u_c, P_cc, D_cc, c_p_g, mu_g, Pr_g,
     q_dot_rad = Q_dot_rad/(np.pi/4*D_cc**2)
     q_dot_conv = h_g*(T_g-T_c)
     Q_dot_conv = q_dot_conv # TO DO
-    m_dot_v = (q_dot_conv + q_dot_rad)/h_fg_star
+    m_dot_v = (q_dot_conv + q_dot_rad)/h_fg_star    # Coolant evaporation rate per area
     F = m_dot_g/(rho_g*u_g) # Blowing ratio
     St_o = St/(np.log(1 + F/St*(M_g/M_c)^0.6)/(F/St*(M_g/M_c)^0.6)) # Transpiration-corrected Stanton number
     h = St_o*rho_c_l*u_c*c_c_l  # Convection coefficient
     Re_c = rho_c_l*u_c*D_c/mu_c # Film coolant Reynolds number
     a = 2.31*10^-4*Re_c^-0.35
     Re_cfilm = 250*np.log(Re_c) - 1265
-    E_m = 1- Re_cfilm/Re_c
-    We = rho_g*u_g^2*D_cc   # TO DO: Check for correct variables
-    E = E_m*np.tanh(a*We^1.25)
+    E_m = 1- Re_cfilm/Re_c  # Maximum entrainment fraction
+    We = rho_g*u_g^2*D_cc/sigma_g*((rho_c_l-rho_g)/rho_g)^(0.25)   # Weber number TO DO: Check for correct variables (coolant vs combustion gases)
+    E = E_m*np.tanh(a*We^1.25)  # Entrainment fraction
     Gamma_c = m_dot_c*(1-E)/(np.pi*D_cc)    # TO DO: Check that this is right
-    L_c = Gamma_c/m_dot_v
+    L_c = Gamma_c/m_dot_v   # Liquid film cooled length
     # Q_dot_conv = h
 # coolMesh.mesh.z
 # Testing
