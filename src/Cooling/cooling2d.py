@@ -136,18 +136,25 @@ def f_equation(f, *data):
     epsilon, D_h, Re_D = data
     return -2*np.log10(epsilon/D_h/3.7 + 2.51/(Re_D*np.sqrt(f))) - 1/np.sqrt(f)
 
-def internal_flow_convection(epsilon, m_dot_c, NumberofChannels, rho, v, A_c, P, Pr, mu, k_c, mu_s):
+def internal_flow_convection(Node_Temp):
     # Gnielinski/Sieder & Tate for channel side
     # Inputs (Cooling channel)
-    epsilon = epsilon.to(unitReg.inch)     # Surface roughness
-    m_dot_c = m_dot_c.to(unitReg.pound / unitReg.second) / NumberofChannels     # Coolant mass flow rate through one channel
-    rho = rho.to(unitReg.pound / unitReg.inch**3)  # Coolant density
-    v = v.to(unitReg.foot / unitReg.s)      # Coolant velocity along channel
-    D_h = D_h.to(unitReg.inch)     # Hydraulic diameter of cooling channel
-    # Pr = 1      # Prandtl number (likely an array)
-    mu = mu.to(unitReg.pound / unitReg.foot / unitReg.second)   # Dynamic viscosity (likely an array)
-    k_c = k_c.to(unitReg.BTU / unitReg.foot / unitReg.hour / unitReg.degR)    # Thermal conductivity of coolant
-    mu_s = mu_s.to(unitReg.pound / unitReg.foot / unitReg.second)    # Dynamic viscosity at the heat transfer boundary surface temperature
+    Temp = Q_(Node_Temp.magnitude, unitReg.degR)
+    (viscosity, specific_heat_p,_, thermal_conductivity, density, prandtl, alpha, thermal_diffusivity, 
+                            SurfaceTens) = get_fluid_properties(fuelname, Temp, pressure_stagnation.to(unitReg.psi)) #using stagnation pressure for now
+    
+    
+    
+    
+    epsilon = epsilon.to(unitReg.inch)     # Surface roughness #TODO From Design Table
+    m_dot_c = m_dot_c.to(unitReg.pound / unitReg.second) / NumberofChannels     # Coolant mass flow rate through one channel #TODO From Design Table
+    rho = density.to(unitReg.pound / unitReg.inch**3)  # Coolant density #! From RP-1 Grab values from ROcket Prop
+    v = v.to(unitReg.foot / unitReg.s)      # Coolant velocity along channel #TODO From Design Table
+    D_h = D_h.to(unitReg.inch)     # Hydraulic diameter of cooling channel  #TODO From Design Table
+    Pr = prandtl     # Prandtl number (likely an array)
+    mu = viscosity.to(unitReg.pound / unitReg.foot / unitReg.second)   # Dynamic viscosity (likely an array) #! From RP-1 Grab values from ROcket Prop
+    k_c = thermal_conductivity.to(unitReg.BTU / unitReg.foot / unitReg.hour / unitReg.degR)    # Thermal conductivity of coolant #! From RP-1 Grab values from ROcket Prop
+    mu_s = viscosity.to(unitReg.pound / unitReg.foot / unitReg.second)    # Dynamic viscosity at the heat transfer boundary surface temperature #! From RP-1 Grab values from ROcket Prop
 
     # Calculations
     D_h = 4*A_c/P

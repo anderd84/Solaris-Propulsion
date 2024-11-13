@@ -139,7 +139,7 @@ class DomainMC:
 
         ax = fig.axes[0]
         contf = ax.contourf(xarr, rarr, matarr, 100, cmap='jet')
-        fig.colorbar(contf, ax=ax)
+        # fig.colorbar(contf, ax=ax)
         # xcells = np.linspace(self.x0 - self.xstep/2, self.x0 + self.width + self.xstep/2, self.hpoints+1)
         # rcells = np.linspace(self.r0 + self.rstep/2, self.r0 - self.height - self.rstep/2, self.vpoints+1)
         # xl, rl = np.meshgrid(xcells, rcells)
