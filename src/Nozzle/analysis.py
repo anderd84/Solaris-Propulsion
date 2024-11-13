@@ -184,6 +184,8 @@ class CharacteristicPoint:
 
         Hfact = (r - PV.r) if isRight else (x - PV.x)
 
+        ic(PV.H)
+
         machStar = PV.machStar + (-(theta - PV.theta) - PV.H*Hfact - PV.J*(s - PV.s))/PV.G
 
         return CharacteristicPoint(x, r, theta, machStar, s, machStar2mach(machStar, workingGas.gammaTyp), MachAngle(machStar2mach(machStar, workingGas.gammaTyp)))
