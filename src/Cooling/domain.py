@@ -90,12 +90,15 @@ class DomainMC:
         self.array = newarray.copy()
 
         # use a pool of processes to parallelize the computation
-        with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_CORES) as executor:
+        with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_CORES, initializer=init_pool_processes, initargs=(mcQ,)) as executor:
             q = []
+
             for i in range(self.vpoints):
                 for j in range(self.hpoints):
                     # q.append((i, j))
                     mcQ.put((i, j))
+
+            print(mcQ.qsize())
 
             futures = []
             print(f"Starting parallel computation with {MAX_CORES} cores")
@@ -105,7 +108,7 @@ class DomainMC:
                 # futures.append(executor.submit(EvalProcess, MAX_CORES - i - 1, q[i*jump:(i+1)*jump], self.shm, self.array.shape, (self.width, self.height), coolant, cowl, chamber, plug))
             print("Tasks submitted")
             for future in concurrent.futures.as_completed(futures):
-                res = future.result()
+                res = future.result(timeout=None)
                 for i, j, mat in res:
                     self.array[i,j].material = mat
 
@@ -399,11 +402,14 @@ class DomainMC:
 
 def EvalMaterialProcess(pn, shm, shape, size, coolant, cowl, chamber, plug):
     res = []
+    global mcQ
     domain = np.ndarray(shape, dtype=DomainPoint, buffer=shm.buf)
-    print(f"Starting process {pn + 1}")
+    print(f"Starting process {pn + 1}", flush=True)
+    print(mcQ.qsize())
     prevPercent = 0
     total = np.prod(shape)
     while mcQ.qsize() > 0:
+        print(mcQ.qsize(), flush=True)
         i, j = mcQ.get()
         res.append(AssignMaterial(domain, i, j, size, coolant, cowl, chamber, plug))
         if pn == 0:
@@ -411,6 +417,7 @@ def EvalMaterialProcess(pn, shm, shape, size, coolant, cowl, chamber, plug):
             if prevPercent < curPercent:
                 prevPercent = curPercent
                 print(f"Progress: {prevPercent}%")
+    print("done")
     return res
 
 def AssignMaterial(domain, i, j, size, coolant, cowl, chamber, plug):
@@ -423,3 +430,7 @@ def AssignMaterial(domain, i, j, size, coolant, cowl, chamber, plug):
     if material.isIntersect(domain[i][j], plug, size):
         return (i, j, DomainMaterial.PLUG)
     return (i, j, DomainMaterial.FREE)
+
+def init_pool_processes(q):
+    global mcQ
+    mcQ = q
