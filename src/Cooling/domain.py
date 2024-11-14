@@ -80,9 +80,16 @@ class DomainMC:
         joblib.dump(self.array, data_filename_memmap)
         inData = joblib.load(data_filename_memmap, mmap_mode='r')
 
-        outputs = joblib.Parallel(n_jobs=3)(joblib.delayed(AssignMaterial)(inData, i, j, (self.width, self.height), coolant, cowl, chamber, plug) for i in range(self.vpoints) for j in range(self.hpoints))
-        for i, j, mat in outputs:
-            self.array[i,j].material = mat
+        q = mp.Manager().Queue()
+
+        for i in range(self.vpoints):
+            for j in range(self.hpoints):
+                q.put((i,j))
+
+        outputs = joblib.Parallel(n_jobs=MAX_CORES)(joblib.delayed(EvalMaterialProcess)(q, i, data_filename_memmap, self.array.shape, (self.width, self.height), coolant, cowl, chamber, plug) for i in range(MAX_CORES))
+        for out in outputs:
+            for i, j, mat in out:
+                self.array[i,j].material = mat
         
 
         print("Parallel computation done")
@@ -371,32 +378,21 @@ class DomainMC:
     def LoadFile(filename):
         return joblib.load(filename + '.z')
 
-def EvalMaterialProcess(pn, shm, shape, size, coolant, cowl, chamber, plug):
+def EvalMaterialProcess(q, pn, shm, shape, size, coolant, cowl, chamber, plug):
     res = []
     global mcQ
-    # print(shmName)
-    # shm = shared_memory.SharedMemory(name=shmName)
-    test = np.memmap('x.dat', dtype=np.float64, mode='r', shape=shape)
-    print(test[0,0])
-    print(DomainPoint)
-    print(DomainMaterial)
-    try:
-        # domain = np.ndarray(shape, dtype=DomainPoint, buffer=shm.buf)
-        domain = np.memmap(SHAREDMEMNAME + '.dat', dtype=DomainPoint, mode='r', shape=shape)
-        print(domain[0,0])
-    except Exception as e:
-        print(e)
-        print(e.__traceback__)
-        print(e.__traceback__.tb_lineno)
+
+    domain = joblib.load(shm, mmap_mode='r')
+
     print(f"Starting process {pn + 1}", flush=True)
-    print(domain[0,0])
+    print(f"Queue size: {q.qsize()}", flush=True)
     prevPercent = 0
     total = np.prod(shape)
-    while mcQ.qsize() > 0:
-        i, j = mcQ.get()
+    while q.qsize() > 0:
+        i, j = q.get()
         res.append(AssignMaterial(domain, i, j, size, coolant, cowl, chamber, plug))
         if pn == 0:
-            curPercent = int((total - mcQ.qsize())/total * 100)
+            curPercent = int((total - q.qsize())/total * 100)
             if prevPercent < curPercent:
                 prevPercent = curPercent
                 print(f"Progress: {prevPercent}%")
