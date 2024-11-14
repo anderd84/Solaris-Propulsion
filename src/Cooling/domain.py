@@ -26,6 +26,11 @@ mcQ = Queue()
 SHAREDMEMNAME = 'CoolingDomain'
 
 @dataclass
+class CoolingChannel:
+    upperContour: np.ndarray
+    lowerContour: np.ndarray    
+
+@dataclass
 class DomainPoint:
     x: float
     r: float
@@ -33,8 +38,11 @@ class DomainPoint:
     material: DomainMaterial = DomainMaterial.FREE
     border: bool = False
     temperature: Q_ = Q_(70, unitReg.degF)
+    pressure: Q_ = Q_(12.1, unitReg.psi)
     velocity: Q_ = Q_(0, unitReg.ft/unitReg.s)
     hydraulicDiameter: Q_ = Q_(0, unitReg.inch)
+    previousFlow: tuple = None
+    flowHeight: Q_ = Q_(0, unitReg.inch)
 
 class DomainMC:
     array: np.ndarray
@@ -124,8 +132,8 @@ class DomainMC:
         xcells = np.linspace(self.x0 - self.xstep/2, self.x0 + self.width + self.xstep/2, self.hpoints+1)
         rcells = np.linspace(self.r0 + self.rstep/2, self.r0 - self.height - self.rstep/2, self.vpoints+1)
         xl, rl = np.meshgrid(xcells, rcells)
-        ax.plot(xl, rl, 'k', linewidth=0.25)
-        ax.plot(np.transpose(xl), np.transpose(rl), 'k', linewidth=0.25)
+        # ax.plot(xl, rl, 'k', linewidth=0.25)
+        # ax.plot(np.transpose(xl), np.transpose(rl), 'k', linewidth=0.25)
 
     def ShowStatePlot(self, fig: plt.Figure):
         print("state plot!")
@@ -163,6 +171,46 @@ class DomainMC:
         xl, rl = np.meshgrid(xcells, rcells)
         # ax.plot(xl, rl, 'k', linewidth=0.25)
         # ax.plot(np.transpose(xl), np.transpose(rl), 'k', linewidth=0.25)
+
+    def AssignCoolantFlow(self, coolant: CoolingChannel, upperWall: bool, initialPressure: Q_):
+        inputPoints = len(coolant.upperContour)
+        previousWall = None
+        for i in range(inputPoints - 1):
+            dist1 = np.sqrt((coolant.lowerContour[i].x - coolant.lowerContour[i+1].x)**2 + (coolant.lowerContour[i].r - coolant.lowerContour[i+1].r)**2)
+            dist2 = np.sqrt((coolant.upperContour[i].x - coolant.upperContour[i+1].x)**2 + (coolant.upperContour[i].r - coolant.upperContour[i+1].r)**2)
+            dist = max(dist1, dist2)
+
+            step = min(self.xstep, self.rstep)
+            steps = max(int(dist/step * 1.25),2)
+
+            xl = np.linspace(coolant.lowerContour[i].x, coolant.lowerContour[i+1].x, steps)[:-1]
+            rl = np.linspace(coolant.lowerContour[i].r, coolant.lowerContour[i+1].r, steps)[:-1]
+
+            xu = np.linspace(coolant.upperContour[i].x, coolant.upperContour[i+1].x, steps)[:-1]
+            ru = np.linspace(coolant.upperContour[i].r, coolant.upperContour[i+1].r, steps)[:-1]
+
+            for j in range(steps - 1):
+                wallPoint = self.CoordsToCell(xu[j], ru[j]) if upperWall else self.CoordsToCell(xl[j], rl[j])
+                cells = self.cellsOnLine((xl[j], rl[j]), (xu[j], ru[j]))
+
+                plt.plot([xl[j], xu[j]], [rl[j], ru[j]], '-k', linewidth=.5)
+
+                for row, col in cells:
+                    if row == wallPoint[0] and col == wallPoint[1]:
+                        self.array[row, col].border = True
+                        self.array[row, col].pressure = initialPressure
+                        self.array[row, col].material = DomainMaterial.COOLANT_WALL
+                        self.array[row, col].previousFlow = previousWall
+                        self.array[row, col].flowHeight = np.sqrt((xl[j] - xu[j])**2 + (rl[j] - ru[j])**2)
+                        previousWall = (row, col)
+                    else:
+                        self.array[row, col].material = DomainMaterial.COOLANT_BULK
+                        self.array[row, col].previousFlow = wallPoint
+                        self.array[row, col].pressure = initialPressure
+                        self.array[row, col].flowHeight = np.sqrt((xl[j] - xu[j])**2 + (rl[j] - ru[j])**2)
+
+        
+        print("done")
 
     def AssignChamberTemps(self, chamber: np.ndarray, exhaust: Gas, startPoint: tuple, endPoint: tuple, chamberWallRadius: Q_, plugBase: Q_, Astar: Q_, fig):
         tic = time.perf_counter()

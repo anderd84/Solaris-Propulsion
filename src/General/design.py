@@ -21,7 +21,7 @@ Fuel_Total = totalmdot /(1+percentFilmCooling + OFratio)
 Oxidizer_Total = totalmdot - Fuel_Total
 
 chamberInternalRadius = Q_(3.825, unitReg.inch)
-wallThickness = Q_(0.125, unitReg.inch)
+wallThickness = Q_(0.25, unitReg.inch)
 maxRadius = chamberInternalRadius + wallThickness
 plugBaseRadius = Q_(2, unitReg.inch)
 chamberatInjectorRadius = Q_(6.25/2, unitReg.inch)
@@ -47,7 +47,7 @@ designAtm = Atmosphere(designAltitude.to(unitReg.meter).magnitude)
 designAmbientPressure = Q_(designAtm.pressure[0], unitReg.pascal)
 lengthMax = Q_(1.75, unitReg.inch)
 basePressure = Q_(5, unitReg.psi)
-
+chokePercent = 0.9
 
 #Cooling inputs
 epsilon = Q_(0.05, unitReg.inch)
@@ -76,5 +76,12 @@ exhaustGas = Gas(gamma, R_throat, P0=chamberPressure, T0=chamberTemp)
 chokeArea = exhaustGas.getChokedArea(totalmdot).to(unitReg.inch**2)
 
 # nozzle design table
-plugDesignTable = {"throatArcRadFactor": .1, "convergeAngle": 25, "turnArcRadFactor": 2, "straightAngle": 10, "lipAngle":15, "manifoldDistanceFactor": .1}
-# plugDesignTable = {"throatArcRadFactor": .1, "convergeAngle": 45, "turnArcRadFactor": 1.75, "straightAngle": 10, "lipAngle":15, "manifoldDistanceFactor": .1}
+# plugDesignTable = {"throatArcRadFactor": .1, "convergeAngle": 25, "turnArcRadFactor": 2, "straightAngle": 10, "lipAngle":15, "manifoldDistanceFactor": .1}
+plugDesignTable = {"throatArcRadFactor": .1, "convergeAngle": 45, "turnArcRadFactor": 1.75, "straightAngle": 9, "lipAngle":15, "manifoldDistanceFactor": .1}
+
+
+# cooling channels
+coolingChannelHeightChamber = Q_(0.05, unitReg.inch)
+coolingChannelHeightConverge = Q_(0.025, unitReg.inch)
+coolingChannelShrinkDist = Q_(0.25, unitReg.inch)
+coolingChannelWallDist = Q_(0.025, unitReg.inch)

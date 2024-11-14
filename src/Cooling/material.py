@@ -1,5 +1,5 @@
 
-from matplotlib import pyplot as plt, patches
+from matplotlib import pyplot as plt
 import numpy as np
 from icecream import ic
 from Nozzle.nozzle import ContourPoint
@@ -8,9 +8,11 @@ from enum import Enum
 class DomainMaterial(Enum):
     FREE = 0 
     COWL = 1
-    COOLANT = 2
     CHAMBER = 3 #*Gas inside the chamber
     PLUG = 4
+    COOLANT = 5
+    COOLANT_WALL = 6
+    COOLANT_BULK = 7
 
 def isIntersect(Point, contour: np.ndarray[ContourPoint], domainSize: tuple[int, int]):
     if contour.size == 0:

@@ -119,6 +119,10 @@ def GenerateDimCowl(throatRadius: Q_, throatTheta: Q_, Re: Q_, straightLength: Q
     straightLength = straightLength.to(unitReg.inch).magnitude
     chamberOuter = chamberOuter.to(unitReg.inch).magnitude
     thickness = thickness.to(unitReg.inch).magnitude
+    coolingFloor = DESIGN.coolingChannelWallDist.to(unitReg.inch).magnitude
+    coolingHeight1 = DESIGN.coolingChannelHeightConverge.to(unitReg.inch).magnitude
+    coolingHeight2 = DESIGN.coolingChannelHeightChamber.to(unitReg.inch).magnitude
+    heightChangeDist = DESIGN.coolingChannelShrinkDist.to(unitReg.inch).magnitude
 
     absThetaT = abs(throatTheta)
     xt = (Re - throatRadius)*np.tan(throatTheta)
@@ -156,6 +160,8 @@ def GenerateDimCowl(throatRadius: Q_, throatTheta: Q_, Re: Q_, straightLength: Q
     yc, rc, xf, yf, rf, ym, rm, l, L = np.linalg.solve(Amat, bmat)
     #! New stuff
 
+    # chamber wall
+
     arcArr = np.linspace(-thetaL, np.pi/2 - thetal, circRes)
     lipArc = np.array([nozzle.ContourPoint(xf - rf*np.sin(a), yf - rf*np.cos(a)) for a in arcArr])
     
@@ -164,14 +170,48 @@ def GenerateDimCowl(throatRadius: Q_, throatTheta: Q_, Re: Q_, straightLength: Q
     arcArr = np.linspace(thetal, np.pi/2, circRes)
     convergeArc = np.array([nozzle.ContourPoint(xc + rc*np.cos(a), yc + rc*np.sin(a)) for a in arcArr])
 
-    chamber = np.array([nozzle.ContourPoint(xc, yc+rc), nozzle.ContourPoint(xc - straightLength, yc+rc), nozzle.ContourPoint(xc - straightLength, Rmax), nozzle.ContourPoint(xm, Rmax)])
+    chamber = np.array([nozzle.ContourPoint(xc - straightLength, yc+rc), nozzle.ContourPoint(xc - straightLength, Rmax)])
 
     arcArr = np.linspace(np.pi/2, -np.pi/2 + thetaL, circRes)
     manifold = np.array([nozzle.ContourPoint(xm + rm*np.cos(a), ym + rm*np.sin(a)) for a in arcArr])
 
     final = np.array([nozzle.ContourPoint(0, Re)])
 
-    return np.concatenate([lipArc, convergeArc, chamber, manifold, final], axis=0)
+    cowl = np.concatenate([lipArc, convergeArc, chamber, manifold, final], axis=0)
+
+    # cooling
+
+    arcArr = np.linspace(0, -np.pi/2 + thetaL, circRes)
+    manifold = np.array([nozzle.ContourPoint(xm + (rm - coolingFloor)*np.cos(a), ym + (rm - coolingFloor)*np.sin(a)) for a in arcArr])
+
+    upperManifold = np.array([nozzle.ContourPoint(xm + (rm - coolingFloor - coolingHeight1)*np.cos(a), ym + (rm - coolingFloor - coolingHeight1)*np.sin(a)) for a in arcArr])
+
+    psi = (-thetaL + thetal + np.pi/2)/2 + thetaL
+    dist = coolingFloor*np.sqrt(2)
+    dist2 = (coolingFloor + coolingHeight1)*np.sqrt(2)
+    # ic(psi)
+    # arcArr = np.linspace(-thetaL, np.pi/2 - thetal, circRes)
+    # lipArc = np.array([nozzle.ContourPoint((xf + dist*(np.cos(psi))) - rf*np.sin(a), (yf + dist*(np.sin(psi))) - rf*np.cos(a)) for a in arcArr])
+
+    lipArc = np.array([nozzle.ContourPoint((xf + dist*(np.cos(psi))) - rf*np.sin(-thetaL), (yf + dist*(np.sin(psi))) - rf*np.cos(-thetaL)),
+                       nozzle.ContourPoint((xf + dist*(np.cos(psi))) - rf*np.sin(np.pi/2 - thetal), (yf + dist*(np.sin(psi))) - rf*np.cos(np.pi/2 - thetal))])
+    
+    lipArcUpper = np.array([nozzle.ContourPoint((xf + dist2*(np.cos(psi))) - rf*np.sin(-thetaL), (yf + dist2*(np.sin(psi))) - rf*np.cos(-thetaL)),
+                            nozzle.ContourPoint((xf + dist2*(np.cos(psi))) - rf*np.sin(np.pi/2 - thetal), (yf + dist2*(np.sin(psi))) - rf*np.cos(np.pi/2 - thetal))])
+
+    arcArr = np.linspace(thetal, np.pi/2, circRes)
+    convergeArc = np.array([nozzle.ContourPoint(xc + (rc + coolingFloor)*np.cos(a), yc + (rc + coolingFloor)*np.sin(a)) for a in arcArr])
+
+    convergeArcUpper = np.array([nozzle.ContourPoint(xc + (rc + coolingFloor + coolingHeight1)*np.cos(a), yc + (rc + coolingFloor + coolingHeight1)*np.sin(a)) for a in arcArr])
+
+    chamber = np.array([nozzle.ContourPoint(xc - heightChangeDist, yc + (rc + coolingFloor)), nozzle.ContourPoint(xc - straightLength, yc+(rc + coolingFloor))])
+
+    chamberUpper = np.array([nozzle.ContourPoint(xc - heightChangeDist, yc + (rc + coolingFloor + coolingHeight2)), nozzle.ContourPoint(xc - straightLength, yc+(rc + coolingFloor + coolingHeight2))])
+
+    cowlCooling = np.concatenate([manifold, lipArc, convergeArc, chamber], axis=0)
+    cowlUpper = np.concatenate([upperManifold, lipArcUpper, convergeArcUpper, chamberUpper], axis=0)
+
+    return cowl, cowlCooling, cowlUpper
 
 def GenerateDimChamber(throatRadius: Q_, throatTheta: Q_, Re: Q_, chamberLength: Q_, chamberOuter: Q_, thickness: Q_, overchoke: Q_, baseRadius: Q_, circRes: int = 50):
     designTable = DESIGN.plugDesignTable
@@ -265,3 +305,7 @@ def GenerateDimChamber(throatRadius: Q_, throatTheta: Q_, Re: Q_, chamberLength:
     aimpoint = (xcTA, (ycTA + designTable["throatArcRad"] + Rinner)/2)
 
     return np.concatenate([wall, chamber[::-1], origin], axis=0), aimpoint
+
+def getOverchokeDist(lipRad, throatRad, thetaThroat, areaRatio):
+    phi = np.pi/2 + thetaThroat
+    return (lipRad - np.sqrt(areaRatio*(lipRad**2 - throatRad**2) + throatRad**2))/np.sin(phi)
