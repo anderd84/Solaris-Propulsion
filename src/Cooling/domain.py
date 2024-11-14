@@ -41,7 +41,7 @@ class DomainPoint:
     pressure: Q_ = Q_(12.1, unitReg.psi)
     velocity: Q_ = Q_(0, unitReg.ft/unitReg.s)
     hydraulicDiameter: Q_ = Q_(0, unitReg.inch)
-    previousFlow: tuple = None
+    previousFlow: tuple[int, int] = (0,0)
     flowHeight: Q_ = Q_(0, unitReg.inch)
 
 class DomainMC:
@@ -78,16 +78,22 @@ class DomainMC:
         shm = None
         tic = time.perf_counter()
         try:
-            shm = shared_memory.SharedMemory(create=True, size=self.array.nbytes, name=SHAREDMEMNAME)
+            shm = shared_memory.SharedMemory(create=True, size=self.array.nbytes*2, name=SHAREDMEMNAME)
         except FileExistsError:
             shm = shared_memory.SharedMemory(name=SHAREDMEMNAME)
             shm.unlink()
-            shm = shared_memory.SharedMemory(create=True, size=self.array.nbytes, name=SHAREDMEMNAME)
+            shm = shared_memory.SharedMemory(create=True, size=self.array.nbytes*2, name=SHAREDMEMNAME)
         
         newarray = np.ndarray(self.array.shape, dtype=DomainPoint, buffer=shm.buf)
         newarray[:] = self.array[:]
 
-        self.array = newarray.copy()
+        memmap = np.memmap(SHAREDMEMNAME + '.dat', dtype=DomainPoint, mode='w+', shape=self.array.shape)
+        memmap[:] = self.array[:]
+
+        x = np.memmap('x' + '.dat', dtype=np.float64, mode='w+', shape=self.array.shape)
+        x[:] = np.array([p.x for row in self.array for p in row]).reshape(self.array.shape)
+
+        print(memmap[0,0])
 
         # use a pool of processes to parallelize the computation
         with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_CORES, initializer=init_pool_processes, initargs=(mcQ,)) as executor:
@@ -103,6 +109,7 @@ class DomainMC:
             futures = []
             print(f"Starting parallel computation with {MAX_CORES} cores")
             jump = int(len(q)/MAX_CORES)
+
             for i in range(MAX_CORES):
                 futures.append(executor.submit(EvalMaterialProcess, i, shm, self.array.shape, (self.width, self.height), coolant, cowl, chamber, plug))
                 # futures.append(executor.submit(EvalProcess, MAX_CORES - i - 1, q[i*jump:(i+1)*jump], self.shm, self.array.shape, (self.width, self.height), coolant, cowl, chamber, plug))
@@ -403,13 +410,25 @@ class DomainMC:
 def EvalMaterialProcess(pn, shm, shape, size, coolant, cowl, chamber, plug):
     res = []
     global mcQ
-    domain = np.ndarray(shape, dtype=DomainPoint, buffer=shm.buf)
+    # print(shmName)
+    # shm = shared_memory.SharedMemory(name=shmName)
+    test = np.memmap('x.dat', dtype=np.float64, mode='r', shape=shape)
+    print(test[0,0])
+    print(DomainPoint)
+    print(DomainMaterial)
+    try:
+        # domain = np.ndarray(shape, dtype=DomainPoint, buffer=shm.buf)
+        domain = np.memmap(SHAREDMEMNAME + '.dat', dtype=DomainPoint, mode='r', shape=shape)
+        print(domain[0,0])
+    except Exception as e:
+        print(e)
+        print(e.__traceback__)
+        print(e.__traceback__.tb_lineno)
     print(f"Starting process {pn + 1}", flush=True)
-    print(mcQ.qsize())
+    print(domain[0,0])
     prevPercent = 0
     total = np.prod(shape)
     while mcQ.qsize() > 0:
-        print(mcQ.qsize(), flush=True)
         i, j = mcQ.get()
         res.append(AssignMaterial(domain, i, j, size, coolant, cowl, chamber, plug))
         if pn == 0:
@@ -418,6 +437,7 @@ def EvalMaterialProcess(pn, shm, shape, size, coolant, cowl, chamber, plug):
                 prevPercent = curPercent
                 print(f"Progress: {prevPercent}%")
     print("done")
+    # shm.close()
     return res
 
 def AssignMaterial(domain, i, j, size, coolant, cowl, chamber, plug):
