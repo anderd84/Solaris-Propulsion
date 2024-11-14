@@ -75,53 +75,17 @@ class DomainMC:
 
     def DefineMaterials(self, cowl: np.ndarray, coolant: np.ndarray, chamber: np.ndarray, plug: np.ndarray, max_cores = mp.cpu_count() - 1):
         MAX_CORES = max_cores
-        shm = None
         tic = time.perf_counter()
-        try:
-            shm = shared_memory.SharedMemory(create=True, size=self.array.nbytes*2, name=SHAREDMEMNAME)
-        except FileExistsError:
-            shm = shared_memory.SharedMemory(name=SHAREDMEMNAME)
-            shm.unlink()
-            shm = shared_memory.SharedMemory(create=True, size=self.array.nbytes*2, name=SHAREDMEMNAME)
+        data_filename_memmap = SHAREDMEMNAME + '.dat'
+        joblib.dump(self.array, data_filename_memmap)
+        inData = joblib.load(data_filename_memmap, mmap_mode='r')
+
+        outputs = joblib.Parallel(n_jobs=3)(joblib.delayed(AssignMaterial)(inData, i, j, (self.width, self.height), coolant, cowl, chamber, plug) for i in range(self.vpoints) for j in range(self.hpoints))
+        for i, j, mat in outputs:
+            self.array[i,j].material = mat
         
-        newarray = np.ndarray(self.array.shape, dtype=DomainPoint, buffer=shm.buf)
-        newarray[:] = self.array[:]
-
-        memmap = np.memmap(SHAREDMEMNAME + '.dat', dtype=DomainPoint, mode='w+', shape=self.array.shape)
-        memmap[:] = self.array[:]
-
-        x = np.memmap('x' + '.dat', dtype=np.float64, mode='w+', shape=self.array.shape)
-        x[:] = np.array([p.x for row in self.array for p in row]).reshape(self.array.shape)
-
-        print(memmap[0,0])
-
-        # use a pool of processes to parallelize the computation
-        with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_CORES, initializer=init_pool_processes, initargs=(mcQ,)) as executor:
-            q = []
-
-            for i in range(self.vpoints):
-                for j in range(self.hpoints):
-                    # q.append((i, j))
-                    mcQ.put((i, j))
-
-            print(mcQ.qsize())
-
-            futures = []
-            print(f"Starting parallel computation with {MAX_CORES} cores")
-            jump = int(len(q)/MAX_CORES)
-
-            for i in range(MAX_CORES):
-                futures.append(executor.submit(EvalMaterialProcess, i, shm, self.array.shape, (self.width, self.height), coolant, cowl, chamber, plug))
-                # futures.append(executor.submit(EvalProcess, MAX_CORES - i - 1, q[i*jump:(i+1)*jump], self.shm, self.array.shape, (self.width, self.height), coolant, cowl, chamber, plug))
-            print("Tasks submitted")
-            for future in concurrent.futures.as_completed(futures):
-                res = future.result(timeout=None)
-                for i, j, mat in res:
-                    self.array[i,j].material = mat
 
         print("Parallel computation done")
-        shm.close()
-        shm.unlink()
         print("assigning borders")
         self.AssignBorders()
         toc = time.perf_counter()
@@ -191,7 +155,7 @@ class DomainMC:
             dist = max(dist1, dist2)
 
             step = min(self.xstep, self.rstep)
-            steps = max(int(dist/step * 1.25),2)
+            steps = max(int(dist/step * 1.25), 5)
 
             xl = np.linspace(coolant.lowerContour[i].x, coolant.lowerContour[i+1].x, steps)[:-1]
             rl = np.linspace(coolant.lowerContour[i].r, coolant.lowerContour[i+1].r, steps)[:-1]
