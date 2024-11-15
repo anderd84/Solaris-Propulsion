@@ -165,8 +165,8 @@ def internal_flow_convection(Node_Temp, Node_Pressure, Land_Height):
     mu_s = mu.to(unitReg.pound / unitReg.foot / unitReg.second)    # Dynamic viscosity at the heat transfer boundary surface temperature NEEDS CORRECTING
 
     # Calculations
-    A_c = Q_(0.5*DESIGN.coolingChannelAngleSweep*(2*(DESIGN.chamberInternalRadius + DESIGN.coolingChannelWallDist)*Land_Height + Land_Height**2), unitReg.inch**2) # Cooling channel cross-sectional area, height should be variable in the future
-    P = Q_(2*Land_Height + DESIGN.coolingChannelAngleSweep*((DESIGN.chamberInternalRadius + DESIGN.coolingChannelWallDist) + 2*Land_Height), unitReg.inch)  # Cooling channel perimeter, height should be variable in the future
+    A_c = Q_(0.5*DESIGN.coolingChannelAngleSweep/NumberofChannels*(2*(DESIGN.chamberInternalRadius + DESIGN.coolingChannelWallDist)*Land_Height + Land_Height**2), unitReg.inch**2) # Cooling channel cross-sectional area, height should be variable in the future
+    P = Q_(2*Land_Height + DESIGN.coolingChannelAngleSweep/NumberofChannels*((DESIGN.chamberInternalRadius + DESIGN.coolingChannelWallDist) + 2*Land_Height), unitReg.inch)  # Cooling channel perimeter, height should be variable in the future
     D_h = 4*A_c/P   # Hydraulic diameter
     Re_D = (m_dot_c/A_c)*D_h/mu   # Reynolds number
     # Re_D = Re_D.to(unitReg.inch / unitReg.inch)
