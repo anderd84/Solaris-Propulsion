@@ -1,6 +1,7 @@
 from dataclasses import dataclass
+import os
+import shutil
 import time
-import concurrent
 from fluids.gas import Gas
 import numpy as np
 np.product = np.prod
@@ -9,10 +10,9 @@ import matrix_viewer as mv
 from scipy.optimize import fsolve
 
 import multiprocessing as mp
-from multiprocessing import shared_memory
 from multiprocessing import Queue
-import concurrent.futures
 import joblib
+from alive_progress import alive_bar
 
 from icecream import ic
 
@@ -76,20 +76,43 @@ class DomainMC:
     def DefineMaterials(self, cowl: np.ndarray, coolant: np.ndarray, chamber: np.ndarray, plug: np.ndarray, max_cores = mp.cpu_count() - 1):
         MAX_CORES = max_cores
         tic = time.perf_counter()
-        data_filename_memmap = SHAREDMEMNAME + '.dat'
+        os.mkdir('./.work')
+        data_filename_memmap = './.work/multicore' + '.mem'
         joblib.dump(self.array, data_filename_memmap)
         inData = joblib.load(data_filename_memmap, mmap_mode='r')
 
-        q = mp.Manager().Queue()
+        print("Starting processes")
+        with joblib.Parallel(n_jobs=MAX_CORES, return_as='generator') as parallel:
+            q = mp.Manager().Queue()
 
-        for i in range(self.vpoints):
-            for j in range(self.hpoints):
-                q.put((i,j))
+            # parallel(joblib.delayed(load_q)(q, i, j) for i in range(self.vpoints) for j in range(self.hpoints))
+            with alive_bar(self.vpoints*self.hpoints) as bar:
+                print("Loading queue")
+                for i in range(self.vpoints):
+                    for j in range(self.hpoints):
+                        q.put((i,j))
+                        bar()
 
-        outputs = joblib.Parallel(n_jobs=MAX_CORES)(joblib.delayed(EvalMaterialProcess)(q, i, data_filename_memmap, self.array.shape, (self.width, self.height), coolant, cowl, chamber, plug) for i in range(MAX_CORES))
-        for out in outputs:
-            for i, j, mat in out:
-                self.array[i,j].material = mat
+            with alive_bar(manual=True) as bar:
+                print("Starting processes")
+                outputs = parallel(joblib.delayed(EvalMaterialProcess)(q, i, inData, self.array.shape, (self.width, self.height), cowl, chamber, plug) for i in range(MAX_CORES))
+                ogSize = q.qsize()
+                while not q.empty():
+                    bar((ogSize - q.qsize())/ogSize)
+                    time.sleep(.01)
+
+            with alive_bar(self.vpoints*self.hpoints) as bar:
+                print("Assinging outputs")
+                for out in outputs:
+                    for i, j, mat in out:
+                        self.array[i,j].material = mat
+                        bar()
+            
+            try:
+                shutil.rmtree('./.work')
+            except OSError as e:
+                print("Error: %s - %s." % (e.filename, e.strerror))
+
         
 
         print("Parallel computation done")
@@ -222,36 +245,31 @@ class DomainMC:
             if self.lineInCell(startPointU, startPointL, i, j):
                 break
 
-        percentItr = 0
-        prevPerc = 0
-        print(f"Assinging straight flow")
-        for oX, oR in zip(originX, originR):
-            percentItr += 1
-            curPerc = int(percentItr/len(originX) * 100)
-            if curPerc > prevPerc:
-                prevPerc = curPerc
-                print(f"Progress: {prevPerc}%")
-            farAway1 = (oX - chamberWallRadius.magnitude*np.sin(flowAngle), oR + chamberWallRadius.magnitude*np.cos(flowAngle))
-            farAway2 = (oX + chamberWallRadius.magnitude*np.sin(flowAngle), oR - chamberWallRadius.magnitude*np.cos(flowAngle))
-            startPointU, _ = material.intersectPolyAt(chamber, (oX, oR), farAway1)
-            startPointL, _ = material.intersectPolyAt(chamber, (oX, oR), farAway2)
+        with alive_bar(originX.size) as bar:
+            print(f"Assinging straight flow")
+            for oX, oR in zip(originX, originR):
+                farAway1 = (oX - chamberWallRadius.magnitude*np.sin(flowAngle), oR + chamberWallRadius.magnitude*np.cos(flowAngle))
+                farAway2 = (oX + chamberWallRadius.magnitude*np.sin(flowAngle), oR - chamberWallRadius.magnitude*np.cos(flowAngle))
+                startPointU, _ = material.intersectPolyAt(chamber, (oX, oR), farAway1)
+                startPointL, _ = material.intersectPolyAt(chamber, (oX, oR), farAway2)
 
-            # plt.plot([startPointU[0], startPointL[0]], [startPointU[1], startPointL[1]], '-gx')
+                # plt.plot([startPointU[0], startPointL[0]], [startPointU[1], startPointL[1]], '-gx')
 
-            area = np.pi/np.sin(phi) * (startPointU[1]**2 - startPointL[1]**2)
+                area = np.pi/np.sin(phi) * (startPointU[1]**2 - startPointL[1]**2)
 
-            AAstar = Q_(area, unitReg.inch**2)/Astar
-            mach = fsolve(lambda M: gas.Isentropic1DExpansion(M, exhaust.gammaTyp) - AAstar, .25)[0]
-            temperature = (gas.StagTempRatio(mach, exhaust) * exhaust.stagTemp)
-            velocity = mach * np.sqrt(exhaust.getVariableGamma(mach) * exhaust.Rgas * temperature)
-            hydroD = Q_(2*np.sqrt((startPointU[0] - startPointL[0])**2 + (startPointU[1] - startPointL[1])**2), unitReg.inch)
+                AAstar = Q_(area, unitReg.inch**2)/Astar
+                mach = fsolve(lambda M: gas.Isentropic1DExpansion(M, exhaust.gammaTyp) - AAstar, .25)[0]
+                temperature = (gas.StagTempRatio(mach, exhaust) * exhaust.stagTemp)
+                velocity = mach * np.sqrt(exhaust.getVariableGamma(mach) * exhaust.Rgas * temperature)
+                hydroD = Q_(2*np.sqrt((startPointU[0] - startPointL[0])**2 + (startPointU[1] - startPointL[1])**2), unitReg.inch)
 
-            cells = self.cellsOnLine(startPointL, startPointU)
-            for i,j in cells:
-                if self.array[i,j].material == DomainMaterial.CHAMBER:
-                    self.array[i,j].temperature = temperature
-                    self.array[i,j].velocity = velocity
-                    self.array[i,j].hydraulicDiameter = hydroD
+                cells = self.cellsOnLine(startPointL, startPointU)
+                for i,j in cells:
+                    if self.array[i,j].material == DomainMaterial.CHAMBER:
+                        self.array[i,j].temperature = temperature
+                        self.array[i,j].velocity = velocity
+                        self.array[i,j].hydraulicDiameter = hydroD
+                bar()
 
 
         # curve section
@@ -318,14 +336,16 @@ class DomainMC:
         finalI = self.vpoints - 1
         finalJ = self.hpoints - 1
 
-        for i in range(self.vpoints):
-            for j in range(self.hpoints):
-                lowI = max(i - 1, 0)
-                lowJ = max(j - 1, 0)
-                highI = min(i + 1, finalI)
-                highJ = min(j + 1, finalJ)
-                checks = [self.array[lowI, j].material, self.array[highI, j].material, self.array[i, lowJ].material, self.array[i, highJ].material]
-                self.array[i, j].border = not(checks[0] == checks[1] and checks[1] == checks[2] and checks[2] == checks[3])
+        with alive_bar(self.vpoints*self.hpoints) as bar:
+            for i in range(self.vpoints):
+                for j in range(self.hpoints):
+                    lowI = max(i - 1, 0)
+                    lowJ = max(j - 1, 0)
+                    highI = min(i + 1, finalI)
+                    highJ = min(j + 1, finalJ)
+                    checks = [self.array[lowI, j].material, self.array[highI, j].material, self.array[i, lowJ].material, self.array[i, highJ].material]
+                    self.array[i, j].border = not(checks[0] == checks[1] and checks[1] == checks[2] and checks[2] == checks[3])
+                    bar()
 
     def cellsOnLine(self, point1, point2):
         linedx = point2[0] - point1[0]
@@ -378,24 +398,17 @@ class DomainMC:
     def LoadFile(filename):
         return joblib.load(filename + '.z')
 
-def EvalMaterialProcess(q, pn, shm, shape, size, coolant, cowl, chamber, plug):
+def EvalMaterialProcess(q, pn, domain, shape, size, cowl, chamber, plug):
     res = []
     global mcQ
 
-    domain = joblib.load(shm, mmap_mode='r')
+    # domain = joblib.load(shm, mmap_mode='r')
 
     print(f"Starting process {pn + 1}", flush=True)
-    print(f"Queue size: {q.qsize()}", flush=True)
-    prevPercent = 0
-    total = np.prod(shape)
+    # print(f"Queue size: {q.qsize()}", flush=True)
     while q.qsize() > 0:
         i, j = q.get()
-        res.append(AssignMaterial(domain, i, j, size, coolant, cowl, chamber, plug))
-        if pn == 0:
-            curPercent = int((total - q.qsize())/total * 100)
-            if prevPercent < curPercent:
-                prevPercent = curPercent
-                print(f"Progress: {prevPercent}%")
+        res.append(AssignMaterial(domain, i, j, size, np.array([]), cowl, chamber, plug))
     print("done")
     # shm.close()
     return res
@@ -414,3 +427,6 @@ def AssignMaterial(domain, i, j, size, coolant, cowl, chamber, plug):
 def init_pool_processes(q):
     global mcQ
     mcQ = q
+
+def load_q(q, i, j):
+    q.put((i,j))

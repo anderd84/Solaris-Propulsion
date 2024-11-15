@@ -34,7 +34,7 @@ def main():
     fig.axes[0].plot([p.x for p in cowlCoolU], [p.r for p in cowlCoolU], '-k', linewidth=1)
     # plt.show()
 
-    cooling2 = domain.DomainMC(-6, 4.5, 7, 5, .01)
+    cooling2 = domain.DomainMC(-6, 4.5, 7, 5, .05)
     cooling2.DefineMaterials(cowlC, np.array([]), chamberC, plugC, 8)
 
 
