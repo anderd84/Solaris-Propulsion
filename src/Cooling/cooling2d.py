@@ -136,27 +136,28 @@ def f_equation(f, *data):
     epsilon, D_h, Re_D = data
     return -2*np.log10(epsilon/D_h/3.7 + 2.51/(Re_D*np.sqrt(f))) - 1/np.sqrt(f)
 
-def internal_flow_convection(Node_Temp):
+def internal_flow_convection(Node_Temp, Node_Pressure, Land_Height):
     # Gnielinski/Sieder & Tate for channel side
     # Inputs (Cooling channel)
-    Temp = Q_(Node_Temp.magnitude, unitReg.degR)
-    (viscosity, specific_heat_p,_, thermal_conductivity, density, prandtl, alpha, thermal_diffusivity, 
-                            SurfaceTens) = get_fluid_properties(fuelname, Temp, pressure_stagnation.to(unitReg.psi)) #using stagnation pressure for now
+    Temp = Q_(Node_Temp.magnitude, unitReg.degR)    # Not sure about this being the right temperature for properties
+    Pressure = Q_(Node_Pressure.magnitude, unitReg.psi)
+    Land_Height = Q_(Land_Height, unitReg.inch)
+    (mu, _,_, k_c, rho, Pr, _, _, _) = get_fluid_properties(fuelname, Temp, Pressure) #using stagnation pressure for now
     
     
     
-    
-    epsilon = epsilon.to(unitReg.inch)     # Surface roughness #TODO From Design Table
-    m_dot_c = m_dot_c.to(unitReg.pound / unitReg.second) / NumberofChannels     # Coolant mass flow rate through one channel #TODO From Design Table
-    rho = density.to(unitReg.pound / unitReg.inch**3)  # Coolant density #! From RP-1 Grab values from ROcket Prop
+     
+    epsilon = epsilon.to(unitReg.inch)     # Surface roughness from Design Table
+    m_dot_c = (DESIGN.totalmdot/(1 + DESIGN.OFratio)).to(unitReg.pound / unitReg.second) / NumberofChannels     # Coolant mass flow rate through one channel from Design Table
+    rho = rho.to(unitReg.pound / unitReg.inch**3)  # Coolant density #! From RP-1 Grab values from ROcket Prop
     v = v.to(unitReg.foot / unitReg.s)      # Coolant velocity along channel #TODO From Design Table
-    D_h = D_h.to(unitReg.inch)     # Hydraulic diameter of cooling channel  #TODO From Design Table
-    Pr = prandtl     # Prandtl number (likely an array)
-    mu = viscosity.to(unitReg.pound / unitReg.foot / unitReg.second)   # Dynamic viscosity (likely an array) #! From RP-1 Grab values from ROcket Prop
-    k_c = thermal_conductivity.to(unitReg.BTU / unitReg.foot / unitReg.hour / unitReg.degR)    # Thermal conductivity of coolant #! From RP-1 Grab values from ROcket Prop
-    mu_s = viscosity.to(unitReg.pound / unitReg.foot / unitReg.second)    # Dynamic viscosity at the heat transfer boundary surface temperature #! From RP-1 Grab values from ROcket Prop
+    mu = mu.to(unitReg.pound / unitReg.foot / unitReg.second)   # Dynamic viscosity #! From RP-1 Grab values from ROcket Prop
+    k_c = k_c.to(unitReg.BTU / unitReg.foot / unitReg.hour / unitReg.degR)    # Thermal conductivity of coolant #! From RP-1 Grab values from ROcket Prop
+    # mu_s = viscosity.to(unitReg.pound / unitReg.foot / unitReg.second)    # Dynamic viscosity at the heat transfer boundary surface temperature #! From RP-1 Grab values from ROcket Prop
 
     # Calculations
+    A_c = t/2*(H+h)
+    P = t + 2*h + 2*np.sqrt((t/2)^2 +(H-h)^2)
     D_h = 4*A_c/P
     Re_D = 4*m_dot_c/np.pi/D_h/mu   # Reynold's number
     # Re_D = Re_D.to(unitReg.inch / unitReg.inch)
@@ -205,7 +206,7 @@ def lambda_equation(Lambda, *data):
 
 def film_cooling(m_dot_g, m_dot_c, u_g, u_c, P_cc, D_cc, c_p_g, mu_g, Pr_g, 
                  rho_g, M_g, mu_c, c_c_l, h_fg, T_c_1, T_c_sat, rho_c_l, 
-                 M_c, sigma_c, h_g, D_c):
+                 M_c, sigma_g, h_g, D_c):
     # Inputs
     # m_dot_g   Combustion gas mass flow rate
     # m_dot_c   Film coolant mass flow rate
@@ -225,6 +226,7 @@ def film_cooling(m_dot_g, m_dot_c, u_g, u_c, P_cc, D_cc, c_p_g, mu_g, Pr_g,
     # T_c_sat   Film coolant saturation temperature
     # rho_c_l   Film coolant liquid density
     # M_c       Film coolant molecular weight
+    # sigma_g   Combustion gas surface tension
     # h_g       Combustion gas convection coefficient
     # D_c       Film cooling channel diameter
     G_g = rho_g*u_g # Combustion gas mass velocity
@@ -251,7 +253,7 @@ def film_cooling(m_dot_g, m_dot_c, u_g, u_c, P_cc, D_cc, c_p_g, mu_g, Pr_g,
     a = 2.31*10^-4*Re_c^-0.35
     Re_cfilm = 250*np.log(Re_c) - 1265
     E_m = 1- Re_cfilm/Re_c
-    We = rho_g*u_g^2*D_cc   # TO DO: Check for correct variables
+    We = rho_g*u_g^2*D_cc/sigma_g   # TO DO: Check for correct variables
     E = E_m*np.tanh(a*We^1.25)
     Gamma_c = m_dot_c*(1-E)/(np.pi*D_cc)    # TO DO: Check that this is right
     L_c = Gamma_c/m_dot_v
