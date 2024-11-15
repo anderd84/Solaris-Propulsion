@@ -24,11 +24,13 @@ Re = outputData["radiusLip"]
 
 fig = plots.CreateNonDimPlot()
 plugC, straightLength = plug.GenerateDimPlug(cont, Rt, Tt, Re, Q_(5, unitReg.inch), Q_(1.5, unitReg.inch))
-cowlC = plug.GenerateDimCowl(Rt, Tt, Re, straightLength, DESIGN.chamberInternalRadius, DESIGN.wallThickness, Q_(0.025, unitReg.inch))
+cowlC, cowlCoolL, cowlCoolU = plug.GenerateDimCowl(Rt, Tt, Re, straightLength, DESIGN.chamberInternalRadius, DESIGN.wallThickness, Q_(0.0203, unitReg.inch))
 chamberC, aimpoint = plug.GenerateDimChamber(Rt, Tt, Re, Q_(5, unitReg.inch), DESIGN.chamberInternalRadius, DESIGN.wallThickness, Q_(0.025, unitReg.inch), Q_(1.5, unitReg.inch))
 plots.PlotPlug(fig, plugC)
 plots.PlotPlug(fig, cowlC)
-plots.PlotPlug(fig, chamberC, '-r')
+plots.PlotPlug(fig, chamberC)
+fig.axes[0].plot([p.x for p in cowlCoolL], [p.r for p in cowlCoolL], '-k', linewidth=1)
+fig.axes[0].plot([p.x for p in cowlCoolU], [p.r for p in cowlCoolU], '-k', linewidth=1)
 
 coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("coolmesh.msh")
 
@@ -41,12 +43,6 @@ def getconductivity(coolmesh,i,j):
         case DomainMaterial.PLUG:
             return cooling_func.conduction_grcop(coolmesh.array[i,j].temperature.to(unitReg.degR))                          
 
-
-
-def getcorecool(coolmesh,i,j):
-    #* If core & Coolant, Use the temperature below
-    T_new = coolmesh.array[i+1,j].temperature
-    return T_new
 
 def getcorecond(coolmesh,i,j):
     #* Left Node
@@ -92,28 +88,92 @@ def getcorecond(coolmesh,i,j):
 
     return C_left, C_upper, C_bottom, C_right, T_left, T_upper, T_bottom, T_right
 
-def coolant(coolmesh,i,j):
-    """already on the boorder of coolant contour. first seperate alll top ones then go to the other ones
+def coolant_wall_left(coolmesh,i,j):
+    Area_exposed = (2 * np.pi * Q_(coolmesh.array[i,j].r, unitReg.inch).to(unitReg.foot) ) * Q_(coolmesh.rstep, unitReg.inch).to(unitReg.foot)
+    conduct_left = getconductivity(coolmesh,i,j-1) # gets the conductivity of the cell directly left of the previous node
+    convect_left = cooling_func.internal_flow_convection(coolmesh.array[i,j].temperature,coolmesh.array[i,j].pressure, coolmesh.array[i,j].flowHeight)
+    resistance_cond_left =  Q_(coolmesh.xstep, unitReg.inch).to(unitReg.foot )/ conduct_left * Area_exposed
+    resistance_conv_left = 1 / convect_left * Area_exposed
+    Q_left = ((coolmesh.array[i,j-1].temperature - coolmesh.array[i,j].temperature)/(resistance_cond_left+resistance_conv_left))
+    Q_left = Q_left.to( unitReg.BTU / unitReg.hour)
+    return Q_left
 
+def coolant_wall_right(coolmesh,i,j):
+    Area_exposed = (2 * np.pi * Q_(coolmesh.array[i,j].r, unitReg.inch).to(unitReg.foot) ) * Q_(coolmesh.rstep, unitReg.inch).to(unitReg.foot)
+    conduct_right = getconductivity(coolmesh,i,j+1) # gets the conductivity of the cell directly right of the previous node
+    convect_right = cooling_func.internal_flow_convection(coolmesh.array[i,j].temperature,coolmesh.array[i,j].pressure, coolmesh.array[i,j].flowHeight)
+    resistance_cond_right =  Q_(coolmesh.xstep, unitReg.inch).to(unitReg.foot )/ conduct_right * Area_exposed
+    resistance_conv_right = 1 / convect_right * Area_exposed
+    Q_right = (coolmesh.array[i,j+1].temperature - coolmesh.array[i,j].temperature)/(resistance_cond_right+resistance_conv_right)
+    Q_right = Q_right.to( unitReg.BTU / unitReg.hour)
+    return Q_right
 
-    Args:
-        coolmesh (_type_): _description_
-        i (_type_): _description_
-        j (_type_): _description_
+def coolant_wall_below(coolmesh,i,j):
+    Area_exposed = (2 * np.pi * Q_(coolmesh.array[i,j].r, unitReg.inch).to(unitReg.foot) ) * Q_(coolmesh.rstep, unitReg.inch).to(unitReg.foot)
+    conduct_below = getconductivity(coolmesh,i,j-1) # gets the conductivity of the cell directly below of the previous node
+    r_i = coolmesh.array[i+1, j].r  # Inner radius at [i, j] 
+    r_o = coolmesh.array[i+1,j].r + coolmesh.rstep/2  # Outer radius at [i-1,j] - halfstep
+    l = Q_(coolmesh.xstep, unitReg.inch).to(unitReg.foot)  # Axial length
+    convect_below = cooling_func.internal_flow_convection(coolmesh.array[i,j].temperature,coolmesh.array[i,j].pressure, coolmesh.array[i,j].flowHeight)
+    resistance_cond_below =  np.log(r_o / r_i) / (2 * np.pi * conduct_below * l)
+    resistance_conv_below = 1 / convect_below * Area_exposed
+    Q_below = (coolmesh.array[i+1,j].temperature - coolmesh.array[i,j].temperature)/(resistance_cond_below+resistance_conv_below)
+    Q_below = Q_below.to( unitReg.BTU / unitReg.hour)
+    return Q_below
 
-    Returns:
-        _type_: _description_
-    """
+def coolantwallheat(coolmesh,i,j, i_previous,j_previous):
+    #*5 Cases overall
+    if ((i_previous == i + 1) and (j_previous == j +1)):
+    #*Case 1 (staircase)
+        Q_left = coolant_wall_left(coolmesh,i_previous,j_previous)
+        Q_below = coolant_wall_below(coolmesh,i_previous,j_previous)
+        Qdotin = Q_left + Q_below #I need capital Q showings it's Heat rate in not Heat Flux #*WINSTON)
+    elif ((i_previous == i) and (j_previous == j +1)):
+    #*Case 2 & 3 (horizontal)
 
-    if (coolmesh.array[i+1,j].material == DomainMaterial.COOLANT):
-        T_new = coolmesh.array[i+1,j].temperature
+        if((coolmesh.array[i_previous,j_previous+1].material == DomainMaterial.PLUG) or(coolmesh.array[i_previous,j_previous+1].material == DomainMaterial.COWL)):
+        #*Case 2 (2 qdots)
+            Q_right = coolant_wall_right(coolmesh,i_previous,j_previous)
+            Q_below = coolant_wall_below(coolmesh,i_previous,j_previous)
+            Qdotin = Q_right + Q_below #I need capital Q showings it's Heat rate in not Heat Flux #*WINSTON)
+
+        else:
+        #*Case 3 (1 qdot1)
+            Q_below = coolant_wall_below(coolmesh,i_previous,j_previous)
+            Qdotin = Q_below #I need capital Q showings it's Heat rate in not Heat Flux #*WINSTON)
+
+    elif ((i_previous == i+1) and (j_previous == j)):
+    #*Case 4 & 5 (vertical)
+
+        if((coolmesh.array[i_previous+1,j_previous].material == DomainMaterial.PLUG) or(coolmesh.array[i_previous+1,j_previous].material == DomainMaterial.COWL)):
+        #*Case 4 (2 qdots)
+            Q_left = coolant_wall_left(coolmesh,i_previous,j_previous)
+            Q_below = coolant_wall_below(coolmesh,i_previous,j_previous)
+            Qdotin = Q_left + Q_below #I need capital Q showings it's Heat rate in not Heat Flux #*WINSTON)
+
+        else:
+        #*Case 5 (1 qdot)
+            Q_left = coolant_wall_left(coolmesh,i_previous,j_previous)
+            Qdotin = Q_left #I need capital Q showings it's Heat rate in not Heat Flux #*WINSTON)
     else:
-    
-        pass
+        ic("YOu did something wrong for sure")
+        Qdotin = 0
+    return Qdotin
 
 
+def coolant(coolmesh,i,j):
 
 
+    if (coolmesh.array[i,j].material == DomainMaterial.COOLANT_WALL):
+        i_previous = coolmesh.array[i,j].previousFlow[0]
+        j_previous = coolmesh.array[i,j].previousFlow[1]
+        Qdotin = coolantwallheat(coolmesh,i,j, i_previous,j_previous)
+        new_Temp = cooling_func.heatcoolant(Qdotin, coolmesh.array[i_previous,j_previous].temperature, coolmesh.array[i_previous,j_previous].pressure)
+        coolmesh.array[i,j].temperature = new_Temp
+    elif (coolmesh.array[i,j].material == DomainMaterial.COOLANT_BULK):
+        i_wall = coolmesh.array[i,j].previousFlow[0]
+        j_wall = coolmesh.array[i,j].previousFlow[1]
+        coolmesh.array[i,j].temperature = coolmesh.array[i_wall,j_wall].temperature
     return T_new
 
 def horizontalcond(coolmesh,i,j):
@@ -375,37 +435,32 @@ def verticalcond(coolmesh,i,j):
     
     return C_upper, T_upper, C_bottom, T_bottom
 
-plt.ion()
-plt.show()
+#plt.ion()
+#plt.show()
 
 
 for iterate in range(5):
     ic(iterate)
-    fig.axes[0].clear()
-    coolmesh.ShowStatePlot(fig)
-    fig.canvas.draw()
-    fig.canvas.flush_events()
+#    fig.axes[0].clear()
+#    coolmesh.ShowStatePlot(fig)
+#    fig.canvas.draw()
+#    fig.canvas.flush_events()
     for i in range(coolmesh.vpoints):
         for j in range(coolmesh.hpoints):
             #*Finding all options for barrier
             if not(coolmesh.array[i,j].material == DomainMaterial.CHAMBER or coolmesh.array[i,j].material == DomainMaterial.FREE):
-
-                if not(coolmesh.array[i,j].border):
-                    if (coolmesh.array[i,j].material == DomainMaterial.COOLANT):
-                        T_new = getcorecool(coolmesh,i,j)
-                        coolmesh.array[i,j].temperature = Q_(T_new, unitReg.degR)
-                        continue
-                    else:
-                        C_left, C_upper, C_bottom, C_right, T_left, T_upper, T_bottom, T_right = getcorecond(coolmesh,i,j)
-
-                else:
-                    if (coolmesh.array[i,j].material == DomainMaterial.COOLANT):
+                
+                if (coolmesh.array[i,j].material == DomainMaterial.COOLANT_WALL or coolmesh.array[i,j].material == DomainMaterial.COOLANT_BULK):
                         T_new = coolant(coolmesh,i,j)
                         coolmesh.array[i,j].temperature = Q_(T_new, unitReg.degR)
-                        continue                                 
-                    else:
-                        C_left, T_left, C_right, T_right = horizontalcond(coolmesh,i,j)               
-                        C_upper, T_upper, C_bottom, T_bottom = verticalcond(coolmesh,i,j)
+                        continue
+
+                if not(coolmesh.array[i,j].border):
+                    C_left, C_upper, C_bottom, C_right, T_left, T_upper, T_bottom, T_right = getcorecond(coolmesh,i,j)
+                else:
+   
+                    C_left, T_left, C_right, T_right = horizontalcond(coolmesh,i,j)               
+                    C_upper, T_upper, C_bottom, T_bottom = verticalcond(coolmesh,i,j)
                 T_left, T_right, T_upper, T_bottom = Q_([T_left.magnitude, T_right.magnitude, T_upper.magnitude, T_bottom.magnitude], unitReg.degR)
 
                 Num = (C_left * T_left + C_upper * T_upper + C_bottom * T_bottom + C_right*  T_right)
@@ -418,7 +473,6 @@ for iterate in range(5):
 #TODO Add David's Gamma changing as a function of Temp
 
 
-
-
+coolmesh.ShowStatePlot(fig)
 
 plt.show()
