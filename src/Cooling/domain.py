@@ -82,33 +82,10 @@ class DomainMC:
         MAX_CORES = max_cores
         print(f"using {MAX_CORES} cores")
         tic = time.perf_counter()
-        # try:
-        #     os.mkdir('./.work')
-        # except OSError as e:
-        #     pass
-        # data_filename_memmap = './.work/multicore' + '.mem'
-        # print("Dumping data")
-        # joblib.dump(self.array, data_filename_memmap)
-        # del self.array
-        # _ = gc.collect()
-        # print("creating shared memory")
-        # inData = joblib.load(data_filename_memmap, mmap_mode='r')
 
         print("Starting processes")
         with joblib.Parallel(n_jobs=MAX_CORES, verbose=100, return_as='generator') as parallel:
-            # q = mp.Manager().Queue()
 
-            # parallel(joblib.delayed(load_q)(q, i, j) for i in range(self.vpoints) for j in range(self.hpoints))
-            # with alive_bar(self.vpoints*self.hpoints) as bar:
-            #     print("Loading queue")
-            #     for i in range(self.vpoints):
-            #         for j in range(self.hpoints):
-            #             q.put((i,j))
-            #             bar()
-
-            # outputs = parallel(joblib.delayed(EvalMaterialProcess)(q, i, (self.x0, self.xstep, self.r0, self.rstep), (self.width, self.height), cowl, chamber, plug) for i in range(MAX_CORES))
-
-            # self.array = np.empty((self.vpoints, self.hpoints), dtype=DomainPoint)
             with alive_bar(self.vpoints*self.hpoints) as bar:
                 print("Starting processes")
 
@@ -147,8 +124,18 @@ class DomainMC:
         xcells = np.linspace(self.x0 - self.xstep/2, self.x0 + self.width + self.xstep/2, self.hpoints+1)
         rcells = np.linspace(self.r0 + self.rstep/2, self.r0 - self.height - self.rstep/2, self.vpoints+1)
         xl, rl = np.meshgrid(xcells, rcells)
-        # ax.plot(xl, rl, 'k', linewidth=0.25)
-        # ax.plot(np.transpose(xl), np.transpose(rl), 'k', linewidth=0.25)
+        ax.plot(xl, rl, 'k', linewidth=0.25)
+        ax.plot(np.transpose(xl), np.transpose(rl), 'k', linewidth=0.25)
+
+        for i in range(self.vpoints):
+            for j in range(self.hpoints):
+                flow = self.array[i,j].previousFlow
+                if flow[0] != 0:
+                    if self.array[i,j].material == DomainMaterial.COOLANT_WALL:
+                        ax.plot([self.array[i,j].x, self.array[flow].x], [self.array[i,j].r, self.array[flow].r], '-b', linewidth=1)
+                    else:
+                        ax.plot([self.array[i,j].x, self.array[flow].x], [self.array[i,j].r, self.array[flow].r], '-k', linewidth=1)
+            
 
     def ShowStatePlot(self, fig: plt.Figure):
         print("state plot!")
@@ -196,7 +183,7 @@ class DomainMC:
             dist = max(dist1, dist2)
 
             step = min(self.xstep, self.rstep)
-            steps = max(int(dist/step * 1.25), 5)
+            steps = max(int(dist/step * 1.5), 5)
 
             xl = np.linspace(coolant.lowerContour[i].x, coolant.lowerContour[i+1].x, steps)[:-1]
             rl = np.linspace(coolant.lowerContour[i].r, coolant.lowerContour[i+1].r, steps)[:-1]
@@ -208,7 +195,7 @@ class DomainMC:
                 wallPoint = self.CoordsToCell(xu[j], ru[j]) if upperWall else self.CoordsToCell(xl[j], rl[j])
                 cells = self.cellsOnLine((xl[j], rl[j]), (xu[j], ru[j]))
 
-                plt.plot([xl[j], xu[j]], [rl[j], ru[j]], '-k', linewidth=.5)
+                # plt.plot([xl[j], xu[j]], [rl[j], ru[j]], '-b', linewidth=.25)
 
                 for row, col in cells:
                     if row == wallPoint[0] and col == wallPoint[1]:
@@ -217,8 +204,12 @@ class DomainMC:
                         self.array[row, col].material = DomainMaterial.COOLANT_WALL
                         self.array[row, col].previousFlow = previousWall
                         self.array[row, col].flowHeight = np.sqrt((xl[j] - xu[j])**2 + (rl[j] - ru[j])**2)
-                        previousWall = (row, col)
+                        if previousWall == None or (previousWall[0] != row or previousWall[1] != col):
+                            previousWall = (row, col)
+                            print(f"wall at {row}, {col}")
                     else:
+                        if self.array[row, col].material == DomainMaterial.COOLANT_WALL:
+                            continue
                         self.array[row, col].material = DomainMaterial.COOLANT_BULK
                         self.array[row, col].previousFlow = wallPoint
                         self.array[row, col].pressure = initialPressure
@@ -364,7 +355,7 @@ class DomainMC:
         cellsx = int(linedx / self.xstep)
         cellsr = int(linedr / self.rstep)
 
-        cellsLine = max(int(np.sqrt(cellsx**2 + cellsr**2) * 1.25),10)
+        cellsLine = max(int(np.sqrt(cellsx**2 + cellsr**2) * 1.5),10)
         x = np.linspace(point1[0], point2[0], cellsLine)
         r = np.linspace(point1[1], point2[1], cellsLine)
 
@@ -408,38 +399,6 @@ class DomainMC:
     @staticmethod
     def LoadFile(filename):
         return joblib.load(filename + '.z')
-
-def EvalMaterialProcess(q, pn, gridData, size, cowl, chamber, plug):
-    res = [(0, 0, DomainMaterial.FREE)]
-
-    x0 = gridData[0]
-    xstep = gridData[1]
-    r0 = gridData[2]
-    rstep = gridData[3]
-
-    print(q.qsize())
-
-    if pn == 0:
-        with alive_bar(manual=True) as bar:
-            ogSize = q.qsize()
-        
-            print(f"Starting process {pn + 1}", flush=True)
-            while q.qsize() > 0:
-                bar((ogSize - q.qsize())/ogSize)
-                i, j = q.get()
-                point = (x0 + j*xstep, r0 - i*rstep)
-                material = AssignMaterial(point, size, np.array([]), cowl, chamber, plug)
-                res.append((i, j, material))
-            print(f"done {pn + 1}, with length {len(res)}", flush=True)
-    else:
-        print(f"Starting process {pn + 1}", flush=True)
-        while q.qsize() > 0:
-            i, j = q.get()
-            point = (x0 + j*xstep, r0 - i*rstep)
-            material = AssignMaterial(point, size, np.array([]), cowl, chamber, plug)
-            res.append((i, j, material))
-        print(f"done {pn + 1}, with length {len(res)}", flush=True)
-    return res
 
 def EvalMaterialProcess2(i, hsteps, pn, gridData, size, cowl, chamber, plug):
     res = []
