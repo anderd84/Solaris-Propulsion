@@ -95,27 +95,31 @@ class DomainMC:
         # inData = joblib.load(data_filename_memmap, mmap_mode='r')
 
         print("Starting processes")
-        with joblib.Parallel(n_jobs=MAX_CORES+2, verbose=100) as parallel:
-            q = mp.Manager().Queue()
+        with joblib.Parallel(n_jobs=MAX_CORES, verbose=100, return_as='generator') as parallel:
+            # q = mp.Manager().Queue()
 
             # parallel(joblib.delayed(load_q)(q, i, j) for i in range(self.vpoints) for j in range(self.hpoints))
-            with alive_bar(self.vpoints*self.hpoints) as bar:
-                print("Loading queue")
-                for i in range(self.vpoints):
-                    for j in range(self.hpoints):
-                        q.put((i,j))
-                        bar()
+            # with alive_bar(self.vpoints*self.hpoints) as bar:
+            #     print("Loading queue")
+            #     for i in range(self.vpoints):
+            #         for j in range(self.hpoints):
+            #             q.put((i,j))
+            #             bar()
 
-            print("Starting processes")
-            outputs = parallel(joblib.delayed(EvalMaterialProcess)(q, i, (self.x0, self.xstep, self.r0, self.rstep), (self.width, self.height), cowl, chamber, plug) for i in range(MAX_CORES))
+            # outputs = parallel(joblib.delayed(EvalMaterialProcess)(q, i, (self.x0, self.xstep, self.r0, self.rstep), (self.width, self.height), cowl, chamber, plug) for i in range(MAX_CORES))
 
             # self.array = np.empty((self.vpoints, self.hpoints), dtype=DomainPoint)
-        with alive_bar(self.vpoints*self.hpoints) as bar:
-            print("Assinging outputs")
-            for out in outputs:
-                for i, j, mat in out:
-                    self.array[i,j].material = mat
-                    bar()
+            with alive_bar(self.vpoints*self.hpoints) as bar:
+                print("Starting processes")
+
+                outputs = parallel(joblib.delayed(EvalMaterialProcess2)(i, self.hpoints, i, (self.x0, self.xstep, self.r0, self.rstep), (self.width, self.height), cowl, chamber, plug) for i in range(self.vpoints))
+                print(outputs)
+
+                print("Assinging outputs")
+                for out in outputs:
+                    for i, j, mat in out:
+                        self.array[i,j].material = mat
+                        bar()
             
             try:
                 shutil.rmtree('./.work')
@@ -435,6 +439,20 @@ def EvalMaterialProcess(q, pn, gridData, size, cowl, chamber, plug):
             material = AssignMaterial(point, size, np.array([]), cowl, chamber, plug)
             res.append((i, j, material))
         print(f"done {pn + 1}, with length {len(res)}", flush=True)
+    return res
+
+def EvalMaterialProcess2(i, hsteps, pn, gridData, size, cowl, chamber, plug):
+    res = []
+
+    x0 = gridData[0]
+    xstep = gridData[1]
+    r0 = gridData[2]
+    rstep = gridData[3]
+
+    for j in range(hsteps):
+        point = (x0 + j*xstep, r0 - i*rstep)
+        material = AssignMaterial(point, size, np.array([]), cowl, chamber, plug)
+        res.append((i, j, material))
     return res
 
 def AssignMaterial(point, size, coolant, cowl, chamber, plug):

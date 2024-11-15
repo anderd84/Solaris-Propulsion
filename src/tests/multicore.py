@@ -35,7 +35,7 @@ def main():
     # plt.show()
 
     cooling2 = domain.DomainMC(-6, 4.5, 7, 5, .01)
-    cooling2.DefineMaterials(cowlC, np.array([]), chamberC, plugC, 17)
+    cooling2.DefineMaterials(cowlC, np.array([]), chamberC, plugC, 15)
 
 
     # tic = time.perf_counter()
