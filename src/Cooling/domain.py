@@ -95,16 +95,21 @@ class DomainMC:
         # inData = joblib.load(data_filename_memmap, mmap_mode='r')
 
         print("Starting processes")
-        q = mp.Manager().Queue()
-
-        for i in range(self.vpoints):
-            q.put((i, 0))
-
         with joblib.Parallel(n_jobs=MAX_CORES, return_as='generator') as parallel:
+            q = mp.Manager().Queue()
+
+            # parallel(joblib.delayed(load_q)(q, i, j) for i in range(self.vpoints) for j in range(self.hpoints))
+            with alive_bar(self.vpoints*self.hpoints) as bar:
+                print("Loading queue")
+                for i in range(self.vpoints):
+                    for j in range(self.hpoints):
+                        q.put((i,j))
+                        bar()
+
             with alive_bar(manual=True) as bar:
                 print("Starting processes")
-                outputs = parallel(joblib.delayed(EvalMaterialProcess)(q, i, (self.x0, self.xstep, self.r0, self.rstep, self.hpoints, self.vpoints), (self.width, self.height), cowl, chamber, plug) for i in range(MAX_CORES))
-                ogSize = self.hpoints*self.vpoints
+                outputs = parallel(joblib.delayed(EvalMaterialProcess)(q, i, (self.x0, self.xstep, self.r0, self.rstep), (self.width, self.height), cowl, chamber, plug) for i in range(MAX_CORES))
+                ogSize = q.qsize()
                 while not q.empty():
                     bar((ogSize - q.qsize())/ogSize)
                     time.sleep(.01)
@@ -414,13 +419,6 @@ def EvalMaterialProcess(q, pn, gridData, size, cowl, chamber, plug):
     rstep = gridData[3]
     
     print(f"Starting process {pn + 1}", flush=True)
-    if pn == 0:
-        print("loading q")
-        for i in range(1, gridData[5]):
-            for j in range(gridData[4]):
-                q.put((i,j))
-        print("q complete")
-
     while q.qsize() > 0:
         i, j = q.get()
         point = (x0 + j*xstep, r0 - i*rstep)
