@@ -27,12 +27,32 @@ cstar = DESIGN.c_star
 R_gas = DESIGN.R_throat #TODO gotta make this better so it's not constant R assumption
 gamma_throat = DESIGN.gamma #TODO gotta make this better so it's not constant R assumption
 A_star = DESIGN.chokeArea
+NumberofChannels = DESIGN.NumberofChannels
+mdot_tot = DESIGN.totalmdot
+
 #First step always is to update doublet.py file and run beforehand to grab all mdot and density values at injector side
 
 # -------------- Design Inputs -------------- #
-NumberofChannels = 30
+
 ChannelShape =  np.array([.25, .25]) #inches Width,Height
 
+mdotperchannel = mdot_tot / NumberofChannels
+
+
+
+
+
+
+def heatcoolant(Qdotin, temperature_previous, pressure_previous):
+
+    Qdotin = Q_(Qdotin.magnitude, unitReg.BTU / unitReg.hour)
+    temperature_previous = Q_(temperature_previous.magnitude, unitReg.degR)
+    pressure_previous = Q_(pressure_previous.magnitude, unitReg.psi)
+
+    (_, cp, _, _, _, _, _, _, _) = get_fluid_properties(fuelname, temperature_previous, pressure_previous)
+    new_temp = (temperature_previous + Qdotin / (mdotperchannel * cp)).to(unitReg.degR)
+
+    return new_temp
 
 
 
@@ -46,15 +66,6 @@ ChannelShape =  np.array([.25, .25]) #inches Width,Height
 
 
 
-
-
-
-
-
-
-
-#temp = Q_(5800, unitReg.degR)
-#ic(exhaustGas.SimpleHarmonicGamma(temp).g)
 
 
 def conduction_rp1(Temp):
