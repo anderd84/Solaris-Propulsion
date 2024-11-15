@@ -69,6 +69,8 @@ def GenerateDimPlug(contour: np.ndarray[nozzle.ContourPoint], throatRadius: Q_, 
     Re = Re.to(unitReg.inch).magnitude
     chamberLength = chamberLength.to(unitReg.inch).magnitude
     baseRadius = baseRadius.to(unitReg.inch).magnitude
+    coolingFloor = DESIGN.coolingChannelWallDist.to(unitReg.inch).magnitude
+    coolingHeight = DESIGN.coolingChannelHeightPlug.to(unitReg.inch).magnitude
 
     xt = (Re - throatRadius)*np.tan(throatTheta)
     absThetaT = abs(throatTheta)
@@ -105,7 +107,34 @@ def GenerateDimPlug(contour: np.ndarray[nozzle.ContourPoint], throatRadius: Q_, 
     fullPlugContour = np.concatenate([contour[::-1], throatArc[1:], convergeArc, straightSection], axis=0)
     fullPlugContour = np.insert(fullPlugContour, 0, nozzle.ContourPoint(spiketipx, 0), axis=0)
 
-    return fullPlugContour, Q_(abs(xcTA - (x2CL - chamberLength)), unitReg.inch)
+    # cooling channels
+    baseOuter = np.array([nozzle.ContourPoint(x2CL - chamberLength, convergeArc[-1].r - coolingFloor)])
+    baseInner = np.array([nozzle.ContourPoint(x2CL - chamberLength, convergeArc[-1].r - coolingFloor - coolingHeight)])
+
+    arcArr = np.linspace(0, np.deg2rad(designTable["convergeAngle"]), circRes)
+    convergeArcOuter = np.array([nozzle.ContourPoint(xcCA + (designTable["turnArcRad"] + coolingFloor)*np.sin(a), ycCA - (designTable["turnArcRad"] + coolingFloor)*np.cos(a)) for a in arcArr])
+    convergeArcInner = np.array([nozzle.ContourPoint(xcCA + (designTable["turnArcRad"] + coolingFloor + coolingHeight)*np.sin(a), ycCA - (designTable["turnArcRad"] + coolingFloor + coolingHeight)*np.cos(a)) for a in arcArr])
+
+    arcArr = np.linspace(np.pi/2 + np.deg2rad(designTable["convergeAngle"]), np.pi/2 - absThetaT, circRes)
+    throatArcOuter = np.array([nozzle.ContourPoint(xcTA + (designTable["throatArcRad"] - coolingFloor)*np.cos(a), ycTA + (designTable["throatArcRad"] - coolingFloor)*np.sin(a)) for a in arcArr])
+    throatArcInner = np.array([nozzle.ContourPoint(xcTA + (designTable["throatArcRad"] - coolingFloor - coolingHeight)*np.cos(a), ycTA + (designTable["throatArcRad"] - coolingFloor - coolingHeight)*np.sin(a)) for a in arcArr])
+
+    nozzleOuter = np.array([])
+    nozzleInner = np.array([])
+
+    for i in range(len(contour[:-1])):
+        angle = np.atan2((contour[i+1].r - contour[i].r),(contour[i+1].x - contour[i].x))
+        expandAngle = angle - np.pi/2
+        nozzleOuter = np.append(nozzleOuter, nozzle.ContourPoint(contour[i].x + coolingFloor*np.cos(expandAngle), contour[i].r + coolingFloor*np.sin(expandAngle)))
+        nozzleInner = np.append(nozzleInner, nozzle.ContourPoint(contour[i].x + (coolingFloor + coolingHeight)*np.cos(expandAngle), contour[i].r + (coolingFloor + coolingHeight)*np.sin(expandAngle)))
+
+    nozzleOuter = np.append(nozzleOuter, nozzle.ContourPoint(contour[-1].x, contour[-1].r - coolingFloor))
+    nozzleInner = np.append(nozzleInner, nozzle.ContourPoint(contour[-1].x, contour[-1].r - coolingFloor - coolingHeight))
+
+    coolOuter = np.concatenate([baseOuter, convergeArcOuter, throatArcOuter, nozzleOuter], axis=0)
+    coolInner = np.concatenate([baseInner, convergeArcInner, throatArcInner, nozzleInner], axis=0)
+
+    return fullPlugContour, Q_(abs(xcTA - (x2CL - chamberLength)), unitReg.inch), coolInner, coolOuter
 
 def GenerateDimCowl(throatRadius: Q_, throatTheta: Q_, Re: Q_, straightLength: Q_, chamberOuter: Q_, thickness: Q_, overchoke: Q_, circRes: int = 50):
     designTable = DESIGN.plugDesignTable

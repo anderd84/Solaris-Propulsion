@@ -186,6 +186,16 @@ class DomainMC:
                 wallPoint = self.CoordsToCell(xu[j], ru[j]) if upperWall else self.CoordsToCell(xl[j], rl[j])
                 cells = self.cellsOnLine((xl[j], rl[j]), (xu[j], ru[j]))
 
+                if xl[j] > self.x0 + self.width or xu[j] > self.x0 + self.width:
+                    break
+                if xl[j] < self.x0 or xu[j] < self.x0:
+                    break
+
+                if rl[j] < self.r0 - self.height or ru[j] < self.r0 - self.height:
+                    break
+                if rl[j] > self.r0 or ru[j] > self.r0:
+                    break
+
                 # plt.plot([xl[j], xu[j]], [rl[j], ru[j]], '-b', linewidth=.25)
 
                 for row, col in cells:
