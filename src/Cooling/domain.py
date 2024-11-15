@@ -69,16 +69,26 @@ class DomainMC:
         self.vpoints = vpoints
         self.xstep = width/(hpoints-1)
         self.rstep = height/(vpoints-1)
-        for i in range(vpoints):
-            for j in range(hpoints):
-                self.array[i,j] = DomainPoint(x0 + j*self.xstep, r0 - i*self.rstep, self.xstep*self.rstep)
+        print("Creating domain")
+        with alive_bar(vpoints*hpoints) as bar:
+            for i in range(vpoints):
+                for j in range(hpoints):
+                    self.array[i,j] = DomainPoint(x0 + j*self.xstep, r0 - i*self.rstep, self.xstep*self.rstep)
+                    bar()
+        print("Domain created")
 
     def DefineMaterials(self, cowl: np.ndarray, coolant: np.ndarray, chamber: np.ndarray, plug: np.ndarray, max_cores = mp.cpu_count() - 1):
         MAX_CORES = max_cores
+        print(f"using {MAX_CORES} cores")
         tic = time.perf_counter()
-        os.mkdir('./.work')
+        try:
+            os.mkdir('./.work')
+        except OSError as e:
+            pass
         data_filename_memmap = './.work/multicore' + '.mem'
+        print("Dumping data")
         joblib.dump(self.array, data_filename_memmap)
+        print("creating shared memory")
         inData = joblib.load(data_filename_memmap, mmap_mode='r')
 
         print("Starting processes")
@@ -400,17 +410,12 @@ class DomainMC:
 
 def EvalMaterialProcess(q, pn, domain, shape, size, cowl, chamber, plug):
     res = []
-    global mcQ
-
-    # domain = joblib.load(shm, mmap_mode='r')
-
+    
     print(f"Starting process {pn + 1}", flush=True)
-    # print(f"Queue size: {q.qsize()}", flush=True)
     while q.qsize() > 0:
         i, j = q.get()
         res.append(AssignMaterial(domain, i, j, size, np.array([]), cowl, chamber, plug))
     print("done")
-    # shm.close()
     return res
 
 def AssignMaterial(domain, i, j, size, coolant, cowl, chamber, plug):
@@ -423,10 +428,3 @@ def AssignMaterial(domain, i, j, size, coolant, cowl, chamber, plug):
     if material.isIntersect(domain[i][j], plug, size):
         return (i, j, DomainMaterial.PLUG)
     return (i, j, DomainMaterial.FREE)
-
-def init_pool_processes(q):
-    global mcQ
-    mcQ = q
-
-def load_q(q, i, j):
-    q.put((i,j))
