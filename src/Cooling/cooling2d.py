@@ -152,25 +152,23 @@ def internal_flow_convection(Node_Temp, Node_Pressure, Land_Height):
     # Inputs (Cooling channel)
     Temp = Q_(Node_Temp.magnitude, unitReg.degR)    # Not sure about this being the right temperature for properties
     Pressure = Q_(Node_Pressure.magnitude, unitReg.psi)
-    Land_Height = Q_(Land_Height, unitReg.inch)
-    (mu, _,_, k_c, rho, Pr, _, _, _) = get_fluid_properties(fuelname, Temp, Pressure) #using stagnation pressure for now
+    Land_Height = Q_(Land_Height.magnitude, unitReg.inch)
+    (mu, _,_, k_c, _, Pr, _, _, _) = get_fluid_properties(fuelname, Temp, Pressure) # Coolant property lookup
     
     
     
      
-    epsilon = epsilon.to(unitReg.inch)     # Surface roughness from Design Table
-    m_dot_c = (DESIGN.totalmdot/(1 + DESIGN.OFratio)).to(unitReg.pound / unitReg.second) / NumberofChannels     # Coolant mass flow rate through one channel from Design Table
-    rho = rho.to(unitReg.pound / unitReg.inch**3)  # Coolant density #! From RP-1 Grab values from ROcket Prop
-    v = v.to(unitReg.foot / unitReg.s)      # Coolant velocity along channel #TODO From Design Table
+    # epsilon = epsilon.to(unitReg.inch)     # Surface roughness from Design Table
+    m_dot_c = (DESIGN.Fuel_Total*(1 - DESIGN.percentFilmCooling)).to(unitReg.pound / unitReg.second) / NumberofChannels     # Coolant mass flow rate through one channel from Design Table
     mu = mu.to(unitReg.pound / unitReg.foot / unitReg.second)   # Dynamic viscosity #! From RP-1 Grab values from ROcket Prop
     k_c = k_c.to(unitReg.BTU / unitReg.foot / unitReg.hour / unitReg.degR)    # Thermal conductivity of coolant #! From RP-1 Grab values from ROcket Prop
-    # mu_s = viscosity.to(unitReg.pound / unitReg.foot / unitReg.second)    # Dynamic viscosity at the heat transfer boundary surface temperature #! From RP-1 Grab values from ROcket Prop
+    mu_s = mu.to(unitReg.pound / unitReg.foot / unitReg.second)    # Dynamic viscosity at the heat transfer boundary surface temperature NEEDS CORRECTING
 
     # Calculations
-    A_c = t/2*(H+h)
-    P = t + 2*h + 2*np.sqrt((t/2)^2 +(H-h)^2)
-    D_h = 4*A_c/P
-    Re_D = 4*m_dot_c/np.pi/D_h/mu   # Reynold's number
+    A_c = Q_(0.5*DESIGN.coolingChannelAngleSweep*(2*(DESIGN.chamberInternalRadius + DESIGN.coolingChannelWallDist)*Land_Height + Land_Height**2), unitReg.inch**2) # Cooling channel cross-sectional area, height should be variable in the future
+    P = Q_(2*Land_Height + DESIGN.coolingChannelAngleSweep*((DESIGN.chamberInternalRadius + DESIGN.coolingChannelWallDist) + 2*Land_Height), unitReg.inch)  # Cooling channel perimeter, height should be variable in the future
+    D_h = 4*A_c/P   # Hydraulic diameter
+    Re_D = 4*m_dot_c/np.pi/D_h/mu   # Reynolds number
     # Re_D = Re_D.to(unitReg.inch / unitReg.inch)
     # Darcy Friction Factor
     if Re_D < 2300:
@@ -196,12 +194,12 @@ def free_convection(beta, T_s, T_infinity, P_atm, D_outer):
     (viscosity, _, _, k_f, density, Pr, _, _, _) = get_fluid_properties('Air', T_infinity, P_atm)
     nu = viscosity/density  # Dynamic viscosity, air property lookup
     # Calculations
-    Gr_D = Q_(g*beta*(T_s - T_infinity)*D_outer**3/nu^2, 
+    Gr_D = Q_(g*beta*(T_s - T_infinity)*D_outer**3/nu**2, 
               unitReg.inch / unitReg.inch)
     Gr_D.to_base_units()
     Ra_D = Q_(Gr_D*Pr, '')
-    if Ra_D < 10^12:
-        Nu_D = (0.60 + 0.387*Ra_D^(1/6)/(1 + (0.559/Pr)^(9/16))^(8/27))^2
+    if Ra_D < 10**12:
+        Nu_D = (0.60 + 0.387*Ra_D**(1/6)/(1 + (0.559/Pr)**(9/16))**(8/27))**2
     else:
         Nu_D = -999999999999
         print("Raleigh number exceeds restriction")
@@ -247,25 +245,25 @@ def film_cooling(m_dot_g, m_dot_c, u_g, u_c, P_cc, D_cc, c_p_g, mu_g, Pr_g,
     Lambda = fsolve(lambda_equation, 300000, args=data) # Friction factor
     e_t = 0.1   # Must be found from testing data?
     K_t = 1 + 4*e_t # Corrective turbulence factor
-    St = Lambda/2/(1.20 + 11.8*np.sqrt(Lambda/2)*(Pr_g - 1)*(Pr_g)^(-1/3))  # Stanton number
+    St = Lambda/2/(1.20 + 11.8*np.sqrt(Lambda/2)*(Pr_g - 1)*(Pr_g)**(-1/3))  # Stanton number
     h_o = G_mean*c_p_g*St*K_t # Dry wall convection coefficient
     h_fg_star = h_fg + (T_c_sat - T_c_1)*c_c_l
     epsilon = 0 # Must take from Leckner's data for spectral radiative properties of combustion gases
-    sigma = 5.67*10^-8  # Stefan-Boltzmann constant
+    sigma = 5.67*10**-8  # Stefan-Boltzmann constant
     Q_dot_rad = sigma*epsilon*np.pi/4*D_cc**2*(T_g**4 - T_c**4) # TO DO: Might need to change area
     q_dot_rad = Q_dot_rad/(np.pi/4*D_cc**2)
     q_dot_conv = h_g*(T_g-T_c)
     Q_dot_conv = q_dot_conv # TO DO
     m_dot_v = (q_dot_conv + q_dot_rad)/h_fg_star
     F = m_dot_g/(rho_g*u_g) # Blowing ratio
-    St_o = St/(np.log(1 + F/St*(M_g/M_c)^0.6)/(F/St*(M_g/M_c)^0.6)) # Transpiration-corrected Stanton number
+    St_o = St/(np.log(1 + F/St*(M_g/M_c)**0.6)/(F/St*(M_g/M_c)**0.6)) # Transpiration-corrected Stanton number
     h = St_o*rho_c_l*u_c*c_c_l  # Convection coefficient
     Re_c = rho_c_l*u_c*D_c/mu_c # Film coolant Reynolds number
-    a = 2.31*10^-4*Re_c^-0.35
+    a = 2.31*10**-4*Re_c**-0.35
     Re_cfilm = 250*np.log(Re_c) - 1265
     E_m = 1- Re_cfilm/Re_c
-    We = rho_g*u_g^2*D_cc/sigma_g   # TO DO: Check for correct variables
-    E = E_m*np.tanh(a*We^1.25)
+    We = rho_g*u_g**2*D_cc/sigma_g   # TO DO: Check for correct variables
+    E = E_m*np.tanh(a*We**1.25)
     Gamma_c = m_dot_c*(1-E)/(np.pi*D_cc)    # TO DO: Check that this is right
     L_c = Gamma_c/m_dot_v
     # Q_dot_conv = h
