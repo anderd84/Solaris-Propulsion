@@ -18,8 +18,8 @@ def isIntersect(Point, contour: np.ndarray[ContourPoint], domainSize: tuple[int,
     if contour.size == 0:
         return False
     OnTheLine = 0
-    A = [Point.x, Point.r]   #Point
-    B = [Point.x, Point.r + domainSize[1]]   #Making an "infinitely" long vertical line at the point
+    A = Point
+    B = [Point[0], Point[1] + domainSize[1]]   #Making an "infinitely" long vertical line at the point
     Check = 0
     for i in range(len(contour) - 1):
         C = [contour[i].x,contour[i].r]
@@ -36,7 +36,6 @@ def isIntersect(Point, contour: np.ndarray[ContourPoint], domainSize: tuple[int,
     return InsideOutside #Return true if point is inside the polygon
 
 def is_point_on_segment(Point, C, D):
-    Point = [Point.x, Point.r]
     # Check collinearity using cross product
     collinear = (D[1] - C[1]) * (Point[0] - C[0]) == (Point[1] - C[1]) * (D[0] - C[0])
     # Check if point P is within the bounding box of C and D

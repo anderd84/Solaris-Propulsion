@@ -16,7 +16,8 @@ dependencies = [
 "pyyaml",
 "ambiance",
 "PyQt6",
-"joblib"
+"joblib",
+"alive-progress"
 ]
 version = "0.1.0"
 description = "A package for aerospike engine calculations"

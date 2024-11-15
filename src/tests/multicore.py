@@ -26,7 +26,7 @@ def main():
     # plots.PlotField(fig, field, Re)
     plugC, straightLength = plug.GenerateDimPlug(cont, Rt, Tt, Re, Q_(5, unitReg.inch), Q_(1.5, unitReg.inch))
     cowlC, cowlCoolL, cowlCoolU = plug.GenerateDimCowl(Rt, Tt, Re, straightLength, DESIGN.chamberInternalRadius, DESIGN.wallThickness, Q_(0.0203, unitReg.inch))
-    chamberC, aimpoint = plug.GenerateDimChamber(Rt, Tt, Re, Q_(5, unitReg.inch), DESIGN.chamberInternalRadius, DESIGN.wallThickness, Q_(0.025, unitReg.inch), Q_(1.5, unitReg.inch))
+    chamberC, aimpoint = plug.GenerateDimChamber(Rt, Tt, Re, Q_(5, unitReg.inch), DESIGN.chamberInternalRadius, DESIGN.wallThickness, Q_(0.0203, unitReg.inch), Q_(1.5, unitReg.inch))
     plots.PlotPlug(fig, plugC)
     plots.PlotPlug(fig, cowlC)
     plots.PlotPlug(fig, chamberC)
@@ -34,10 +34,9 @@ def main():
     fig.axes[0].plot([p.x for p in cowlCoolU], [p.r for p in cowlCoolU], '-k', linewidth=1)
     # plt.show()
 
-    cooling2 = domain.DomainMC(-6, 4.5, 7, 5, .1)
-    cooling2.DefineMaterials(cowlC, np.array([]), chamberC, plugC, 1)
+    cooling2 = domain.DomainMC(-6, 4.5, 7, 5, .005)
+    cooling2.DefineMaterials(cowlC, np.array([]), chamberC, plugC, 15)
 
-    cooling2.DumpFile("coolmesh.msh")
 
     # tic = time.perf_counter()
     # cooling = domain.Domain(-8.5, 4, 15, 4, .05, .05)
@@ -49,6 +48,8 @@ def main():
     cooling2.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius, DESIGN.plugBaseRadius, DESIGN.chokeArea, fig)
 
     cooling2.AssignCoolantFlow(domain.CoolingChannel(cowlCoolU, cowlCoolL), False, Q_(400, unitReg.psi))
+
+    cooling2.DumpFile("coolmesh.msh")
 
     # fig2 = plots.CreateNonDimPlot()
     cooling2.ShowMaterialPlot(fig)

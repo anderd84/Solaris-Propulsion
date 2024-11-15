@@ -1,6 +1,7 @@
 from dataclasses import dataclass
+import os
+import shutil
 import time
-import concurrent
 from fluids.gas import Gas
 import numpy as np
 np.product = np.prod
@@ -9,10 +10,10 @@ import matrix_viewer as mv
 from scipy.optimize import fsolve
 
 import multiprocessing as mp
-from multiprocessing import shared_memory
 from multiprocessing import Queue
-import concurrent.futures
 import joblib
+from alive_progress import alive_bar
+import gc
 
 from icecream import ic
 
@@ -69,59 +70,63 @@ class DomainMC:
         self.vpoints = vpoints
         self.xstep = width/(hpoints-1)
         self.rstep = height/(vpoints-1)
-        for i in range(vpoints):
-            for j in range(hpoints):
-                self.array[i,j] = DomainPoint(x0 + j*self.xstep, r0 - i*self.rstep, self.xstep*self.rstep)
+        print("Creating domain")
+        with alive_bar(vpoints*hpoints) as bar:
+            for i in range(vpoints):
+                for j in range(hpoints):
+                    self.array[i,j] = DomainPoint(x0 + j*self.xstep, r0 - i*self.rstep, self.xstep*self.rstep)
+                    bar()
+        print("Domain created")
 
     def DefineMaterials(self, cowl: np.ndarray, coolant: np.ndarray, chamber: np.ndarray, plug: np.ndarray, max_cores = mp.cpu_count() - 1):
         MAX_CORES = max_cores
-        shm = None
+        print(f"using {MAX_CORES} cores")
         tic = time.perf_counter()
-        try:
-            shm = shared_memory.SharedMemory(create=True, size=self.array.nbytes*2, name=SHAREDMEMNAME)
-        except FileExistsError:
-            shm = shared_memory.SharedMemory(name=SHAREDMEMNAME)
-            shm.unlink()
-            shm = shared_memory.SharedMemory(create=True, size=self.array.nbytes*2, name=SHAREDMEMNAME)
-        
-        newarray = np.ndarray(self.array.shape, dtype=DomainPoint, buffer=shm.buf)
-        newarray[:] = self.array[:]
+        # try:
+        #     os.mkdir('./.work')
+        # except OSError as e:
+        #     pass
+        # data_filename_memmap = './.work/multicore' + '.mem'
+        # print("Dumping data")
+        # joblib.dump(self.array, data_filename_memmap)
+        # del self.array
+        # _ = gc.collect()
+        # print("creating shared memory")
+        # inData = joblib.load(data_filename_memmap, mmap_mode='r')
 
-        memmap = np.memmap(SHAREDMEMNAME + '.dat', dtype=DomainPoint, mode='w+', shape=self.array.shape)
-        memmap[:] = self.array[:]
+        print("Starting processes")
+        with joblib.Parallel(n_jobs=MAX_CORES, verbose=100, return_as='generator') as parallel:
+            # q = mp.Manager().Queue()
 
-        x = np.memmap('x' + '.dat', dtype=np.float64, mode='w+', shape=self.array.shape)
-        x[:] = np.array([p.x for row in self.array for p in row]).reshape(self.array.shape)
+            # parallel(joblib.delayed(load_q)(q, i, j) for i in range(self.vpoints) for j in range(self.hpoints))
+            # with alive_bar(self.vpoints*self.hpoints) as bar:
+            #     print("Loading queue")
+            #     for i in range(self.vpoints):
+            #         for j in range(self.hpoints):
+            #             q.put((i,j))
+            #             bar()
 
-        print(memmap[0,0])
+            # outputs = parallel(joblib.delayed(EvalMaterialProcess)(q, i, (self.x0, self.xstep, self.r0, self.rstep), (self.width, self.height), cowl, chamber, plug) for i in range(MAX_CORES))
 
-        # use a pool of processes to parallelize the computation
-        with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_CORES, initializer=init_pool_processes, initargs=(mcQ,)) as executor:
-            q = []
+            # self.array = np.empty((self.vpoints, self.hpoints), dtype=DomainPoint)
+            with alive_bar(self.vpoints*self.hpoints) as bar:
+                print("Starting processes")
 
-            for i in range(self.vpoints):
-                for j in range(self.hpoints):
-                    # q.append((i, j))
-                    mcQ.put((i, j))
+                outputs = parallel(joblib.delayed(EvalMaterialProcess2)(i, self.hpoints, i, (self.x0, self.xstep, self.r0, self.rstep), (self.width, self.height), cowl, chamber, plug) for i in range(self.vpoints))
+                print(outputs)
 
-            print(mcQ.qsize())
-
-            futures = []
-            print(f"Starting parallel computation with {MAX_CORES} cores")
-            jump = int(len(q)/MAX_CORES)
-
-            for i in range(MAX_CORES):
-                futures.append(executor.submit(EvalMaterialProcess, i, shm, self.array.shape, (self.width, self.height), coolant, cowl, chamber, plug))
-                # futures.append(executor.submit(EvalProcess, MAX_CORES - i - 1, q[i*jump:(i+1)*jump], self.shm, self.array.shape, (self.width, self.height), coolant, cowl, chamber, plug))
-            print("Tasks submitted")
-            for future in concurrent.futures.as_completed(futures):
-                res = future.result(timeout=None)
-                for i, j, mat in res:
-                    self.array[i,j].material = mat
+                print("Assinging outputs")
+                for out in outputs:
+                    for i, j, mat in out:
+                        self.array[i,j].material = mat
+                        bar()
+            
+            try:
+                shutil.rmtree('./.work')
+            except OSError as e:
+                print("Error: %s - %s." % (e.filename, e.strerror))
 
         print("Parallel computation done")
-        shm.close()
-        shm.unlink()
         print("assigning borders")
         self.AssignBorders()
         toc = time.perf_counter()
@@ -191,7 +196,7 @@ class DomainMC:
             dist = max(dist1, dist2)
 
             step = min(self.xstep, self.rstep)
-            steps = max(int(dist/step * 1.25),2)
+            steps = max(int(dist/step * 1.25), 5)
 
             xl = np.linspace(coolant.lowerContour[i].x, coolant.lowerContour[i+1].x, steps)[:-1]
             rl = np.linspace(coolant.lowerContour[i].r, coolant.lowerContour[i+1].r, steps)[:-1]
@@ -251,36 +256,31 @@ class DomainMC:
             if self.lineInCell(startPointU, startPointL, i, j):
                 break
 
-        percentItr = 0
-        prevPerc = 0
-        print(f"Assinging straight flow")
-        for oX, oR in zip(originX, originR):
-            percentItr += 1
-            curPerc = int(percentItr/len(originX) * 100)
-            if curPerc > prevPerc:
-                prevPerc = curPerc
-                print(f"Progress: {prevPerc}%")
-            farAway1 = (oX - chamberWallRadius.magnitude*np.sin(flowAngle), oR + chamberWallRadius.magnitude*np.cos(flowAngle))
-            farAway2 = (oX + chamberWallRadius.magnitude*np.sin(flowAngle), oR - chamberWallRadius.magnitude*np.cos(flowAngle))
-            startPointU, _ = material.intersectPolyAt(chamber, (oX, oR), farAway1)
-            startPointL, _ = material.intersectPolyAt(chamber, (oX, oR), farAway2)
+        with alive_bar(originX.size) as bar:
+            print(f"Assinging straight flow")
+            for oX, oR in zip(originX, originR):
+                farAway1 = (oX - chamberWallRadius.magnitude*np.sin(flowAngle), oR + chamberWallRadius.magnitude*np.cos(flowAngle))
+                farAway2 = (oX + chamberWallRadius.magnitude*np.sin(flowAngle), oR - chamberWallRadius.magnitude*np.cos(flowAngle))
+                startPointU, _ = material.intersectPolyAt(chamber, (oX, oR), farAway1)
+                startPointL, _ = material.intersectPolyAt(chamber, (oX, oR), farAway2)
 
-            # plt.plot([startPointU[0], startPointL[0]], [startPointU[1], startPointL[1]], '-gx')
+                # plt.plot([startPointU[0], startPointL[0]], [startPointU[1], startPointL[1]], '-gx')
 
-            area = np.pi/np.sin(phi) * (startPointU[1]**2 - startPointL[1]**2)
+                area = np.pi/np.sin(phi) * (startPointU[1]**2 - startPointL[1]**2)
 
-            AAstar = Q_(area, unitReg.inch**2)/Astar
-            mach = fsolve(lambda M: gas.Isentropic1DExpansion(M, exhaust.gammaTyp) - AAstar, .25)[0]
-            temperature = (gas.StagTempRatio(mach, exhaust) * exhaust.stagTemp)
-            velocity = mach * np.sqrt(exhaust.getVariableGamma(mach) * exhaust.Rgas * temperature)
-            hydroD = Q_(2*np.sqrt((startPointU[0] - startPointL[0])**2 + (startPointU[1] - startPointL[1])**2), unitReg.inch)
+                AAstar = Q_(area, unitReg.inch**2)/Astar
+                mach = fsolve(lambda M: gas.Isentropic1DExpansion(M, exhaust.gammaTyp) - AAstar, .25)[0]
+                temperature = (gas.StagTempRatio(mach, exhaust) * exhaust.stagTemp)
+                velocity = mach * np.sqrt(exhaust.getVariableGamma(mach) * exhaust.Rgas * temperature)
+                hydroD = Q_(2*np.sqrt((startPointU[0] - startPointL[0])**2 + (startPointU[1] - startPointL[1])**2), unitReg.inch)
 
-            cells = self.cellsOnLine(startPointL, startPointU)
-            for i,j in cells:
-                if self.array[i,j].material == DomainMaterial.CHAMBER:
-                    self.array[i,j].temperature = temperature
-                    self.array[i,j].velocity = velocity
-                    self.array[i,j].hydraulicDiameter = hydroD
+                cells = self.cellsOnLine(startPointL, startPointU)
+                for i,j in cells:
+                    if self.array[i,j].material == DomainMaterial.CHAMBER:
+                        self.array[i,j].temperature = temperature
+                        self.array[i,j].velocity = velocity
+                        self.array[i,j].hydraulicDiameter = hydroD
+                bar()
 
 
         # curve section
@@ -347,14 +347,16 @@ class DomainMC:
         finalI = self.vpoints - 1
         finalJ = self.hpoints - 1
 
-        for i in range(self.vpoints):
-            for j in range(self.hpoints):
-                lowI = max(i - 1, 0)
-                lowJ = max(j - 1, 0)
-                highI = min(i + 1, finalI)
-                highJ = min(j + 1, finalJ)
-                checks = [self.array[lowI, j].material, self.array[highI, j].material, self.array[i, lowJ].material, self.array[i, highJ].material]
-                self.array[i, j].border = not(checks[0] == checks[1] and checks[1] == checks[2] and checks[2] == checks[3])
+        with alive_bar(self.vpoints*self.hpoints) as bar:
+            for i in range(self.vpoints):
+                for j in range(self.hpoints):
+                    lowI = max(i - 1, 0)
+                    lowJ = max(j - 1, 0)
+                    highI = min(i + 1, finalI)
+                    highJ = min(j + 1, finalJ)
+                    checks = [self.array[lowI, j].material, self.array[highI, j].material, self.array[i, lowJ].material, self.array[i, highJ].material]
+                    self.array[i, j].border = not(checks[0] == checks[1] and checks[1] == checks[2] and checks[2] == checks[3])
+                    bar()
 
     def cellsOnLine(self, point1, point2):
         linedx = point2[0] - point1[0]
@@ -407,50 +409,59 @@ class DomainMC:
     def LoadFile(filename):
         return joblib.load(filename + '.z')
 
-def EvalMaterialProcess(pn, shm, shape, size, coolant, cowl, chamber, plug):
-    res = []
-    global mcQ
-    # print(shmName)
-    # shm = shared_memory.SharedMemory(name=shmName)
-    test = np.memmap('x.dat', dtype=np.float64, mode='r', shape=shape)
-    print(test[0,0])
-    print(DomainPoint)
-    print(DomainMaterial)
-    try:
-        # domain = np.ndarray(shape, dtype=DomainPoint, buffer=shm.buf)
-        domain = np.memmap(SHAREDMEMNAME + '.dat', dtype=DomainPoint, mode='r', shape=shape)
-        print(domain[0,0])
-    except Exception as e:
-        print(e)
-        print(e.__traceback__)
-        print(e.__traceback__.tb_lineno)
-    print(f"Starting process {pn + 1}", flush=True)
-    print(domain[0,0])
-    prevPercent = 0
-    total = np.prod(shape)
-    while mcQ.qsize() > 0:
-        i, j = mcQ.get()
-        res.append(AssignMaterial(domain, i, j, size, coolant, cowl, chamber, plug))
-        if pn == 0:
-            curPercent = int((total - mcQ.qsize())/total * 100)
-            if prevPercent < curPercent:
-                prevPercent = curPercent
-                print(f"Progress: {prevPercent}%")
-    print("done")
-    # shm.close()
+def EvalMaterialProcess(q, pn, gridData, size, cowl, chamber, plug):
+    res = [(0, 0, DomainMaterial.FREE)]
+
+    x0 = gridData[0]
+    xstep = gridData[1]
+    r0 = gridData[2]
+    rstep = gridData[3]
+
+    print(q.qsize())
+
+    if pn == 0:
+        with alive_bar(manual=True) as bar:
+            ogSize = q.qsize()
+        
+            print(f"Starting process {pn + 1}", flush=True)
+            while q.qsize() > 0:
+                bar((ogSize - q.qsize())/ogSize)
+                i, j = q.get()
+                point = (x0 + j*xstep, r0 - i*rstep)
+                material = AssignMaterial(point, size, np.array([]), cowl, chamber, plug)
+                res.append((i, j, material))
+            print(f"done {pn + 1}, with length {len(res)}", flush=True)
+    else:
+        print(f"Starting process {pn + 1}", flush=True)
+        while q.qsize() > 0:
+            i, j = q.get()
+            point = (x0 + j*xstep, r0 - i*rstep)
+            material = AssignMaterial(point, size, np.array([]), cowl, chamber, plug)
+            res.append((i, j, material))
+        print(f"done {pn + 1}, with length {len(res)}", flush=True)
     return res
 
-def AssignMaterial(domain, i, j, size, coolant, cowl, chamber, plug):
-    if material.isIntersect(domain[i][j], coolant, size):
-        return (i, j, DomainMaterial.COOLANT)
-    if material.isIntersect(domain[i][j], cowl, size):
-        return (i, j, DomainMaterial.COWL)
-    if material.isIntersect(domain[i][j], chamber, size):
-        return (i, j, DomainMaterial.CHAMBER)
-    if material.isIntersect(domain[i][j], plug, size):
-        return (i, j, DomainMaterial.PLUG)
-    return (i, j, DomainMaterial.FREE)
+def EvalMaterialProcess2(i, hsteps, pn, gridData, size, cowl, chamber, plug):
+    res = []
 
-def init_pool_processes(q):
-    global mcQ
-    mcQ = q
+    x0 = gridData[0]
+    xstep = gridData[1]
+    r0 = gridData[2]
+    rstep = gridData[3]
+
+    for j in range(hsteps):
+        point = (x0 + j*xstep, r0 - i*rstep)
+        material = AssignMaterial(point, size, np.array([]), cowl, chamber, plug)
+        res.append((i, j, material))
+    return res
+
+def AssignMaterial(point, size, coolant, cowl, chamber, plug):
+    if material.isIntersect(point, coolant, size):
+        return DomainMaterial.COOLANT
+    if material.isIntersect(point, cowl, size):
+        return DomainMaterial.COWL
+    if material.isIntersect(point, chamber, size):
+        return DomainMaterial.CHAMBER
+    if material.isIntersect(point, plug, size):
+        return DomainMaterial.PLUG
+    return DomainMaterial.FREE
