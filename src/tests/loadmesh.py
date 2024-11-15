@@ -31,17 +31,17 @@ plots.PlotPlug(fig, chamberC)
 coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("coolmesh.msh")
 
 startingpoint = (-5.75, 2.6) # TODO use real point
-plt.plot([startingpoint[0], aimpoint[0]], [startingpoint[1], aimpoint[1]], 'rx-')
+# plt.plot([startingpoint[0], aimpoint[0]], [startingpoint[1], aimpoint[1]], 'rx-')
 # coolmesh.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius, DESIGN.plugBaseRadius, DESIGN.chokeArea, fig)
 
 coolmesh.AssignCoolantFlow(domain.CoolingChannel(cowlCoolU, cowlCoolL), False, Q_(400, unitReg.psi))
 
 # fig2 = plots.CreateNonDimPlot()
-coolmesh.ShowMaterialPlot(fig)
+# coolmesh.ShowMaterialPlot(fig)
 
 # cooling2.ShowMaterialPlot(fig)
 # cooling2.ShowStatePlot(fig)
-# coolmesh.ShowMaterialPlot(fig)
+coolmesh.ShowBorderPlot(fig)
 
 
 plt.show()

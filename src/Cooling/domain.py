@@ -124,18 +124,8 @@ class DomainMC:
         xcells = np.linspace(self.x0 - self.xstep/2, self.x0 + self.width + self.xstep/2, self.hpoints+1)
         rcells = np.linspace(self.r0 + self.rstep/2, self.r0 - self.height - self.rstep/2, self.vpoints+1)
         xl, rl = np.meshgrid(xcells, rcells)
-        ax.plot(xl, rl, 'k', linewidth=0.25)
-        ax.plot(np.transpose(xl), np.transpose(rl), 'k', linewidth=0.25)
-
-        for i in range(self.vpoints):
-            for j in range(self.hpoints):
-                flow = self.array[i,j].previousFlow
-                if flow[0] != 0:
-                    if self.array[i,j].material == DomainMaterial.COOLANT_WALL:
-                        ax.plot([self.array[i,j].x, self.array[flow].x], [self.array[i,j].r, self.array[flow].r], '-b', linewidth=1)
-                    else:
-                        ax.plot([self.array[i,j].x, self.array[flow].x], [self.array[i,j].r, self.array[flow].r], '-k', linewidth=1)
-            
+        # ax.plot(xl, rl, 'k', linewidth=0.25)
+        # ax.plot(np.transpose(xl), np.transpose(rl), 'k', linewidth=0.25)            
 
     def ShowStatePlot(self, fig: plt.Figure):
         print("state plot!")
@@ -176,7 +166,8 @@ class DomainMC:
 
     def AssignCoolantFlow(self, coolant: CoolingChannel, upperWall: bool, initialPressure: Q_):
         inputPoints = len(coolant.upperContour)
-        previousWall = None
+        previousWall = (0,0)
+        previousFlow = (0,0)
         for i in range(inputPoints - 1):
             dist1 = np.sqrt((coolant.lowerContour[i].x - coolant.lowerContour[i+1].x)**2 + (coolant.lowerContour[i].r - coolant.lowerContour[i+1].r)**2)
             dist2 = np.sqrt((coolant.upperContour[i].x - coolant.upperContour[i+1].x)**2 + (coolant.upperContour[i].r - coolant.upperContour[i+1].r)**2)
@@ -199,23 +190,26 @@ class DomainMC:
 
                 for row, col in cells:
                     if row == wallPoint[0] and col == wallPoint[1]:
+                        if row != previousWall[0] or col != previousWall[1]:
+                            previousFlow = previousWall
                         self.array[row, col].border = True
                         self.array[row, col].pressure = initialPressure
                         self.array[row, col].material = DomainMaterial.COOLANT_WALL
-                        self.array[row, col].previousFlow = previousWall
+                        self.array[row, col].previousFlow = previousFlow
                         self.array[row, col].flowHeight = np.sqrt((xl[j] - xu[j])**2 + (rl[j] - ru[j])**2)
-                        if previousWall == None or (previousWall[0] != row or previousWall[1] != col):
-                            previousWall = (row, col)
-                            print(f"wall at {row}, {col}")
+                        previousWall = (row, col)
                     else:
-                        if self.array[row, col].material == DomainMaterial.COOLANT_WALL:
+                        if self.array[row, col].material == DomainMaterial.COOLANT_WALL or self.array[row, col].material == DomainMaterial.COOLANT_BULK:
                             continue
                         self.array[row, col].material = DomainMaterial.COOLANT_BULK
                         self.array[row, col].previousFlow = wallPoint
                         self.array[row, col].pressure = initialPressure
                         self.array[row, col].flowHeight = np.sqrt((xl[j] - xu[j])**2 + (rl[j] - ru[j])**2)
-
         
+        print("done")
+
+        print("assigning borders")
+        self.AssignBorders()
         print("done")
 
     def AssignChamberTemps(self, chamber: np.ndarray, exhaust: Gas, startPoint: tuple, endPoint: tuple, chamberWallRadius: Q_, plugBase: Q_, Astar: Q_, fig):
