@@ -415,7 +415,21 @@ class DomainMC:
 
     @staticmethod
     def LoadFile(filename):
-        return joblib.load(filename + '.z')
+        print("Loading file")
+        loaded: DomainMC = joblib.load(filename + '.z')
+        with alive_bar(loaded.vpoints * loaded.hpoints) as bar:
+            print("Updating units")
+            for i in range(loaded.vpoints):
+                for j in range(loaded.hpoints):
+                    point = loaded.array[i,j]
+                    d = point.__dict__
+                    for key in d:
+                        if isinstance(d[key], Q_):
+                            d[key] = d[key].magnitude * Q_(str(d[key].units))
+                            point[i,j].__setattr__(key, d[key])
+                    bar()
+        return loaded   
+
 
 def EvalMaterialProcess2(i, hsteps, pn, gridData, size, cowl, chamber, plug):
     res = []
