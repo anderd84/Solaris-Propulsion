@@ -23,9 +23,9 @@ Tt = outputData["thetaThroat"]
 Re = outputData["radiusLip"]
 
 fig = plots.CreateNonDimPlot()
-plugC, straightLength = plug.GenerateDimPlug(cont, Rt, Tt, Re, Q_(5, unitReg.inch), Q_(1.5, unitReg.inch))
+plugC, straightLength, plugCoolL, plugCoolU = plug.GenerateDimPlug(cont, Rt, Tt, Re, Q_(5, unitReg.inch), Q_(1.5, unitReg.inch))
 cowlC, cowlCoolL, cowlCoolU = plug.GenerateDimCowl(Rt, Tt, Re, straightLength, DESIGN.chamberInternalRadius, DESIGN.wallThickness, Q_(0.0203, unitReg.inch))
-chamberC, aimpoint = plug.GenerateDimChamber(Rt, Tt, Re, Q_(5, unitReg.inch), DESIGN.chamberInternalRadius, DESIGN.wallThickness, Q_(0.025, unitReg.inch), Q_(1.5, unitReg.inch))
+chamberC, aimpoint = plug.GenerateDimChamber(Rt, Tt, Re, Q_(5, unitReg.inch), DESIGN.chamberInternalRadius, DESIGN.wallThickness, Q_(0.0203, unitReg.inch), Q_(1.5, unitReg.inch))
 plots.PlotPlug(fig, plugC)
 plots.PlotPlug(fig, cowlC)
 plots.PlotPlug(fig, chamberC)
@@ -157,7 +157,7 @@ def coolantwallheat(coolmesh,i,j, i_previous,j_previous):
         #*Case 5 (1 qdot)
             Q_left = coolant_wall_left(coolmesh,i_previous,j_previous)
             Qdotin = Q_left #I need capital Q showings it's Heat rate in not Heat Flux #*WINSTON)
-    else:
+    else:   
         ic("YOu did something wrong for sure")
         Qdotin = 0
     return Qdotin
@@ -491,50 +491,47 @@ def verticalcond(coolmesh,i,j):
 #plt.ion()
 #plt.show()
 
-ic(coolmesh.array[60,537].border)
-ic(coolmesh.array[60,537].material)
-ic(coolmesh.array[59,537].material)
-ic(coolmesh.array[61,537].material)
-ic(coolmesh.array[60,536].material)
-ic(coolmesh.array[60,538].material)
+ic(coolmesh.array[59,350].border)
+ic(coolmesh.array[59,350].material)
+ic(coolmesh.array[60,350].material)
+ic(coolmesh.array[58,350].material)
+ic(coolmesh.array[59,351].material)
+ic(coolmesh.array[59,349].material)
 
 #
 #
 
-#total_change = 0
-#for iterate in range(5):
-#    ic(iterate)
-##    fig.axes[0].clear()
-##    coolmesh.ShowStatePlot(fig)
-##    fig.canvas.draw()
-##    fig.canvas.flush_events()
-#    #for i in range(coolmesh.vpoints):
-#    for i in range(30, 200):
-#        #for j in range(coolmesh.hpoints):
-#        for j in range(350, 650):
-#            #*Finding all options for barrier
-#            ic(i,j)
-#            if not(coolmesh.array[i,j].material == DomainMaterial.CHAMBER or coolmesh.array[i,j].material == DomainMaterial.FREE):
-#                
-#                if (coolmesh.array[i,j].material == DomainMaterial.COOLANT_WALL or coolmesh.array[i,j].material == DomainMaterial.COOLANT_BULK):
-#                        T_new = coolant(coolmesh,i,j)
-#                        coolmesh.array[i,j].temperature = Q_(T_new, unitReg.degR)
-#                        continue
-#
-#                if not(coolmesh.array[i,j].border):
-#                    C_left, C_upper, C_bottom, C_right, T_left, T_upper, T_bottom, T_right = getcorecond(coolmesh,i,j)
-#                else:
-#   
-#                    C_left, T_left, C_right, T_right = horizontalcond(coolmesh,i,j)               
-#                    C_upper, T_upper, C_bottom, T_bottom = verticalcond(coolmesh,i,j)
-#                T_left, T_right, T_upper, T_bottom = Q_([T_left.magnitude, T_right.magnitude, T_upper.magnitude, T_bottom.magnitude], unitReg.degR)
-#
-#                Num = (C_left * T_left + C_upper * T_upper + C_bottom * T_bottom + C_right*  T_right)
-#                Denom = (C_left + C_upper + C_bottom + C_right)
-#                new_temp = (Num/Denom).to(unitReg.degR)
-#                current_temp = Q_((coolmesh.array[i,j].temperature).magnitude, unitReg.degR)
-#                total_change = total_change + np.abs(current_temp - new_temp)
-#                coolmesh.array[i,j].temperature = new_temp
+total_change = 0
+for iterate in range(5):
+    ic(iterate)
+#    fig.axes[0].clear()
+#    coolmesh.ShowStatePlot(fig)
+#    fig.canvas.draw()
+#    fig.canvas.flush_events()
+    #for i in range(coolmesh.vpoints):
+    for i in range(30, 200):
+        #for j in range(coolmesh.hpoints):
+        for j in range(350, 650):
+            #*Finding all options for barrier
+            if not(coolmesh.array[i,j].material == DomainMaterial.CHAMBER or coolmesh.array[i,j].material == DomainMaterial.FREE):
+                
+                if (coolmesh.array[i,j].material == DomainMaterial.COOLANT_WALL or coolmesh.array[i,j].material == DomainMaterial.COOLANT_BULK):
+                        T_new = coolant(coolmesh,i,j)
+                        coolmesh.array[i,j].temperature = Q_(T_new, unitReg.degR)
+                        continue#
+                if not(coolmesh.array[i,j].border):
+                    C_left, C_upper, C_bottom, C_right, T_left, T_upper, T_bottom, T_right = getcorecond(coolmesh,i,j)
+                else:
+   
+                    C_left, T_left, C_right, T_right = horizontalcond(coolmesh,i,j)               
+                    C_upper, T_upper, C_bottom, T_bottom = verticalcond(coolmesh,i,j)
+                T_left, T_right, T_upper, T_bottom = Q_([T_left.magnitude, T_right.magnitude, T_upper.magnitude, T_bottom.magnitude], unitReg.degR)#
+                Num = (C_left * T_left + C_upper * T_upper + C_bottom * T_bottom + C_right*  T_right)
+                Denom = (C_left + C_upper + C_bottom + C_right)
+                new_temp = (Num/Denom).to(unitReg.degR)
+                current_temp = Q_((coolmesh.array[i,j].temperature).magnitude, unitReg.degR)
+                total_change = total_change + np.abs(current_temp - new_temp)
+                coolmesh.array[i,j].temperature = new_temp
             
 
 

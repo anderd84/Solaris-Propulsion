@@ -215,7 +215,6 @@ class DomainMC:
                         if row == wallPoint[0] and col == wallPoint[1]:
                             if row != previousWall[0] or col != previousWall[1]:
                                 previousFlow = previousWall
-                            self.array[row, col].border = True
                             self.array[row, col].material = DomainMaterial.COOLANT_WALL if self.array[row, col].material != DomainMaterial.COOLANT_INLET else DomainMaterial.COOLANT_INLET
                             self.array[row, col].previousFlow = previousFlow
                             previousWall = (row, col)
@@ -225,7 +224,7 @@ class DomainMC:
                             self.array[row, col].material = DomainMaterial.COOLANT_BULK
                             self.array[row, col].previousFlow = wallPoint
                         self.array[row, col].pressure = initialPressure
-                        self.array[row, col].flowHeight = np.sqrt((xl[j] - xu[j])**2 + (rl[j] - ru[j])**2)
+                        self.array[row, col].flowHeight = Q_(np.sqrt((xl[j] - xu[j])**2 + (rl[j] - ru[j])**2), unitReg.inch)
                 bar()
                 
         print("done")
