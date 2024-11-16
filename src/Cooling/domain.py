@@ -143,7 +143,7 @@ class DomainMC:
         rarr = np.array([[point.r for point in row] for row in self.array])
         print("rarr done!")
         
-        matarr = np.array([[point.temperature.to(unitReg.degR).magnitude for point in row] for row in self.array])
+        matarr = np.array([[point.flowHeight.to(unitReg.inch).magnitude for point in row] for row in self.array])
         print("matarr done!")
 
         ax = fig.axes[0]
@@ -223,8 +223,10 @@ class DomainMC:
                                 continue
                             self.array[row, col].material = DomainMaterial.COOLANT_BULK
                             self.array[row, col].previousFlow = wallPoint
+                        
                         self.array[row, col].pressure = initialPressure
                         self.array[row, col].flowHeight = Q_(np.sqrt((xl[j] - xu[j])**2 + (rl[j] - ru[j])**2), unitReg.inch)
+                    print(self.array[row, col].flowHeight)
                 bar()
                 
         print("done")
