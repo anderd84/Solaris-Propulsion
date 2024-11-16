@@ -125,7 +125,16 @@ class DomainMC:
         rcells = np.linspace(self.r0 + self.rstep/2, self.r0 - self.height - self.rstep/2, self.vpoints+1)
         xl, rl = np.meshgrid(xcells, rcells)
         # ax.plot(xl, rl, 'k', linewidth=0.25)
-        # ax.plot(np.transpose(xl), np.transpose(rl), 'k', linewidth=0.25)            
+        # ax.plot(np.transpose(xl), np.transpose(rl), 'k', linewidth=0.25)  
+          
+        for i in range(self.vpoints):
+            for j in range(self.hpoints):
+                flow = self.array[i,j].previousFlow
+                if flow[0] != 0:
+                    if self.array[i,j].material == DomainMaterial.COOLANT_WALL:
+                        ax.plot([self.array[i,j].x, self.array[flow].x], [self.array[i,j].r, self.array[flow].r], '-b', linewidth=1)
+                    else:
+                        ax.plot([self.array[i,j].x, self.array[flow].x], [self.array[i,j].r, self.array[flow].r], '-k', linewidth=1)        
 
     def ShowStatePlot(self, fig: plt.Figure):
         print("state plot!")
