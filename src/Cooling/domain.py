@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 import os
 import shutil
+import tempfile
 import time
 from fluids.gas import Gas
 import numpy as np
+import pint
 np.product = np.prod
 import matplotlib.pyplot as plt
 import matrix_viewer as mv
@@ -226,7 +228,6 @@ class DomainMC:
                         
                         self.array[row, col].pressure = initialPressure
                         self.array[row, col].flowHeight = Q_(np.sqrt((xl[j] - xu[j])**2 + (rl[j] - ru[j])**2), unitReg.inch)
-                    print(self.array[row, col].flowHeight)
                 bar()
                 
         print("done")
@@ -417,18 +418,25 @@ class DomainMC:
     def LoadFile(filename):
         print("Loading file")
         loaded: DomainMC = joblib.load(filename + '.z')
-        with alive_bar(loaded.vpoints * loaded.hpoints) as bar:
-            print("Updating units")
-            for i in range(loaded.vpoints):
-                for j in range(loaded.hpoints):
-                    point = loaded.array[i,j]
-                    d = point.__dict__
-                    for key in d:
-                        if isinstance(d[key], Q_):
-                            d[key] = d[key].magnitude * Q_(str(d[key].units))
-                            point[i,j].__setattr__(key, d[key])
-                    bar()
-        return loaded   
+        DomainMC.ConvertUnits(loaded)
+        return loaded
+    
+    @staticmethod
+    def ConvertUnits(domain):
+        print("Converting units")
+        attributes = list(domain.array[0,0].__dict__.keys())
+        for attr in attributes:
+            testAttr = domain.array[0,0].__getattribute__(attr)
+            if isinstance(testAttr, pint.Quantity):
+                with alive_bar(domain.vpoints*domain.hpoints) as bar:
+                    print(f"Converting {attr}")
+                    unit = str(testAttr.units)
+                    t = [[domain.array[i,j].__getattribute__(attr).magnitude for i in range(domain.vpoints)] for j in range(domain.hpoints)]
+                    for i in range(domain.vpoints):
+                        for j in range(domain.hpoints):
+                            domain.array[i,j].__setattr__(attr, Q_(t[j][i], unit))
+                            bar()
+        return domain
 
 
 def EvalMaterialProcess2(i, hsteps, pn, gridData, size, cowl, chamber, plug):
