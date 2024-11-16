@@ -48,14 +48,14 @@ def getconductivity(coolmesh,i,j):
 
 def getcorecond(coolmesh,i,j):
     #* Left Node
-    if not(j==0):
+    if not(j==0):   # Select non-border nodes
         C_left = getconductivity(coolmesh,i,j-1) * (2 * np.pi * Q_(coolmesh.array[i,j].r, unitReg.inch).to(unitReg.foot) ) * Q_(coolmesh.rstep, unitReg.inch).to(unitReg.foot) / Q_(coolmesh.xstep, unitReg.inch).to(unitReg.foot)
         T_left = coolmesh.array[i,j-1].temperature.to(unitReg.degR)
-    else:
+    else:   # Border node case (left edge)
         C_left = Q_(0, unitReg.BTU  / unitReg.hour / unitReg.degR)
         T_left = Q_(0, unitReg.degR)
     #* Upper Node
-    if not(i==0):
+    if not(i==0):   # Select non-border nodes
         conduct_upper = getconductivity(coolmesh,i-1,j)
         r_i = coolmesh.array[i, j].r  # Inner radius at [i, j]
         r_o = coolmesh.array[i - 1, j].r  # Outer radius at [i-1,j]

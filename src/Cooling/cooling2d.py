@@ -201,14 +201,6 @@ def free_convection(beta, T_s, T_infinity, P_atm, D_outer):
         print("Raleigh number exceeds restriction")
     return Nu_D*k_f/D_outer
 
-def lambda_equation(Lambda, *data):
-    Re_g = data
-    return 1.930*np.log10(Re_g*np.sqrt(Lambda)) - 1/np.sqrt(Lambda)
-
-
-
-
-
 def film_cooling(m_dot_g, m_dot_c, u_g, u_c, P_cc, D_cc, c_p_g, mu_g, Pr_g, 
                  rho_g, M_g, mu_c, c_c_l, h_fg, T_c_1, T_c_sat, rho_c_l, 
                  M_c, sigma_g, h_g, D_c):
