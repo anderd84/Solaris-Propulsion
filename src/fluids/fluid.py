@@ -144,8 +144,9 @@ def PROPFLOWS(Film_Cooling,oxImpingeAngle, fuelInitalImpingeAngle, filmImpingeAn
 # Function to retrieve fluid properties using RocketProps defaults (English Engineering units)
 def get_fluid_properties(name, temperature_R, pressure_psi):
     # Ensure inputs are in the correct units for RocketProps methods
-    temperature = Q_(temperature_R, unitReg.degR)
-    pressure = Q_(pressure_psi, unitReg.psi)
+    temperature = Q_(temperature_R.magnitude, unitReg.degR)
+    
+    pressure = Q_(pressure_psi.magnitude, unitReg.psi)
     
     # Create an fluid object
     fluid = get_prop(name)

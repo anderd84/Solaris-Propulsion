@@ -177,11 +177,13 @@ def internal_flow_convection(Node_Temp, Node_Pressure, Land_Height):
         data = (epsilon, D_h, Re_D) # Arguments for fsolve
         f = fsolve(f_equation, 0.05, args=data)  # Turbulent flow
     # Convection coefficient (Gnielinski)
+    f = f[0]
     if Pr >= 0.7 and Pr <= 16700 and Re_D >= 3000 and Re_D <= 5000000:   # Check that properties fit restrictions for Gnielinski
         Nu_D = f/8*(Re_D - 1000)*Pr / (1 + 12.7*(f/8)**0.5 * (Pr**(2/3) - 1))   # Nusselt number of fully developed flow
     else:    # Use Sieder & Tate otherwise
         Nu_D = 0.027*Re_D**0.8*Pr**(1/3)*(mu/mu_s)**0.14    # Nusselt number of fully developed flow
-    return Nu_D*k_c/D_h      # Convective heat transfer coefficient
+    
+    return (Nu_D*k_c/D_h).to((unitReg.BTU / unitReg.foot**2 / unitReg.hour / unitReg.degR))      # Convective heat transfer coefficient
 
 def free_convection(beta, T_s, T_infinity, P_atm, D_outer):
     # Properties
