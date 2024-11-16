@@ -33,6 +33,8 @@ plots.PlotPlug(fig, chamberC)
 
 coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("coolmesh.msh")
 
+print(Q_(3, unitReg.inch) + coolmesh.array[0,0].flowHeight)
+
 print(coolmesh.array[60,350])
 
 startingpoint = (-5.75, 2.6) # TODO use real point
