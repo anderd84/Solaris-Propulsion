@@ -127,14 +127,14 @@ class DomainMC:
         # ax.plot(xl, rl, 'k', linewidth=0.25)
         # ax.plot(np.transpose(xl), np.transpose(rl), 'k', linewidth=0.25)  
           
-        for i in range(self.vpoints):
-            for j in range(self.hpoints):
-                flow = self.array[i,j].previousFlow
-                if flow[0] != 0:
-                    if self.array[i,j].material == DomainMaterial.COOLANT_WALL:
-                        ax.plot([self.array[i,j].x, self.array[flow].x], [self.array[i,j].r, self.array[flow].r], '-b', linewidth=1)
-                    else:
-                        ax.plot([self.array[i,j].x, self.array[flow].x], [self.array[i,j].r, self.array[flow].r], '-k', linewidth=1)        
+        # for i in range(self.vpoints):
+        #     for j in range(self.hpoints):
+        #         flow = self.array[i,j].previousFlow
+        #         if flow[0] != 0:
+        #             if self.array[i,j].material == DomainMaterial.COOLANT_WALL:
+        #                 ax.plot([self.array[i,j].x, self.array[flow].x], [self.array[i,j].r, self.array[flow].r], '-b', linewidth=1)
+        #             else:
+        #                 ax.plot([self.array[i,j].x, self.array[flow].x], [self.array[i,j].r, self.array[flow].r], '-k', linewidth=1)        
 
     def ShowStatePlot(self, fig: plt.Figure):
         print("state plot!")
@@ -177,54 +177,57 @@ class DomainMC:
         inputPoints = len(coolant.upperContour)
         previousWall = (0,0)
         previousFlow = (0,0)
-        for i in range(inputPoints - 1):
-            dist1 = np.sqrt((coolant.lowerContour[i].x - coolant.lowerContour[i+1].x)**2 + (coolant.lowerContour[i].r - coolant.lowerContour[i+1].r)**2)
-            dist2 = np.sqrt((coolant.upperContour[i].x - coolant.upperContour[i+1].x)**2 + (coolant.upperContour[i].r - coolant.upperContour[i+1].r)**2)
-            dist = max(dist1, dist2)
+        with alive_bar(inputPoints - 1) as bar:
+            for i in range(inputPoints - 1):
+                dist1 = np.sqrt((coolant.lowerContour[i].x - coolant.lowerContour[i+1].x)**2 + (coolant.lowerContour[i].r - coolant.lowerContour[i+1].r)**2)
+                dist2 = np.sqrt((coolant.upperContour[i].x - coolant.upperContour[i+1].x)**2 + (coolant.upperContour[i].r - coolant.upperContour[i+1].r)**2)
+                dist = max(dist1, dist2)
 
-            step = min(self.xstep, self.rstep)
-            steps = max(int(dist/step * 1.5), 5)
+                step = min(self.xstep, self.rstep)
+                steps = max(int(dist/step * 1.5), 5)
 
-            xl = np.linspace(coolant.lowerContour[i].x, coolant.lowerContour[i+1].x, steps)[:-1]
-            rl = np.linspace(coolant.lowerContour[i].r, coolant.lowerContour[i+1].r, steps)[:-1]
+                xl = np.linspace(coolant.lowerContour[i].x, coolant.lowerContour[i+1].x, steps)[:-1]
+                rl = np.linspace(coolant.lowerContour[i].r, coolant.lowerContour[i+1].r, steps)[:-1]
 
-            xu = np.linspace(coolant.upperContour[i].x, coolant.upperContour[i+1].x, steps)[:-1]
-            ru = np.linspace(coolant.upperContour[i].r, coolant.upperContour[i+1].r, steps)[:-1]
+                xu = np.linspace(coolant.upperContour[i].x, coolant.upperContour[i+1].x, steps)[:-1]
+                ru = np.linspace(coolant.upperContour[i].r, coolant.upperContour[i+1].r, steps)[:-1]
 
-            for j in range(steps - 1):
-                wallPoint = self.CoordsToCell(xu[j], ru[j]) if upperWall else self.CoordsToCell(xl[j], rl[j])
-                cells = self.cellsOnLine((xl[j], rl[j]), (xu[j], ru[j]))
+                for j in range(steps - 1):
+                    wallPoint = self.CoordsToCell(xu[j], ru[j]) if upperWall else self.CoordsToCell(xl[j], rl[j])
+                    cells = self.cellsOnLine((xl[j], rl[j]), (xu[j], ru[j]))
 
-                if xl[j] > self.x0 + self.width or xu[j] > self.x0 + self.width:
-                    break
-                if xl[j] < self.x0 or xu[j] < self.x0:
-                    break
+                    if xl[j] > self.x0 + self.width or xu[j] > self.x0 + self.width:
+                        break
+                    if xl[j] < self.x0 or xu[j] < self.x0:
+                        break
 
-                if rl[j] < self.r0 - self.height or ru[j] < self.r0 - self.height:
-                    break
-                if rl[j] > self.r0 or ru[j] > self.r0:
-                    break
+                    if rl[j] < self.r0 - self.height or ru[j] < self.r0 - self.height:
+                        break
+                    if rl[j] > self.r0 or ru[j] > self.r0:
+                        break
 
-                # plt.plot([xl[j], xu[j]], [rl[j], ru[j]], '-b', linewidth=.25)
+                    # plt.plot([xl[j], xu[j]], [rl[j], ru[j]], '-b', linewidth=.25)
 
-                for row, col in cells:
-                    if row == wallPoint[0] and col == wallPoint[1]:
-                        if row != previousWall[0] or col != previousWall[1]:
-                            previousFlow = previousWall
-                        self.array[row, col].border = True
+                    for row, col in cells:
+                        if (i==0 and j==0) or self.array[row, col].material == DomainMaterial.COOLANT_INLET:
+                            self.array[row,col].material = DomainMaterial.COOLANT_INLET
+
+                        if row == wallPoint[0] and col == wallPoint[1]:
+                            if row != previousWall[0] or col != previousWall[1]:
+                                previousFlow = previousWall
+                            self.array[row, col].border = True
+                            self.array[row, col].material = DomainMaterial.COOLANT_WALL if self.array[row, col].material != DomainMaterial.COOLANT_INLET else DomainMaterial.COOLANT_INLET
+                            self.array[row, col].previousFlow = previousFlow
+                            previousWall = (row, col)
+                        else:
+                            if self.array[row, col].material in [DomainMaterial.COOLANT_WALL, DomainMaterial.COOLANT_INLET, DomainMaterial.COOLANT_BULK]:
+                                continue
+                            self.array[row, col].material = DomainMaterial.COOLANT_BULK
+                            self.array[row, col].previousFlow = wallPoint
                         self.array[row, col].pressure = initialPressure
-                        self.array[row, col].material = DomainMaterial.COOLANT_WALL
-                        self.array[row, col].previousFlow = previousFlow
                         self.array[row, col].flowHeight = np.sqrt((xl[j] - xu[j])**2 + (rl[j] - ru[j])**2)
-                        previousWall = (row, col)
-                    else:
-                        if self.array[row, col].material == DomainMaterial.COOLANT_WALL or self.array[row, col].material == DomainMaterial.COOLANT_BULK:
-                            continue
-                        self.array[row, col].material = DomainMaterial.COOLANT_BULK
-                        self.array[row, col].previousFlow = wallPoint
-                        self.array[row, col].pressure = initialPressure
-                        self.array[row, col].flowHeight = np.sqrt((xl[j] - xu[j])**2 + (rl[j] - ru[j])**2)
-        
+                bar()
+                
         print("done")
 
         print("assigning borders")

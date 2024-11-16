@@ -13,6 +13,7 @@ class DomainMaterial(Enum):
     COOLANT = 5
     COOLANT_WALL = 6
     COOLANT_BULK = 7
+    COOLANT_INLET = 8
 
 def isIntersect(Point, contour: np.ndarray[ContourPoint], domainSize: tuple[int, int]):
     if contour.size == 0:

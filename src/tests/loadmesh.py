@@ -40,6 +40,8 @@ startingpoint = (-5.75, 2.6) # TODO use real point
 coolmesh.AssignCoolantFlow(domain.CoolingChannel(cowlCoolU, cowlCoolL), False, Q_(400, unitReg.psi))
 coolmesh.AssignCoolantFlow(domain.CoolingChannel(plugCoolU, plugCoolL), True, Q_(400, unitReg.psi))
 
+coolmesh.DumpFile("coolmesh.msh")
+
 coolmesh.ShowMaterialPlot(fig)
 
 # coolmesh.ShowBorderPlot(fig)
