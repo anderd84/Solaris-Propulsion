@@ -142,18 +142,13 @@ def combustion_convection(Node_Temp, Velocity):
 #Temp_test = Q_(5800, unitReg.degR)
 #ic(combustion_convection2(Temp_test,Velocity_test))
 
-
-def f_equation(f, *data):
-    epsilon, D_h, Re_D = data
-    return -2*np.log10(epsilon/D_h/3.7 + 2.51/(Re_D*np.sqrt(f))) - 1/np.sqrt(f)
-
 def internal_flow_convection(Node_Temp, Node_Pressure, Land_Height):
     # Gnielinski/Sieder & Tate for channel side
     # Inputs (Cooling channel)
     Temp = Q_(Node_Temp.magnitude, unitReg.degR)    # Not sure about this being the right temperature for properties
     Pressure = Q_(Node_Pressure.magnitude, unitReg.psi)
     Land_Height = Q_(Land_Height.magnitude, unitReg.inch)
-    (mu, _,_, k_c, rho, Pr, _, _, _) = get_fluid_properties(fuelname, Temp, Pressure) # Coolant property lookup
+    (mu, _,_, k_c, _, Pr, _, _, _) = get_fluid_properties(fuelname, Temp, Pressure) # Coolant property lookup
     
     
     
@@ -174,12 +169,13 @@ def internal_flow_convection(Node_Temp, Node_Pressure, Land_Height):
     if Re_D < 2300:
         f = 64/Re_D # Laminar flow
     else:
-        data = (epsilon, D_h, Re_D) # Arguments for fsolve
-        f = fsolve(f_equation, 0.05, args=data)  # Turbulent flow
+        f_func = lambda f: -2*np.log10(epsilon/D_h/3.7 + 2.51/(Re_D*np.sqrt(f))) - 1/np.sqrt(f)
+        f = fsolve(f_func, 0.1)
     # Convection coefficient (Gnielinski)
     if Pr >= 0.7 and Pr <= 16700 and Re_D >= 3000 and Re_D <= 5000000:   # Check that properties fit restrictions for Gnielinski
         Nu_D = f/8*(Re_D - 1000)*Pr / (1 + 12.7*(f/8)**0.5 * (Pr**(2/3) - 1))   # Nusselt number of fully developed flow
     else:    # Use Sieder & Tate otherwise
+        print("Using Sieder-Tate, not ready yet")
         Nu_D = 0.027*Re_D**0.8*Pr**(1/3)*(mu/mu_s)**0.14    # Nusselt number of fully developed flow
     return Nu_D*k_c/D_h      # Convective heat transfer coefficient
 
@@ -241,8 +237,8 @@ def film_cooling(m_dot_g, m_dot_c, u_g, u_c, P_cc, D_cc, c_p_g, mu_g, Pr_g,
     G_g = rho_g*u_g # Combustion gas mass velocity
     G_mean = G_g*(u_g - u_c)/u_g    # Mean mass velocity
     Re_g = G_mean*D_cc/mu_g # Combustion gas Reynolds number
-    data = Re_g
-    Lambda = fsolve(lambda_equation, 300000, args=data) # Friction factor
+    lambda_func = lambda Lambda: 1.930*np.log10(Re_g*np.sqrt(Lambda)) - 1/np.sqrt(Lambda)
+    Lambda = fsolve(lambda_func, 0.1) # Friction factor
     e_t = 0.1   # Must be found from testing data?
     K_t = 1 + 4*e_t # Corrective turbulence factor
     St = Lambda/2/(1.20 + 11.8*np.sqrt(Lambda/2)*(Pr_g - 1)*(Pr_g)**(-1/3))  # Stanton number

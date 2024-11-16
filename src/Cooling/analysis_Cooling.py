@@ -513,17 +513,17 @@ for iterate in range(5):
         #for j in range(coolmesh.hpoints):
         for j in range(350, 650):
             #*Finding all options for barrier
-            if not(coolmesh.array[i,j].material == DomainMaterial.CHAMBER or coolmesh.array[i,j].material == DomainMaterial.FREE):
+            if not(coolmesh.array[i,j].material == DomainMaterial.CHAMBER or coolmesh.array[i,j].material == DomainMaterial.FREE):  # Select only walls and coolant
                 
-                if (coolmesh.array[i,j].material == DomainMaterial.COOLANT_WALL or coolmesh.array[i,j].material == DomainMaterial.COOLANT_BULK):
+                if (coolmesh.array[i,j].material == DomainMaterial.COOLANT_WALL or coolmesh.array[i,j].material == DomainMaterial.COOLANT_BULK):    # Select coolant
                         T_new = coolant(coolmesh,i,j)
                         coolmesh.array[i,j].temperature = Q_(T_new, unitReg.degR)
-                        continue#
-                if not(coolmesh.array[i,j].border):
+                        continue    # Move to next iteration
+                if not(coolmesh.array[i,j].border): # Select non-border coolant nodes
                     C_left, C_upper, C_bottom, C_right, T_left, T_upper, T_bottom, T_right = getcorecond(coolmesh,i,j)
-                else:
+                else:   # Wall nodes
    
-                    C_left, T_left, C_right, T_right = horizontalcond(coolmesh,i,j)               
+                    C_left, T_left, C_right, T_right = horizontalcond(coolmesh,i,j)
                     C_upper, T_upper, C_bottom, T_bottom = verticalcond(coolmesh,i,j)
                 T_left, T_right, T_upper, T_bottom = Q_([T_left.magnitude, T_right.magnitude, T_upper.magnitude, T_bottom.magnitude], unitReg.degR)#
                 Num = (C_left * T_left + C_upper * T_upper + C_bottom * T_bottom + C_right*  T_right)
