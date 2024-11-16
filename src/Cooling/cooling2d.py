@@ -142,6 +142,11 @@ def combustion_convection(Node_Temp, Velocity):
 #Temp_test = Q_(5800, unitReg.degR)
 #ic(combustion_convection2(Temp_test,Velocity_test))
 
+
+def f_equation(f, *data):
+    epsilon, D_h, Re_D = data
+    return -2*np.log10(epsilon/D_h/3.7 + 2.51/(Re_D*np.sqrt(f))) - 1/np.sqrt(f)
+
 def internal_flow_convection(Node_Temp, Node_Pressure, Land_Height):
     # Gnielinski/Sieder & Tate for channel side
     # Inputs (Cooling channel)
@@ -169,15 +174,17 @@ def internal_flow_convection(Node_Temp, Node_Pressure, Land_Height):
     if Re_D < 2300:
         f = 64/Re_D # Laminar flow
     else:
-        f_func = lambda f: -2*np.log10(epsilon/D_h/3.7 + 2.51/(Re_D*np.sqrt(f))) - 1/np.sqrt(f)
-        f = fsolve(f_func, 0.1)
+        data = (epsilon, D_h, Re_D) # Arguments for fsolve
+        f = fsolve(f_equation, 0.05, args=data)  # Turbulent flow
     # Convection coefficient (Gnielinski)
+    f = f[0]
     if Pr >= 0.7 and Pr <= 16700 and Re_D >= 3000 and Re_D <= 5000000:   # Check that properties fit restrictions for Gnielinski
         Nu_D = f/8*(Re_D - 1000)*Pr / (1 + 12.7*(f/8)**0.5 * (Pr**(2/3) - 1))   # Nusselt number of fully developed flow
     else:    # Use Sieder & Tate otherwise
         print("Using Sieder-Tate, not ready yet")
         Nu_D = 0.027*Re_D**0.8*Pr**(1/3)*(mu/mu_s)**0.14    # Nusselt number of fully developed flow
-    return Nu_D*k_c/D_h      # Convective heat transfer coefficient
+    
+    return (Nu_D*k_c/D_h).to((unitReg.BTU / unitReg.foot**2 / unitReg.hour / unitReg.degR))      # Convective heat transfer coefficient
 
 def free_convection(beta, T_s, T_infinity, P_atm, D_outer):
     # Properties

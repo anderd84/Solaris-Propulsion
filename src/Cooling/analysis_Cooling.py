@@ -34,6 +34,8 @@ fig.axes[0].plot([p.x for p in cowlCoolU], [p.r for p in cowlCoolU], '-k', linew
 
 coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("coolmesh.msh")
 
+check = coolmesh.array[60,529]
+
 def getconductivity(coolmesh,i,j):
     match coolmesh.array[i,j].material:
         case DomainMaterial.COWL:
@@ -170,11 +172,11 @@ def coolant(coolmesh,i,j):
         i_previous = coolmesh.array[i,j].previousFlow[0]
         j_previous = coolmesh.array[i,j].previousFlow[1]
         Qdotin = coolantwallheat(coolmesh,i,j, i_previous,j_previous)
-        T_new = cooling_func.heatcoolant(Qdotin, coolmesh.array[i_previous,j_previous].temperature, coolmesh.array[i_previous,j_previous].pressure)
+        T_new = cooling_func.heatcoolant(Qdotin, coolmesh.array[i_previous,j_previous].temperature.to(unitReg.degR), coolmesh.array[i_previous,j_previous].pressure)
     elif (coolmesh.array[i,j].material == DomainMaterial.COOLANT_BULK):
         i_wall = coolmesh.array[i,j].previousFlow[0]
         j_wall = coolmesh.array[i,j].previousFlow[1]
-        T_new = coolmesh.array[i_wall,j_wall].temperature
+        T_new = coolmesh.array[i_wall,j_wall].temperature.to(unitReg.degR)
     return T_new
 
 def horizontalcond(coolmesh,i,j):
@@ -517,7 +519,7 @@ for iterate in range(5):
                 
                 if (coolmesh.array[i,j].material == DomainMaterial.COOLANT_WALL or coolmesh.array[i,j].material == DomainMaterial.COOLANT_BULK):    # Select coolant
                         T_new = coolant(coolmesh,i,j)
-                        coolmesh.array[i,j].temperature = Q_(T_new, unitReg.degR)
+                        coolmesh.array[i,j].temperature = Q_(T_new.magnitude, unitReg.degR)
                         continue    # Move to next iteration
                 if not(coolmesh.array[i,j].border): # Select non-border coolant nodes
                     C_left, C_upper, C_bottom, C_right, T_left, T_upper, T_bottom, T_right = getcorecond(coolmesh,i,j)
@@ -529,8 +531,10 @@ for iterate in range(5):
                 Num = (C_left * T_left + C_upper * T_upper + C_bottom * T_bottom + C_right*  T_right)
                 Denom = (C_left + C_upper + C_bottom + C_right)
                 new_temp = (Num/Denom).to(unitReg.degR)
-                current_temp = Q_((coolmesh.array[i,j].temperature).magnitude, unitReg.degR)
+                current_temp = coolmesh.array[i,j].temperature.to(unitReg.degR)
+                current_temp = Q_(current_temp.magnitude, unitReg.degR)
                 total_change = total_change + np.abs(current_temp - new_temp)
+                check2 = new_temp
                 coolmesh.array[i,j].temperature = new_temp
             
 
