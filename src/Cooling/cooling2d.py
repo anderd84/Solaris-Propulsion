@@ -142,11 +142,6 @@ def combustion_convection(Node_Temp, Velocity):
 #Temp_test = Q_(5800, unitReg.degR)
 #ic(combustion_convection2(Temp_test,Velocity_test))
 
-
-def f_equation(f, *data):
-    epsilon, D_h, Re_D = data
-    return -2*np.log10(epsilon/D_h/3.7 + 2.51/(Re_D*np.sqrt(f))) - 1/np.sqrt(f)
-
 def internal_flow_convection(Node_Temp, Node_Pressure, Land_Height):
     # Gnielinski/Sieder & Tate for channel side
     # Inputs (Cooling channel)
@@ -174,16 +169,18 @@ def internal_flow_convection(Node_Temp, Node_Pressure, Land_Height):
     if Re_D < 2300:
         f = 64/Re_D # Laminar flow
     else:
-        data = (epsilon, D_h, Re_D) # Arguments for fsolve
-        f = fsolve(f_equation, 0.05, args=data)  # Turbulent flow
+        f_func = lambda f: -2*np.log10(epsilon/D_h/3.7 + 2.51/(Re_D*np.sqrt(f))) - 1/np.sqrt(f)
+        f = fsolve(f_func, 0.05)  # Turbulent flow
     # Convection coefficient (Gnielinski)
     f = f[0]
-    if Pr >= 0.7 and Pr <= 16700 and Re_D >= 3000 and Re_D <= 5000000:   # Check that properties fit restrictions for Gnielinski
+    if Pr >= 0.5 and Pr <= 2000 and Re_D >= 3000 and Re_D <= 5000000:   # Check that properties fit restrictions for Gnielinski
         Nu_D = f/8*(Re_D - 1000)*Pr / (1 + 12.7*(f/8)**0.5 * (Pr**(2/3) - 1))   # Nusselt number of fully developed flow
-    else:    # Use Sieder & Tate otherwise
+    elif Pr >= 0.7 and Pr <= 16700 and Re_D >= 10000:    # Use Sieder & Tate otherwise
         print("Using Sieder-Tate, not ready yet")
         Nu_D = 0.027*Re_D**0.8*Pr**(1/3)*(mu/mu_s)**0.14    # Nusselt number of fully developed flow
-    
+    else:
+        print("Pr/Re is wack")
+        Nu_D = 0.027*Re_D**0.8*Pr**(1/3)*(mu/mu_s)**0.14    # Use Sieder-Tate anyway
     return (Nu_D*k_c/D_h).to((unitReg.BTU / unitReg.foot**2 / unitReg.hour / unitReg.degR))      # Convective heat transfer coefficient
 
 def free_convection(beta, T_s, T_infinity, P_atm, D_outer):
@@ -208,16 +205,17 @@ def free_convection(beta, T_s, T_infinity, P_atm, D_outer):
         print("Raleigh number exceeds restriction")
     return Nu_D*k_f/D_outer
 
-def film_cooling(m_dot_g, m_dot_c, u_g, u_c, P_cc, D_cc, c_p_g, mu_g, Pr_g, 
+def film_cooling(m_dot_g, m_dot_c, A_c, P, u_g, u_c, P_cc, c_p_g, mu_g, Pr_g, 
                  rho_g, M_g, mu_c, c_c_l, h_fg, T_c_1, T_c_sat, rho_c_l, 
                  M_c, sigma_g, h_g, D_c):
     # Inputs
     # m_dot_g   Combustion gas mass flow rate
     # m_dot_c   Film coolant mass flow rate
+    # A_c       Chamber cross-sectional area
+    # P         Chamber wetted perimeter
     # u_g       Combustion gas velocity
     # u_c       Film coolant velocity
     # P_cc      Chamber pressure
-    # D_cc      Chamber diameter (might be hydraulic?)
     # c_p_g     Combustion gas specific heat at constant pressure
     # mu_g      Combustion gas dynamic viscosity
     # Pr_g      Combustion gas Prandtl number
@@ -233,23 +231,26 @@ def film_cooling(m_dot_g, m_dot_c, u_g, u_c, P_cc, D_cc, c_p_g, mu_g, Pr_g,
     # sigma_g   Combustion gas surface tension
     # h_g       Combustion gas convection coefficient
     # D_c       Film cooling channel diameter
+    D_h = 4*A_c/P
     G_g = rho_g*u_g # Combustion gas mass velocity
     G_mean = G_g*(u_g - u_c)/u_g    # Mean mass velocity
-    Re_g = G_mean*D_cc/mu_g # Combustion gas Reynolds number
+    Re_g = G_mean*D_h/mu_g # Combustion gas Reynolds number
     lambda_func = lambda Lambda: 1.930*np.log10(Re_g*np.sqrt(Lambda)) - 1/np.sqrt(Lambda)
     Lambda = fsolve(lambda_func, 0.1) # Friction factor
-    e_t = 0.1   # Must be found from testing data?
+    e_t = 0.1   # RMS turbulence fraction Must be found from testing data?
     K_t = 1 + 4*e_t # Corrective turbulence factor
     St = Lambda/2/(1.20 + 11.8*np.sqrt(Lambda/2)*(Pr_g - 1)*(Pr_g)**(-1/3))  # Stanton number
     h_o = G_mean*c_p_g*St*K_t # Dry wall convection coefficient
-    h_fg_star = h_fg + (T_c_sat - T_c_1)*c_c_l
-    epsilon = 0 # Must take from Leckner's data for spectral radiative properties of combustion gases
-    sigma = 5.67*10**-8  # Stefan-Boltzmann constant
-    Q_dot_rad = sigma*epsilon*np.pi/4*D_cc**2*(T_g**4 - T_c**4) # TO DO: Might need to change area
-    q_dot_rad = Q_dot_rad/(np.pi/4*D_cc**2)
-    q_dot_conv = h_g*(T_g-T_c)
-    Q_dot_conv = q_dot_conv # TO DO
-    m_dot_v = (q_dot_conv + q_dot_rad)/h_fg_star
+    h_fg_star = h_fg + (T_c_sat - T_c_1)*c_c_l  # Heat of vaporization + enthalpy change from subcooled to saturated
+    epsilon = 0 # Combustion gas emissivity Must take from Leckner's data for spectral radiative properties of combustion gases
+    sigma = Q_(1.713441*10**-9, unitReg.BTU / unitReg.hour / unitReg.foot**2 / unitReg.degR**4)  # Stefan-Boltzmann constant
+    A_rad = np.pi*2*DESIGN.chamberInternalRadius   # Radiative area NEED TO FIND L SOMEHOW?
+    q_dot_rad = sigma*epsilon*(T_g**4 - T_c**4) # Radiative heat flux
+    Q_dot_rad = q_dot_rad*A_rad # Radiative heat rate 
+    q_dot_conv = h_g*(T_g-T_c)  # Convective heat flux
+    Q_dot_conv = q_dot_conv # Convective heat rate TO DO
+    q_dot_tot = q_dot_rad + q_dot_conv  # Total heat rate into coolant
+    m_dot_v = q_dot_tot/h_fg_star
     F = m_dot_g/(rho_g*u_g) # Blowing ratio
     St_o = St/(np.log(1 + F/St*(M_g/M_c)**0.6)/(F/St*(M_g/M_c)**0.6)) # Transpiration-corrected Stanton number
     h = St_o*rho_c_l*u_c*c_c_l  # Convection coefficient
@@ -257,9 +258,9 @@ def film_cooling(m_dot_g, m_dot_c, u_g, u_c, P_cc, D_cc, c_p_g, mu_g, Pr_g,
     a = 2.31*10**-4*Re_c**-0.35
     Re_cfilm = 250*np.log(Re_c) - 1265
     E_m = 1- Re_cfilm/Re_c
-    We = rho_g*u_g**2*D_cc/sigma_g   # TO DO: Check for correct variables
+    We = rho_g*u_g**2*D_h/sigma_g   # Weber number TO DO: Check for correct variables, especially D and sigma
     E = E_m*np.tanh(a*We**1.25)
-    Gamma_c = m_dot_c*(1-E)/(np.pi*D_cc)    # TO DO: Check that this is right
+    Gamma_c = m_dot_c*(1-E)/(np.pi*2*DESIGN.chamberInternalRadius)    # TO DO: Check that this is right
     L_c = Gamma_c/m_dot_v
     # Q_dot_conv = h
 # coolMesh.mesh.z

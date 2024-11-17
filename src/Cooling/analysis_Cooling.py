@@ -93,75 +93,133 @@ def getcorecond(coolmesh,i,j):
     return C_left, C_upper, C_bottom, C_right, T_left, T_upper, T_bottom, T_right
 
 def coolant_wall_left(coolmesh,i,j):
+    old_t = Q_(coolmesh.array[i,j-1].temperature.to(unitReg.degR).magnitude, unitReg.degR)
+    new_t = Q_(coolmesh.array[i,j].temperature.to(unitReg.degR).magnitude, unitReg.degR)
     Area_exposed = (2 * np.pi * Q_(coolmesh.array[i,j].r, unitReg.inch).to(unitReg.foot) ) * Q_(coolmesh.rstep, unitReg.inch).to(unitReg.foot)
-    conduct_left = getconductivity(coolmesh,i,j-1) # gets the conductivity of the cell directly left of the previous node
-    convect_left = cooling_func.internal_flow_convection((coolmesh.array[i,j].temperature).to(unitReg.degR),(coolmesh.array[i,j].pressure).to(unitReg.psi), (coolmesh.array[i,j].flowHeight).to(unitReg.inch))
-    resistance_cond_left =  Q_(coolmesh.xstep, unitReg.inch).to(unitReg.foot )/ conduct_left * Area_exposed
-    resistance_conv_left = 1 / convect_left * Area_exposed
-    Q_left = ((coolmesh.array[i,j-1].temperature - coolmesh.array[i,j].temperature)/(resistance_cond_left+resistance_conv_left))
-    Q_left = Q_left.to( unitReg.BTU / unitReg.hour)
-    return Q_left
+    error = 0
+    if ((coolmesh.array[i,j - 1].material == DomainMaterial.COWL ) or (coolmesh.array[i,j - 1].material == DomainMaterial.PLUG)):
+
+
+        conduct_left = getconductivity(coolmesh,i,j-1) # gets the conductivity of the cell directly left of the previous node
+        convect_left = cooling_func.internal_flow_convection((coolmesh.array[i,j].temperature).to(unitReg.degR),(coolmesh.array[i,j].pressure).to(unitReg.psi), (coolmesh.array[i,j].flowHeight).to(unitReg.inch))
+        resistance_cond_left =  Q_(coolmesh.xstep/2, unitReg.inch).to(unitReg.foot )/ (conduct_left * Area_exposed)
+        resistance_conv_left = 1 / (convect_left * Area_exposed)
+        Q_left = ((old_t - new_t)/(resistance_cond_left+resistance_conv_left))
+        Q_left = Q_left.to( unitReg.BTU / unitReg.hour)
+    elif coolmesh.array[i,j - 1].material == DomainMaterial.COOLANT_WALL:
+        conduct_left = getconductivity(coolmesh,i,j-1)
+        resistance_cond_left =  Q_(coolmesh.xstep/2, unitReg.inch).to(unitReg.foot )/ (conduct_left * Area_exposed)
+        Q_left = ((old_t - new_t)/(resistance_cond_left))
+        Q_left = Q_left.to( unitReg.BTU / unitReg.hour)
+    elif coolmesh.array[i,j - 1].material == DomainMaterial.COOLANT_BULK:
+        Q_left = Q_(0, unitReg.BTU / unitReg.hour)
+    else:
+        Q_left = Q_(0, unitReg.BTU / unitReg.hour)
+        error = 1
+    return Q_left, error
 
 def coolant_wall_right(coolmesh,i,j):
+    old_t = Q_(coolmesh.array[i,j+1].temperature.to(unitReg.degR).magnitude, unitReg.degR)
+    new_t = Q_(coolmesh.array[i,j].temperature.to(unitReg.degR).magnitude, unitReg.degR)
     Area_exposed = (2 * np.pi * Q_(coolmesh.array[i,j].r, unitReg.inch).to(unitReg.foot) ) * Q_(coolmesh.rstep, unitReg.inch).to(unitReg.foot)
-    conduct_right = getconductivity(coolmesh,i,j+1) # gets the conductivity of the cell directly right of the previous node
-    convect_right = cooling_func.internal_flow_convection((coolmesh.array[i,j].temperature).to(unitReg.degR),(coolmesh.array[i,j].pressure).to(unitReg.psi), (coolmesh.array[i,j].flowHeight).to(unitReg.inch))
-    resistance_cond_right =  Q_(coolmesh.xstep, unitReg.inch).to(unitReg.foot )/ conduct_right * Area_exposed
-    resistance_conv_right = 1 / convect_right * Area_exposed
-    Q_right = (coolmesh.array[i,j+1].temperature - coolmesh.array[i,j].temperature)/(resistance_cond_right+resistance_conv_right)
-    Q_right = Q_right.to( unitReg.BTU / unitReg.hour)
-    return Q_right
+    error = 0
+    if ((coolmesh.array[i,j +1].material == DomainMaterial.COWL ) or (coolmesh.array[i,j + 1].material == DomainMaterial.PLUG)):
+
+
+        conduct_right = getconductivity(coolmesh,i,j+1) # gets the conductivity of the cell directly right of the previous node
+        convect_right = cooling_func.internal_flow_convection((coolmesh.array[i,j].temperature).to(unitReg.degR),(coolmesh.array[i,j].pressure).to(unitReg.psi), (coolmesh.array[i,j].flowHeight).to(unitReg.inch))
+        resistance_cond_right =  Q_(coolmesh.xstep/2, unitReg.inch).to(unitReg.foot )/ (conduct_right * Area_exposed)
+        resistance_conv_right = 1 / (convect_right * Area_exposed)
+
+        Q_right = (old_t - new_t)/(resistance_cond_right+resistance_conv_right)
+        Q_right = Q_right.to( unitReg.BTU / unitReg.hour)
+    elif coolmesh.array[i,j + 1].material == DomainMaterial.COOLANT_WALL:
+        conduct_right = getconductivity(coolmesh,i,j+1)
+        resistance_cond_right =  Q_(coolmesh.xstep/2, unitReg.inch).to(unitReg.foot )/ (conduct_right * Area_exposed)
+        Q_right = ((old_t - new_t)/(resistance_cond_right))
+        Q_right = Q_right.to( unitReg.BTU / unitReg.hour)
+    elif coolmesh.array[i,j + 1].material == DomainMaterial.COOLANT_BULK:
+        Q_right = Q_(0, unitReg.BTU / unitReg.hour)
+    else:
+        Q_right = Q_(0, unitReg.BTU / unitReg.hour)
+        error = 1
+
+    return Q_right, error
 
 def coolant_wall_below(coolmesh,i,j):
+    old_t = Q_(coolmesh.array[i+1,j].temperature.to(unitReg.degR).magnitude, unitReg.degR)
+    new_t = Q_(coolmesh.array[i,j].temperature.to(unitReg.degR).magnitude, unitReg.degR)
     Area_exposed = (2 * np.pi * Q_(coolmesh.array[i,j].r, unitReg.inch).to(unitReg.foot) ) * Q_(coolmesh.rstep, unitReg.inch).to(unitReg.foot)
-    conduct_below = getconductivity(coolmesh,i,j-1) # gets the conductivity of the cell directly below of the previous node
-    r_i = coolmesh.array[i+1, j].r  # Inner radius at [i, j] 
-    r_o = coolmesh.array[i+1,j].r + coolmesh.rstep/2  # Outer radius at [i-1,j] - halfstep
-    l = Q_(coolmesh.xstep, unitReg.inch).to(unitReg.foot)  # Axial length
-    convect_below = cooling_func.internal_flow_convection((coolmesh.array[i,j].temperature).to(unitReg.degR),(coolmesh.array[i,j].pressure).to(unitReg.psi), (coolmesh.array[i,j].flowHeight).to(unitReg.inch))
-    resistance_cond_below =  np.log(r_o / r_i) / (2 * np.pi * conduct_below * l)
-    resistance_conv_below = 1 / convect_below * Area_exposed
-    Q_below = (coolmesh.array[i+1,j].temperature - coolmesh.array[i,j].temperature)/(resistance_cond_below+resistance_conv_below)
-    Q_below = Q_below.to( unitReg.BTU / unitReg.hour)
-    return Q_below
+    error = 0
+    if ((coolmesh.array[i+1,j].material == DomainMaterial.COWL ) or (coolmesh.array[i+1,j].material == DomainMaterial.PLUG)):
 
-def coolantwallheat(coolmesh,i,j, i_previous,j_previous):
-    #*5 Cases overall
-    if ((i_previous == i + 1) and (j_previous == j +1)):
-    #*Case 1 (staircase)
-        Q_left = coolant_wall_left(coolmesh,i_previous,j_previous)
-        Q_below = coolant_wall_below(coolmesh,i_previous,j_previous)
-        Qdotin = Q_left + Q_below #I need capital Q showings it's Heat rate in not Heat Flux #*WINSTON)
-    elif ((i_previous == i) and (j_previous == j +1)):
-    #*Case 2 & 3 (horizontal)
+        
+        conduct_below = getconductivity(coolmesh,i+1,j) # gets the conductivity of the cell directly below of the previous node
+        r_i = coolmesh.array[i+1, j].r  # Inner radius at [i+1, j] 
+        r_o = coolmesh.array[i+1,j].r + coolmesh.rstep/2  # Outer radius at [i+1,j] + halfstep
+        l = Q_(coolmesh.xstep, unitReg.inch).to(unitReg.foot)  # Axial length
+        convect_below = cooling_func.internal_flow_convection((coolmesh.array[i,j].temperature).to(unitReg.degR),(coolmesh.array[i,j].pressure).to(unitReg.psi), (coolmesh.array[i,j].flowHeight).to(unitReg.inch))
+        resistance_cond_below =  np.log(r_o / r_i) / (2 * np.pi * conduct_below * l)
+        resistance_conv_below = 1 / (convect_below * Area_exposed)
 
-        if((coolmesh.array[i_previous,j_previous+1].material == DomainMaterial.PLUG) or(coolmesh.array[i_previous,j_previous+1].material == DomainMaterial.COWL)):
-        #*Case 2 (2 qdots)
-            Q_right = coolant_wall_right(coolmesh,i_previous,j_previous)
-            Q_below = coolant_wall_below(coolmesh,i_previous,j_previous)
-            Qdotin = Q_right + Q_below #I need capital Q showings it's Heat rate in not Heat Flux #*WINSTON)
+        Q_below = (old_t - new_t)/(resistance_cond_below+resistance_conv_below)
+        Q_below = Q_below.to( unitReg.BTU / unitReg.hour)
+    elif coolmesh.array[i+1,j].material == DomainMaterial.COOLANT_WALL:
+        conduct_below = getconductivity(coolmesh,i,j+1)
+        resistance_cond_below =  Q_(coolmesh.xstep, unitReg.inch).to(unitReg.foot )/ (conduct_below * Area_exposed)
 
-        else:
-        #*Case 3 (1 qdot1)
-            Q_below = coolant_wall_below(coolmesh,i_previous,j_previous)
-            Qdotin = Q_below #I need capital Q showings it's Heat rate in not Heat Flux #*WINSTON)
+        Q_below = (old_t - new_t)/(resistance_cond_below)
+        Q_below = Q_below.to( unitReg.BTU / unitReg.hour)
+    elif coolmesh.array[i+1,j].material == DomainMaterial.COOLANT_BULK:
+        Q_below = Q_(0, unitReg.BTU / unitReg.hour)
+    else:
+        Q_below = Q_(0, unitReg.BTU / unitReg.hour)
+        error = 1
 
-    elif ((i_previous == i+1) and (j_previous == j)):
-    #*Case 4 & 5 (vertical)
+    return Q_below, error
 
-        if((coolmesh.array[i_previous+1,j_previous].material == DomainMaterial.PLUG) or(coolmesh.array[i_previous+1,j_previous].material == DomainMaterial.COWL)):
-        #*Case 4 (2 qdots)
-            Q_left = coolant_wall_left(coolmesh,i_previous,j_previous)
-            Q_below = coolant_wall_below(coolmesh,i_previous,j_previous)
-            Qdotin = Q_left + Q_below #I need capital Q showings it's Heat rate in not Heat Flux #*WINSTON)
 
-        else:
-        #*Case 5 (1 qdot)
-            Q_left = coolant_wall_left(coolmesh,i_previous,j_previous)
-            Qdotin = Q_left #I need capital Q showings it's Heat rate in not Heat Flux #*WINSTON)
-    else:   
-        ic("YOu did something wrong for sure")
-        Qdotin = 0
+def coolant_wall_upper(coolmesh,i,j):
+
+    old_t = Q_(coolmesh.array[i-1,j].temperature.to(unitReg.degR).magnitude, unitReg.degR)
+    new_t = Q_(coolmesh.array[i,j].temperature.to(unitReg.degR).magnitude, unitReg.degR)
+    Area_exposed = (2 * np.pi * Q_(coolmesh.array[i,j].r, unitReg.inch).to(unitReg.foot) ) * Q_(coolmesh.rstep, unitReg.inch).to(unitReg.foot)
+    error = 0
+    if (coolmesh.array[i-1,j].material == DomainMaterial.PLUG or coolmesh.array[i-1,j].material == DomainMaterial.COWL):
+
+        
+        conduct_upper = getconductivity(coolmesh,i-1,j) # gets the conductivity of the cell directly upper of the previous node
+        r_i = coolmesh.array[i, j].r + coolmesh.rstep/2  # Inner radius at [i, j] 
+        r_o = coolmesh.array[i-1,j].r  # Outer radius at [i-1,j] - halfstep
+        l = Q_(coolmesh.xstep, unitReg.inch).to(unitReg.foot)  # Axial length
+        convect_upper = cooling_func.internal_flow_convection((coolmesh.array[i,j].temperature).to(unitReg.degR),(coolmesh.array[i,j].pressure).to(unitReg.psi), (coolmesh.array[i,j].flowHeight).to(unitReg.inch))
+        resistance_cond_upper =  np.log(r_o / r_i) / (2 * np.pi * conduct_upper * l)
+        resistance_conv_upper = 1 / (convect_upper * Area_exposed)
+
+        Q_upper = (old_t - new_t)/(resistance_cond_upper+resistance_conv_upper)
+        Q_upper = Q_upper.to( unitReg.BTU / unitReg.hour)
+    elif coolmesh.array[i-1,j].material == DomainMaterial.COOLANT_WALL:
+        conduct_upper = getconductivity(coolmesh,i,j+1)
+        resistance_cond_upper =  Q_(coolmesh.xstep, unitReg.inch).to(unitReg.foot )/ (conduct_upper * Area_exposed)
+        Q_upper = (old_t - new_t)/(resistance_cond_upper)
+        Q_upper = Q_upper.to( unitReg.BTU / unitReg.hour)
+    elif coolmesh.array[i-1,j].material == DomainMaterial.COOLANT_BULK:
+        Q_upper = Q_(0, unitReg.BTU / unitReg.hour)
+    else:
+        Q_upper = Q_(0, unitReg.BTU / unitReg.hour)
+        error = 1
+
+    return Q_upper, error
+
+def coolantwallheat(coolmesh, i_previous,j_previous):
+    Q_left, error1 = coolant_wall_left(coolmesh,i_previous,j_previous)
+    Q_below, error2 = coolant_wall_below(coolmesh,i_previous,j_previous)
+    Q_right, error3 = coolant_wall_right(coolmesh,i_previous,j_previous)
+    Q_upper, error4 = coolant_wall_upper(coolmesh,i_previous,j_previous) #I need capital Q showings it's Heat rate in not Heat Flux #*WINSTON)
+    Qdotin = Q_left + Q_right + Q_below + Q_upper
+    if ((error1 + error2 + error3 + error4) > 0):
+        ic("you are a retard, do it correct")
+        ic(coolmesh.array[i_previous-1,j_previous].material)
     return Qdotin
 
 
@@ -171,7 +229,7 @@ def coolant(coolmesh,i,j):
     if (coolmesh.array[i,j].material == DomainMaterial.COOLANT_WALL):
         i_previous = coolmesh.array[i,j].previousFlow[0]
         j_previous = coolmesh.array[i,j].previousFlow[1]
-        Qdotin = coolantwallheat(coolmesh,i,j, i_previous,j_previous)
+        Qdotin = coolantwallheat(coolmesh, i_previous,j_previous)
         T_new = cooling_func.heatcoolant(Qdotin, coolmesh.array[i_previous,j_previous].temperature.to(unitReg.degR), coolmesh.array[i_previous,j_previous].pressure)
     elif (coolmesh.array[i,j].material == DomainMaterial.COOLANT_BULK):
         i_wall = coolmesh.array[i,j].previousFlow[0]
