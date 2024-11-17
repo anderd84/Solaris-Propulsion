@@ -108,7 +108,7 @@ def coolant_wall_left(coolmesh,i,j):
         Q_left = Q_left.to( unitReg.BTU / unitReg.hour)
     elif coolmesh.array[i,j - 1].material == DomainMaterial.COOLANT_WALL:
         conduct_left = getconductivity(coolmesh,i,j-1)
-        resistance_cond_left =  Q_(coolmesh.xstep/2, unitReg.inch).to(unitReg.foot )/ (conduct_left * Area_exposed)
+        resistance_cond_left =  Q_(coolmesh.xstep, unitReg.inch).to(unitReg.foot )/ (conduct_left * Area_exposed)
         Q_left = ((old_t - new_t)/(resistance_cond_left))
         Q_left = Q_left.to( unitReg.BTU / unitReg.hour)
     elif coolmesh.array[i,j - 1].material == DomainMaterial.COOLANT_BULK:
@@ -135,7 +135,7 @@ def coolant_wall_right(coolmesh,i,j):
         Q_right = Q_right.to( unitReg.BTU / unitReg.hour)
     elif coolmesh.array[i,j + 1].material == DomainMaterial.COOLANT_WALL:
         conduct_right = getconductivity(coolmesh,i,j+1)
-        resistance_cond_right =  Q_(coolmesh.xstep/2, unitReg.inch).to(unitReg.foot )/ (conduct_right * Area_exposed)
+        resistance_cond_right =  Q_(coolmesh.xstep, unitReg.inch).to(unitReg.foot )/ (conduct_right * Area_exposed)
         Q_right = ((old_t - new_t)/(resistance_cond_right))
         Q_right = Q_right.to( unitReg.BTU / unitReg.hour)
     elif coolmesh.array[i,j + 1].material == DomainMaterial.COOLANT_BULK:
@@ -150,14 +150,13 @@ def coolant_wall_below(coolmesh,i,j):
     old_t = Q_(coolmesh.array[i+1,j].temperature.to(unitReg.degR).magnitude, unitReg.degR)
     new_t = Q_(coolmesh.array[i,j].temperature.to(unitReg.degR).magnitude, unitReg.degR)
     Area_exposed = (2 * np.pi * Q_(coolmesh.array[i,j].r, unitReg.inch).to(unitReg.foot) ) * Q_(coolmesh.rstep, unitReg.inch).to(unitReg.foot)
+    r_i = coolmesh.array[i+1, j].r  # Inner radius at [i+1, j] 
+    r_o = coolmesh.array[i+1,j].r + coolmesh.rstep/2  # Outer radius at [i+1,j] + halfstep
+    l = Q_(coolmesh.xstep, unitReg.inch).to(unitReg.foot)  # Axial length
     error = 0
     if ((coolmesh.array[i+1,j].material == DomainMaterial.COWL ) or (coolmesh.array[i+1,j].material == DomainMaterial.PLUG)):
 
-        
         conduct_below = getconductivity(coolmesh,i+1,j) # gets the conductivity of the cell directly below of the previous node
-        r_i = coolmesh.array[i+1, j].r  # Inner radius at [i+1, j] 
-        r_o = coolmesh.array[i+1,j].r + coolmesh.rstep/2  # Outer radius at [i+1,j] + halfstep
-        l = Q_(coolmesh.xstep, unitReg.inch).to(unitReg.foot)  # Axial length
         convect_below = cooling_func.internal_flow_convection((coolmesh.array[i,j].temperature).to(unitReg.degR),(coolmesh.array[i,j].pressure).to(unitReg.psi), (coolmesh.array[i,j].flowHeight).to(unitReg.inch))
         resistance_cond_below =  np.log(r_o / r_i) / (2 * np.pi * conduct_below * l)
         resistance_conv_below = 1 / (convect_below * Area_exposed)
@@ -166,7 +165,7 @@ def coolant_wall_below(coolmesh,i,j):
         Q_below = Q_below.to( unitReg.BTU / unitReg.hour)
     elif coolmesh.array[i+1,j].material == DomainMaterial.COOLANT_WALL:
         conduct_below = getconductivity(coolmesh,i,j+1)
-        resistance_cond_below =  Q_(coolmesh.xstep, unitReg.inch).to(unitReg.foot )/ (conduct_below * Area_exposed)
+        resistance_cond_below =  np.log(r_o / r_i) / (2 * np.pi * conduct_below * l)
 
         Q_below = (old_t - new_t)/(resistance_cond_below)
         Q_below = Q_below.to( unitReg.BTU / unitReg.hour)
@@ -184,14 +183,14 @@ def coolant_wall_upper(coolmesh,i,j):
     old_t = Q_(coolmesh.array[i-1,j].temperature.to(unitReg.degR).magnitude, unitReg.degR)
     new_t = Q_(coolmesh.array[i,j].temperature.to(unitReg.degR).magnitude, unitReg.degR)
     Area_exposed = (2 * np.pi * Q_(coolmesh.array[i,j].r, unitReg.inch).to(unitReg.foot) ) * Q_(coolmesh.rstep, unitReg.inch).to(unitReg.foot)
+    r_i = coolmesh.array[i, j].r + coolmesh.rstep/2  # Inner radius at [i, j] 
+    r_o = coolmesh.array[i-1,j].r  # Outer radius at [i-1,j] - halfstep
+    l = Q_(coolmesh.xstep, unitReg.inch).to(unitReg.foot)  # Axial length
     error = 0
     if (coolmesh.array[i-1,j].material == DomainMaterial.PLUG or coolmesh.array[i-1,j].material == DomainMaterial.COWL):
 
         
         conduct_upper = getconductivity(coolmesh,i-1,j) # gets the conductivity of the cell directly upper of the previous node
-        r_i = coolmesh.array[i, j].r + coolmesh.rstep/2  # Inner radius at [i, j] 
-        r_o = coolmesh.array[i-1,j].r  # Outer radius at [i-1,j] - halfstep
-        l = Q_(coolmesh.xstep, unitReg.inch).to(unitReg.foot)  # Axial length
         convect_upper = cooling_func.internal_flow_convection((coolmesh.array[i,j].temperature).to(unitReg.degR),(coolmesh.array[i,j].pressure).to(unitReg.psi), (coolmesh.array[i,j].flowHeight).to(unitReg.inch))
         resistance_cond_upper =  np.log(r_o / r_i) / (2 * np.pi * conduct_upper * l)
         resistance_conv_upper = 1 / (convect_upper * Area_exposed)
@@ -200,7 +199,7 @@ def coolant_wall_upper(coolmesh,i,j):
         Q_upper = Q_upper.to( unitReg.BTU / unitReg.hour)
     elif coolmesh.array[i-1,j].material == DomainMaterial.COOLANT_WALL:
         conduct_upper = getconductivity(coolmesh,i,j+1)
-        resistance_cond_upper =  Q_(coolmesh.xstep, unitReg.inch).to(unitReg.foot )/ (conduct_upper * Area_exposed)
+        resistance_cond_upper =  np.log(r_o / r_i) / (2 * np.pi * conduct_upper * l)
         Q_upper = (old_t - new_t)/(resistance_cond_upper)
         Q_upper = Q_upper.to( unitReg.BTU / unitReg.hour)
     elif coolmesh.array[i-1,j].material == DomainMaterial.COOLANT_BULK:
@@ -562,7 +561,7 @@ ic(coolmesh.array[59,349].material)
 #
 
 total_change = 0
-for iterate in range(5):
+for iterate in range(1):
     ic(iterate)
 #    fig.axes[0].clear()
 #    coolmesh.ShowStatePlot(fig)
@@ -573,11 +572,15 @@ for iterate in range(5):
         #for j in range(coolmesh.hpoints):
         for j in range(350, 650):
             #*Finding all options for barrier
+            if i==122 and j == 578:
+                pass
             if not(coolmesh.array[i,j].material == DomainMaterial.CHAMBER or coolmesh.array[i,j].material == DomainMaterial.FREE):  # Select only walls and coolant
                 
                 if (coolmesh.array[i,j].material == DomainMaterial.COOLANT_WALL or coolmesh.array[i,j].material == DomainMaterial.COOLANT_BULK):    # Select coolant
                         T_new = coolant(coolmesh,i,j)
                         coolmesh.array[i,j].temperature = Q_(T_new.magnitude, unitReg.degR)
+                        if T_new.magnitude > 600:
+                            pass
                         continue    # Move to next iteration
                 if not(coolmesh.array[i,j].border): # Select non-border coolant nodes
                     C_left, C_upper, C_bottom, C_right, T_left, T_upper, T_bottom, T_right = getcorecond(coolmesh,i,j)
@@ -594,15 +597,20 @@ for iterate in range(5):
                 total_change = total_change + np.abs(current_temp - new_temp)
                 check2 = new_temp
                 coolmesh.array[i,j].temperature = new_temp
+                if new_temp.magnitude > 600:
+                    pass
             
 
 
 
                 
 #TODO Add David's Gamma changing as a function of Temp
-coolmesh.ShowStatePlot(fig)
+#coolmesh.ShowStatePlot(fig)
+coolmesh.ShowMaterialPlot(fig)
 plt.scatter(350 * coolmesh.xstep+ coolmesh.array[0,0].x, -30 *coolmesh.rstep + coolmesh.array[0,0].r, marker='x', s=100) #top left
 plt.scatter(650 * coolmesh.xstep+ coolmesh.array[0,0].x, -30 *coolmesh.rstep + coolmesh.array[0,0].r, marker='x', s=100) # top right
 plt.scatter(350 * coolmesh.xstep+ coolmesh.array[0,0].x, -200 *coolmesh.rstep + coolmesh.array[0,0].r, marker='x', s=100) #bottome left
 plt.scatter(650 * coolmesh.xstep+ coolmesh.array[0,0].x, -200 *coolmesh.rstep + coolmesh.array[0,0].r, marker='x', s=100) # bottom right
 plt.show()
+
+coolmesh.DumpFile("coolmesh2.msh")

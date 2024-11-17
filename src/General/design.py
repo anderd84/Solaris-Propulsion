@@ -50,7 +50,7 @@ basePressure = Q_(5, unitReg.psi)
 chokePercent = 0.9
 
 #Cooling inputs
-epsilon = Q_(0.05, unitReg.inch)
+epsilon = Q_(0.000590551, unitReg.inch)
 
 
 # chamber derived
