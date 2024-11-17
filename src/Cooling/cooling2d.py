@@ -142,11 +142,6 @@ def combustion_convection(Node_Temp, Velocity):
 #Temp_test = Q_(5800, unitReg.degR)
 #ic(combustion_convection2(Temp_test,Velocity_test))
 
-
-def f_equation(f, *data):
-    epsilon, D_h, Re_D = data
-    return -2*np.log10(epsilon/D_h/3.7 + 2.51/(Re_D*np.sqrt(f))) - 1/np.sqrt(f)
-
 def internal_flow_convection(Node_Temp, Node_Pressure, Land_Height):
     # Gnielinski/Sieder & Tate for channel side
     # Inputs (Cooling channel)
@@ -174,8 +169,8 @@ def internal_flow_convection(Node_Temp, Node_Pressure, Land_Height):
     if Re_D < 2300:
         f = 64/Re_D # Laminar flow
     else:
-        data = (epsilon, D_h, Re_D) # Arguments for fsolve
-        f = fsolve(f_equation, 0.05, args=data)  # Turbulent flow
+        f_func = lambda f: -2*np.log10(epsilon/D_h/3.7 + 2.51/(Re_D*np.sqrt(f))) - 1/np.sqrt(f)
+        f = fsolve(f_func, 0.05)  # Turbulent flow
     # Convection coefficient (Gnielinski)
     f = f[0]
     if Pr >= 0.5 and Pr <= 2000 and Re_D >= 3000 and Re_D <= 5000000:   # Check that properties fit restrictions for Gnielinski
