@@ -1,6 +1,9 @@
 from dataclasses import dataclass
+from enum import Enum
 import os
+import random
 import shutil
+import string
 import tempfile
 import time
 from fluids.gas import Gas
@@ -10,11 +13,12 @@ np.product = np.prod
 import matplotlib.pyplot as plt
 import matrix_viewer as mv
 from scipy.optimize import fsolve
+from typing import Any
 
 import multiprocessing as mp
 from multiprocessing import Queue
 import joblib
-from alive_progress import alive_bar
+from alive_progress import alive_bar, alive_it
 import gc
 
 from icecream import ic
@@ -418,7 +422,7 @@ class DomainMC:
     def LoadFile(filename):
         print("Loading file")
         loaded: DomainMC = joblib.load(filename + '.z')
-        DomainMC.ConvertUnits(loaded)
+        # DomainMC.ConvertUnits(loaded)
         return loaded
     
     @staticmethod
@@ -438,6 +442,81 @@ class DomainMC:
                             bar()
         return domain
 
+class DomainMMAP(DomainMC):
+    attributes: list = []
+    memmaps: dict = {}
+
+    units: dict = {}
+
+    workingFolder = tempfile.mkdtemp()
+    prefix = str(''.join(random.choices(string.ascii_letters, k=4)))
+
+    def __init__(self, domain: DomainMC):
+        self.x0 = domain.x0
+        self.r0 = domain.r0
+        self.width = domain.width
+        self.height = domain.height
+        self.hpoints = domain.hpoints
+        self.vpoints = domain.vpoints
+        self.xstep = domain.xstep
+        self.rstep = domain.rstep
+
+        print("Loading domain")
+        self.attributes = list(DomainPoint(0, 0, 0).__dict__.keys())
+
+        for attr in alive_it(self.attributes):
+            print(f"Transferring {attr}")
+            testAttr = domain.array[0,0].__getattribute__(attr)
+            if isinstance(testAttr, pint.Quantity):
+                self.units[attr] = str(testAttr.units)
+                t = [[domain.array[i,j].__getattribute__(attr).to(testAttr.units).magnitude for j in range(domain.hpoints)] for i in range(domain.vpoints)]
+            elif isinstance(testAttr, Enum):
+                t = [[domain.array[i,j].__getattribute__(attr).value for j in range(domain.hpoints)] for i in range(domain.vpoints)]
+            elif isinstance(testAttr, tuple):
+                t = [[[a for a in domain.array[i,j].__getattribute__(attr)] for j in range(domain.hpoints)] for i in range(domain.vpoints)]
+            else:
+                t = [[domain.array[i,j].__getattribute__(attr) for j in range(domain.hpoints)] for i in range(domain.vpoints)]
+            shape = (domain.vpoints, domain.hpoints) if not isinstance(testAttr, tuple) else (domain.vpoints, domain.hpoints, len(testAttr))
+            self.memmaps[attr] = np.memmap(f'{self.workingFolder}/{self.prefix}_{attr}.dat', dtype='float64', mode='w+', shape=shape)
+            self.memmaps[attr][:] = t[:]
+            del t
+
+    def __getattribute__(self, name: str) -> Any:
+        try:
+            return super().__getattribute__(name)
+        except AttributeError:
+            if name in self.attributes:
+                if name in self.units:
+                    return Q_(self.memmaps[name][:], self.units[name])
+                return self.memmaps[name]
+            else:
+                return super().__getattribute__(name)
+            
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name in ['attributes', 'memmaps', 'units', 'workingFolder', 'prefix'] or name in super().__dir__():
+            super().__setattr__(name, value)
+        else:
+            if name in self.attributes:
+                if isinstance(value, pint.Quantity):
+                    self.memmaps[name][:] = value.to(self.units[name]).magnitude
+                elif isinstance(value, Enum):
+                    self.memmaps[name][:] = value.value
+                else:
+                    self.memmaps[name][:] = value
+                self.memmaps[name].flush()
+            else:
+                super().__setattr__(name, value)
+
+    def toDomain(self):
+        domain = DomainMC(self.x0, self.r0, self.width, self.height)
+        for i in range(self.vpoints):
+            for j in range(self.hpoints):
+                for attr in self.attributes:
+                    if attr in self.units:
+                        domain.array[i,j].__setattr__(attr, Q_(self.memmaps[attr][i,j], self.units[attr]))
+                    else:
+                        domain.array[i,j].__setattr__(attr, self.memmaps[attr][i,j])
+        return domain
 
 def EvalMaterialProcess2(i, hsteps, pn, gridData, size, cowl, chamber, plug):
     res = []

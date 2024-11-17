@@ -3,9 +3,9 @@ from matplotlib import pyplot as plt
 import numpy as np
 from icecream import ic
 from Nozzle.nozzle import ContourPoint
-from enum import Enum
+from enum import IntEnum
 
-class DomainMaterial(Enum):
+class DomainMaterial(IntEnum):
     FREE = 0 
     COWL = 1
     CHAMBER = 3 #*Gas inside the chamber
