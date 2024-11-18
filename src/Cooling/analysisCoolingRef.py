@@ -17,6 +17,26 @@ class ResistorSet:
     R: list[Q_] = [Q_(0, unitReg.hour * unitReg.degR / unitReg.BTU) for _ in range(4)]
     T: list[Q_] = [Q_(0, unitReg.degR) for _ in range(4)]
 
+    def getTnew(self):
+        TRsum = Q_(0, str((self.T[0]/self.R[0]).units))
+        Rsum = Q_(0, str(1/self.R[0].units))
+        for i in range(4):
+            if self.R[i] > Q_(2e8, unitReg.hour * unitReg.degR / unitReg.BTU) or self.R[i] <= Q_(1e-2, unitReg.hour * unitReg.degR / unitReg.BTU):
+                continue
+            TRsum += self.T[i] / self.R[i]
+            Rsum += 1/self.R[i]
+            # print(TRsum, Rsum)
+        return TRsum / Rsum
+
+    def getQin(self, Tprev: Q_):
+        Qsum = Q_(0, str((self.T[0]/self.R[0]).units))
+        for i in range(4):
+            if self.R[i] > Q_(2e8, unitReg.hour * unitReg.degR / unitReg.BTU):
+                continue
+            Qsum += (self.T[i] - Tprev)/self.R[i]
+        return Qsum
+
+
 def getConductivity(domain: domain.DomainMMAP, row: int, col: int):
     if domain.material[row,col] in MaterialType.WALL:
         return cooling_func.conduction_grcop(domain.temperature[row,col].to(unitReg.degR))
@@ -75,11 +95,11 @@ def CoolantConvectionArea(domain: domain.DomainMMAP, row: int, col: int, isHoriz
 
     theta = getCoolingArcAngle(landRadius)
     if isHoriz:
-        return (outerRadius**2 - innerRadius**2) * theta/2
+        return (outerRadius**2 - innerRadius**2) * theta/2 * DESIGN.NumberofChannels
     else:
         outer = (sinkTop ^ sinkSide)               
         xstep = Q_(domain.xstep, unitReg.inch).to(unitReg.foot)           
-        return (2 * np.pi * outerRadius * theta) * xstep if outer else (2 * np.pi * innerRadius * theta) * xstep
+        return (2 * np.pi * outerRadius * theta * DESIGN.NumberofChannels) * xstep if outer else (2 * np.pi * innerRadius * theta * DESIGN.NumberofChannels) * xstep
 
 def CombustionConvectionArea(domain: domain.DomainMMAP, row: int, col: int, isHoriz: bool, sinkTop: bool, sinkSide: bool):
     innerRadius = Q_(domain.r[row, col] - domain.rstep/2, unitReg.inch).to(unitReg.foot)
@@ -120,24 +140,29 @@ def CombineResistors(resSet: ResistorSet):
         if resSet.R[i] > Q_(1e10, unitReg.hour * unitReg.degR / unitReg.BTU):
             resSet.T[i] = Q_(0, unitReg.degR)
             resSet.R[i] = Q_(1, unitReg.hour * unitReg.degR / unitReg.BTU)
-    return Qsum([resSet.T[i] / resSet.R[i] for i in range(4)]) * Qsum(resSet.R)
+    return resSet.getTnew()
 
 def GetResistor(domain: domain.DomainMMAP, sink: tuple[int, int], source: tuple[int, int]):
-
     if domain.material[source] in MaterialType.SOLID:
         sourceR = ConductionHalfResistor(domain, sink, source, False)
+        # print("half solid")
     elif domain.material[source] in MaterialType.FLUID:
         sourceR = ConvectionHalfResistor(domain, sink, source)
+        # print("half fluid")
     elif domain.material[source] in MaterialType.ADIABATIC:
+        # print("half free")
         sourceR = Q_(2e31, unitReg.hour * unitReg.degR / unitReg.BTU)
     else:
         raise ValueError("Material not recognized")
     
     if domain.material[sink] in MaterialType.SOLID:
         sinkR = ConductionHalfResistor(domain, sink, source, True)
+        # print("half solid")
     elif domain.material[sink] in MaterialType.FLUID:
         sinkR = ConvectionHalfResistor(domain, sink, source)
+        # print("half fluid")
     elif domain.material[sink] in MaterialType.ADIABATIC:
+        # print("half free")
         sinkR = Q_(2e31, unitReg.hour * unitReg.degR / unitReg.BTU)
     else:
         raise ValueError("Material not recognized")
@@ -163,6 +188,7 @@ def CalculateBorderResistors(domain: domain.DomainMMAP, row: int, col: int):
         resSet.R[Direction.RIGHT] = GetResistor(domain, (row, col), (row, col+1))
         resSet.T[Direction.RIGHT] = domain.temperature[row, col+1]
 
+    # print(resSet.R, resSet.T)
     return resSet
 
 def CalculateCoolant(domain: domain.DomainMMAP, row: int, col: int):
@@ -171,17 +197,20 @@ def CalculateCoolant(domain: domain.DomainMMAP, row: int, col: int):
     previousIn = CalculateBorderResistors(domain, previousFlow[0], previousFlow[1])
     Tprev = domain.temperature[row, col]
 
-    Qin = Qsum([(previousIn.T[i] - Tprev)/previousIn.R[i] for i in range(4)])
+    Qin = previousIn.getQin(Tprev)
     return cooling2d.heatcoolant(Qin, Tprev, domain.pressure[row, col])
 
 def CalculateCell(domain: domain.DomainMMAP, row: int, col: int):
     if domain.material[row,col] in MaterialType.STATIC_TEMP:
         return domain.temperature[row,col]
     
+    if domain.r[row,col] - domain.rstep/2 <= 0:
+        return domain.temperature[row,col]
+    
     if domain.material[row,col] in MaterialType.WALL:
         if not domain.border[row,col]:
-            return CombineResistors(CalculateCoreResistors(domain, row, col))
-        return CombineResistors(CalculateBorderResistors(domain, row, col))
+            return CalculateCoreResistors(domain, row, col).getTnew()
+        return CalculateBorderResistors(domain, row, col).getTnew()
     
     if domain.material[row,col] in MaterialType.COOLANT:
         if domain.material[row,col] == DomainMaterial.COOLANT_BULK:
@@ -194,11 +223,3 @@ def Cell(domain: domain.DomainMMAP, row: int, col: int):
     if isinstance(out, tuple):
         return out
     return (out, domain.pressure[row, col])
-
-def Qsum(array):
-    if len(array) == 0:
-        return Q_(0)
-    sum = Q_(0, str(array[0].units))
-    for e in array:
-        sum += e
-    return sum

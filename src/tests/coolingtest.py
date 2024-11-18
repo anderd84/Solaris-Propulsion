@@ -35,7 +35,9 @@ def main():
 
     mmapmesh = domain.DomainMMAP(coolmesh)
 
-    analysis.AnalyzeMC(mmapmesh)
+    
+
+    analysis.AnalyzeMC(mmapmesh, fig, plugC, cowlC)
     
     mmapmesh.toDomain().ShowStatePlot(fig)
     plt.show()

@@ -22,7 +22,7 @@ class MaterialType:
     COOLANT_WALL = {DomainMaterial.COOLANT_WALL}
     WALL = {DomainMaterial.COWL, DomainMaterial.PLUG}
     EXHAUST = {DomainMaterial.CHAMBER}
-    STATIC_TEMP = {DomainMaterial.COOLANT_INLET, DomainMaterial.FREE, DomainMaterial.CHAMBER, DomainMaterial.COOLANT_BULK, DomainMaterial.COOLANT_WALL}
+    STATIC_TEMP = {DomainMaterial.COOLANT_INLET, DomainMaterial.FREE, DomainMaterial.CHAMBER}
     ADIABATIC = {DomainMaterial.FREE}
     SOLID = {DomainMaterial.COWL, DomainMaterial.PLUG}
     FLUID = {DomainMaterial.COOLANT, DomainMaterial.COOLANT_WALL, DomainMaterial.COOLANT_BULK, DomainMaterial.COOLANT_INLET, DomainMaterial.CHAMBER}

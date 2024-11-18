@@ -154,13 +154,13 @@ class DomainMC:
 
         ax = fig.axes[0]
         contf = ax.contourf(xarr, rarr, matarr, 100, cmap='jet')
-        fig.colorbar(contf, ax=ax)
+        # fig.colorbar(contf, ax=ax)
         xcells = np.linspace(self.x0 - self.xstep/2, self.x0 + self.width + self.xstep/2, self.hpoints+1)
         rcells = np.linspace(self.r0 + self.rstep/2, self.r0 - self.height - self.rstep/2, self.vpoints+1)
         xl, rl = np.meshgrid(xcells, rcells)
         print("done!")
-        ax.plot(xl, rl, 'k', linewidth=0.25)
-        ax.plot(np.transpose(xl), np.transpose(rl), 'k', linewidth=0.25)
+        # ax.plot(xl, rl, 'k', linewidth=0.25)
+        # ax.plot(np.transpose(xl), np.transpose(rl), 'k', linewidth=0.25)
 
     def ShowBorderPlot(self, fig: plt.Figure):
         xarr = np.array([[point.x for point in row] for row in self.array])
