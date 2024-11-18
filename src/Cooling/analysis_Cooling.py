@@ -32,7 +32,7 @@ plots.PlotPlug(fig, chamberC)
 fig.axes[0].plot([p.x for p in cowlCoolL], [p.r for p in cowlCoolL], '-k', linewidth=1)
 fig.axes[0].plot([p.x for p in cowlCoolU], [p.r for p in cowlCoolU], '-k', linewidth=1)
 
-coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("coolmesh.msh")
+coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("coolmesh4.msh")
 
 check = coolmesh.array[60,529]
 
@@ -111,6 +111,7 @@ def coolant_wall_left(coolmesh,i,j):
         resistance_cond_left =  Q_(coolmesh.xstep, unitReg.inch).to(unitReg.foot )/ (conduct_left * Area_exposed)
         Q_left = ((old_t - new_t)/(resistance_cond_left))
         Q_left = Q_left.to( unitReg.BTU / unitReg.hour)
+        Q_left = Q_(0, unitReg.BTU / unitReg.hour)
     elif coolmesh.array[i,j - 1].material == DomainMaterial.COOLANT_BULK:
         Q_left = Q_(0, unitReg.BTU / unitReg.hour)
     else:
@@ -138,6 +139,7 @@ def coolant_wall_right(coolmesh,i,j):
         resistance_cond_right =  Q_(coolmesh.xstep, unitReg.inch).to(unitReg.foot )/ (conduct_right * Area_exposed)
         Q_right = ((old_t - new_t)/(resistance_cond_right))
         Q_right = Q_right.to( unitReg.BTU / unitReg.hour)
+        Q_right = Q_(0, unitReg.BTU / unitReg.hour)
     elif coolmesh.array[i,j + 1].material == DomainMaterial.COOLANT_BULK:
         Q_right = Q_(0, unitReg.BTU / unitReg.hour)
     else:
@@ -169,6 +171,7 @@ def coolant_wall_below(coolmesh,i,j):
 
         Q_below = (old_t - new_t)/(resistance_cond_below)
         Q_below = Q_below.to( unitReg.BTU / unitReg.hour)
+        Q_below = Q_(0, unitReg.BTU / unitReg.hour)
     elif coolmesh.array[i+1,j].material == DomainMaterial.COOLANT_BULK:
         Q_below = Q_(0, unitReg.BTU / unitReg.hour)
     else:
@@ -202,6 +205,7 @@ def coolant_wall_upper(coolmesh,i,j):
         resistance_cond_upper =  np.log(r_o / r_i) / (2 * np.pi * conduct_upper * l)
         Q_upper = (old_t - new_t)/(resistance_cond_upper)
         Q_upper = Q_upper.to( unitReg.BTU / unitReg.hour)
+        Q_upper = Q_(0, unitReg.BTU / unitReg.hour)
     elif coolmesh.array[i-1,j].material == DomainMaterial.COOLANT_BULK:
         Q_upper = Q_(0, unitReg.BTU / unitReg.hour)
     else:
@@ -216,6 +220,7 @@ def coolantwallheat(coolmesh, i_previous,j_previous):
     Q_right, error3 = coolant_wall_right(coolmesh,i_previous,j_previous)
     Q_upper, error4 = coolant_wall_upper(coolmesh,i_previous,j_previous) #I need capital Q showings it's Heat rate in not Heat Flux #*WINSTON)
     Qdotin = Q_left + Q_right + Q_below + Q_upper
+#    ic(Qdotin)
     if ((error1 + error2 + error3 + error4) > 0):
         ic("you are a retard, do it correct")
         ic(coolmesh.array[i_previous-1,j_previous].material)
@@ -550,18 +555,10 @@ def verticalcond(coolmesh,i,j):
 #plt.ion()
 #plt.show()
 
-ic(coolmesh.array[59,350].border)
-ic(coolmesh.array[59,350].material)
-ic(coolmesh.array[60,350].material)
-ic(coolmesh.array[58,350].material)
-ic(coolmesh.array[59,351].material)
-ic(coolmesh.array[59,349].material)
 
-#
-#
 
 total_change = 0
-for iterate in range(1):
+for iterate in range(50):
     ic(iterate)
 #    fig.axes[0].clear()
 #    coolmesh.ShowStatePlot(fig)
@@ -579,7 +576,7 @@ for iterate in range(1):
                 if (coolmesh.array[i,j].material == DomainMaterial.COOLANT_WALL or coolmesh.array[i,j].material == DomainMaterial.COOLANT_BULK):    # Select coolant
                         T_new = coolant(coolmesh,i,j)
                         coolmesh.array[i,j].temperature = Q_(T_new.magnitude, unitReg.degR)
-                        if T_new.magnitude > 600:
+                        if T_new.magnitude > 10000:
                             pass
                         continue    # Move to next iteration
                 if not(coolmesh.array[i,j].border): # Select non-border coolant nodes
@@ -597,7 +594,7 @@ for iterate in range(1):
                 total_change = total_change + np.abs(current_temp - new_temp)
                 check2 = new_temp
                 coolmesh.array[i,j].temperature = new_temp
-                if new_temp.magnitude > 600:
+                if new_temp.magnitude > 10000:
                     pass
             
 
@@ -605,12 +602,12 @@ for iterate in range(1):
 
                 
 #TODO Add David's Gamma changing as a function of Temp
-#coolmesh.ShowStatePlot(fig)
-coolmesh.ShowMaterialPlot(fig)
+coolmesh.ShowStatePlot(fig)
+#coolmesh.ShowMaterialPlot(fig)
 plt.scatter(350 * coolmesh.xstep+ coolmesh.array[0,0].x, -30 *coolmesh.rstep + coolmesh.array[0,0].r, marker='x', s=100) #top left
 plt.scatter(650 * coolmesh.xstep+ coolmesh.array[0,0].x, -30 *coolmesh.rstep + coolmesh.array[0,0].r, marker='x', s=100) # top right
 plt.scatter(350 * coolmesh.xstep+ coolmesh.array[0,0].x, -200 *coolmesh.rstep + coolmesh.array[0,0].r, marker='x', s=100) #bottome left
 plt.scatter(650 * coolmesh.xstep+ coolmesh.array[0,0].x, -200 *coolmesh.rstep + coolmesh.array[0,0].r, marker='x', s=100) # bottom right
 plt.show()
 
-coolmesh.DumpFile("coolmesh2.msh")
+coolmesh.DumpFile("coolmesh5.msh")
