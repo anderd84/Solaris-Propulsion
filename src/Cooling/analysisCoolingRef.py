@@ -31,7 +31,7 @@ class ResistorSet:
     def getQin(self, Tprev: Q_):
         Qsum = Q_(0, str((self.T[0]/self.R[0]).units))
         for i in range(4):
-            if self.R[i] > Q_(2e8, unitReg.hour * unitReg.degR / unitReg.BTU):
+            if self.R[i] > Q_(2e8, unitReg.hour * unitReg.degR / unitReg.BTU) or self.R[i] <= Q_(1e-2, unitReg.hour * unitReg.degR / unitReg.BTU):
                 continue
             Qsum += (self.T[i] - Tprev)/self.R[i]
         return Qsum
