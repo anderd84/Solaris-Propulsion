@@ -1,4 +1,5 @@
 
+from dataclasses import dataclass
 from matplotlib import pyplot as plt
 import numpy as np
 from icecream import ic
@@ -14,6 +15,17 @@ class DomainMaterial(IntEnum):
     COOLANT_WALL = 6
     COOLANT_BULK = 7
     COOLANT_INLET = 8
+
+@dataclass
+class MaterialType:
+    COOLANT = {DomainMaterial.COOLANT, DomainMaterial.COOLANT_WALL, DomainMaterial.COOLANT_BULK, DomainMaterial.COOLANT_INLET}
+    COOLANT_WALL = {DomainMaterial.COOLANT_WALL}
+    WALL = {DomainMaterial.COWL, DomainMaterial.PLUG}
+    EXHAUST = {DomainMaterial.CHAMBER}
+    STATIC_TEMP = {DomainMaterial.COOLANT_INLET, DomainMaterial.FREE, DomainMaterial.CHAMBER, DomainMaterial.COOLANT_BULK, DomainMaterial.COOLANT_WALL}
+    ADIABATIC = {DomainMaterial.FREE}
+    SOLID = {DomainMaterial.COWL, DomainMaterial.PLUG}
+    FLUID = {DomainMaterial.COOLANT, DomainMaterial.COOLANT_WALL, DomainMaterial.COOLANT_BULK, DomainMaterial.COOLANT_INLET, DomainMaterial.CHAMBER}
 
 def isIntersect(Point, contour: np.ndarray[ContourPoint], domainSize: tuple[int, int]):
     if contour.size == 0:

@@ -51,8 +51,9 @@ def heatcoolant(Qdotin, temperature_previous, pressure_previous):
 
     (_, cp, _, _, _, _, _, _, _) = get_fluid_properties(fuelname, temperature_previous, pressure_previous)
     new_temp = (temperature_previous + Qdotin / (mdotperchannel * cp)).to(unitReg.degR)
+    newPressure = pressure_previous
 
-    return new_temp
+    return new_temp, newPressure
 
 
 

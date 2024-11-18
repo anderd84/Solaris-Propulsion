@@ -44,7 +44,7 @@ class DomainPoint:
     area: float
     material: DomainMaterial = DomainMaterial.FREE
     border: bool = False
-    temperature: Q_ = Q_(70, unitReg.degF)
+    temperature: Q_ = Q_(70, unitReg.degF).to(unitReg.degR)
     pressure: Q_ = Q_(12.1, unitReg.psi)
     velocity: Q_ = Q_(0, unitReg.ft/unitReg.s)
     hydraulicDiameter: Q_ = Q_(0, unitReg.inch)
@@ -155,12 +155,12 @@ class DomainMC:
         ax = fig.axes[0]
         contf = ax.contourf(xarr, rarr, matarr, 100, cmap='jet')
         fig.colorbar(contf, ax=ax)
-        # xcells = np.linspace(self.x0 - self.xstep/2, self.x0 + self.width + self.xstep/2, self.hpoints+1)
-        # rcells = np.linspace(self.r0 + self.rstep/2, self.r0 - self.height - self.rstep/2, self.vpoints+1)
-        # xl, rl = np.meshgrid(xcells, rcells)
+        xcells = np.linspace(self.x0 - self.xstep/2, self.x0 + self.width + self.xstep/2, self.hpoints+1)
+        rcells = np.linspace(self.r0 + self.rstep/2, self.r0 - self.height - self.rstep/2, self.vpoints+1)
+        xl, rl = np.meshgrid(xcells, rcells)
         print("done!")
-        # ax.plot(xl, rl, 'k', linewidth=0.25)
-        # ax.plot(np.transpose(xl), np.transpose(rl), 'k', linewidth=0.25)
+        ax.plot(xl, rl, 'k', linewidth=0.25)
+        ax.plot(np.transpose(xl), np.transpose(rl), 'k', linewidth=0.25)
 
     def ShowBorderPlot(self, fig: plt.Figure):
         xarr = np.array([[point.x for point in row] for row in self.array])
@@ -441,12 +441,12 @@ class DomainMC:
                             domain.array[i,j].__setattr__(attr, Q_(t[j][i], unit))
                             bar()
         return domain
-
+    
 class DomainMMAP(DomainMC):
     attributes: list = []
-    memmaps: dict = {}
+    memmaps: dict
 
-    units: dict = {}
+    units: dict
 
     workingFolder = tempfile.mkdtemp()
     prefix = str(''.join(random.choices(string.ascii_letters, k=4)))
@@ -463,21 +463,26 @@ class DomainMMAP(DomainMC):
 
         print("Loading domain")
         self.attributes = list(DomainPoint(0, 0, 0).__dict__.keys())
+        self.memmaps = {}
+        self.units = {}
 
         for attr in alive_it(self.attributes):
             print(f"Transferring {attr}")
             testAttr = domain.array[0,0].__getattribute__(attr)
+            dtype = 'float64'
             if isinstance(testAttr, pint.Quantity):
                 self.units[attr] = str(testAttr.units)
                 t = [[domain.array[i,j].__getattribute__(attr).to(testAttr.units).magnitude for j in range(domain.hpoints)] for i in range(domain.vpoints)]
             elif isinstance(testAttr, Enum):
                 t = [[domain.array[i,j].__getattribute__(attr).value for j in range(domain.hpoints)] for i in range(domain.vpoints)]
+                dtype = 'int'
             elif isinstance(testAttr, tuple):
                 t = [[[a for a in domain.array[i,j].__getattribute__(attr)] for j in range(domain.hpoints)] for i in range(domain.vpoints)]
+                dtype = 'int'
             else:
                 t = [[domain.array[i,j].__getattribute__(attr) for j in range(domain.hpoints)] for i in range(domain.vpoints)]
             shape = (domain.vpoints, domain.hpoints) if not isinstance(testAttr, tuple) else (domain.vpoints, domain.hpoints, len(testAttr))
-            self.memmaps[attr] = np.memmap(f'{self.workingFolder}/{self.prefix}_{attr}.dat', dtype='float64', mode='w+', shape=shape)
+            self.memmaps[attr] = np.memmap(f'{self.workingFolder}/{self.prefix}_{attr}.dat', dtype=dtype, mode='w+', shape=shape)
             self.memmaps[attr][:] = t[:]
             del t
 
@@ -498,7 +503,7 @@ class DomainMMAP(DomainMC):
         else:
             if name in self.attributes:
                 if isinstance(value, pint.Quantity):
-                    self.memmaps[name][:] = value.to(self.units[name]).magnitude
+                    self.memmaps[name][:] = value.to(Q_(self.units[name])).magnitude
                 elif isinstance(value, Enum):
                     self.memmaps[name][:] = value.value
                 else:
@@ -508,15 +513,26 @@ class DomainMMAP(DomainMC):
                 super().__setattr__(name, value)
 
     def toDomain(self):
-        domain = DomainMC(self.x0, self.r0, self.width, self.height)
-        for i in range(self.vpoints):
-            for j in range(self.hpoints):
-                for attr in self.attributes:
-                    if attr in self.units:
-                        domain.array[i,j].__setattr__(attr, Q_(self.memmaps[attr][i,j], self.units[attr]))
-                    else:
-                        domain.array[i,j].__setattr__(attr, self.memmaps[attr][i,j])
+        domain = DomainMC(self.x0, self.r0, self.width, self.height, self.xstep)
+        with alive_bar(self.vpoints*self.hpoints, title="Setting point data") as bar:
+            for i in range(self.vpoints):
+                for j in range(self.hpoints):
+                    for attr in self.attributes:
+                        if attr in self.units:
+                            domain.array[i,j].__setattr__(attr, Q_(self.memmaps[attr][i,j], self.units[attr]))
+                        else:
+                            domain.array[i,j].__setattr__(attr, self.memmaps[attr][i,j])
+                    bar()
         return domain
+    
+    def setMEM(self, row, col, name, value):
+        if isinstance(value, pint.Quantity):
+            self.memmaps[name][row, col] = value.to(Q_(self.units[name])).magnitude
+        elif isinstance(value, Enum):
+            self.memmaps[name][row, col] = value.value
+        else:
+            self.memmaps[name][row, col] = value
+        self.memmaps[name].flush()
 
 def EvalMaterialProcess2(i, hsteps, pn, gridData, size, cowl, chamber, plug):
     res = []
