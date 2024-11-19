@@ -23,7 +23,7 @@ import gc
 
 from icecream import ic
 
-from Cooling.material import DomainMaterial
+from Cooling.material import DomainMaterial, MaterialType
 from Cooling import material
 from Nozzle import plots
 from General.units import Q_, unitReg
@@ -544,6 +544,21 @@ class DomainMMAP(DomainMC):
         else:
             self.memmaps[name][row, col] = value
         self.memmaps[name].flush()
+
+    def plotTemp(self, fig):
+        temps = self.temperature.magnitude.copy()
+        for i in range(self.vpoints):
+            for j in range(self.hpoints):
+                if self.material[i,j] in MaterialType.STATIC_TEMP:
+                    temps[i,j] = np.nan
+        ax = fig.axes[0]
+        contf = ax.contourf(self.x, self.r, temps, 100, cmap='jet')
+        fig.colorbar(contf, ax=ax)
+        # xcells = np.linspace(self.x0 - self.xstep/2, self.x0 + self.width + self.xstep/2, self.hpoints+1)
+        # rcells = np.linspace(self.r0 + self.rstep/2, self.r0 - self.height - self.rstep/2, self.vpoints+1)
+        # xl, rl = np.meshgrid(xcells, rcells)
+        print("done!")
+
 
 def EvalMaterialProcess2(i, hsteps, pn, gridData, size, cowl, chamber, plug):
     res = []
