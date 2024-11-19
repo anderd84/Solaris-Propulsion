@@ -34,7 +34,7 @@ def main():
     fig.axes[0].plot([p.x for p in cowlCoolU], [p.r for p in cowlCoolU], '-k', linewidth=1)
     # plt.show()
 
-    cooling2 = domain.DomainMC(-6, 4.5, 7, 5, .1)
+    cooling2 = domain.DomainMC(-6, 4.5, 7, 5, .01)
     cooling2.DefineMaterials(cowlC, np.array([]), chamberC, plugC, 15)
 
 
@@ -47,8 +47,8 @@ def main():
     plt.plot([startingpoint[0], aimpoint[0]], [startingpoint[1], aimpoint[1]], 'rx-')
     cooling2.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius, DESIGN.plugBaseRadius, DESIGN.chokeArea, fig)
 
-    # cooling2.AssignCoolantFlow(domain.CoolingChannel(cowlCoolU, cowlCoolL), False, Q_(400, unitReg.psi))
-    # cooling2.AssignCoolantFlow(domain.CoolingChannel(plugCoolU, plugCoolL), True, Q_(400, unitReg.psi))
+    cooling2.AssignCoolantFlow(domain.CoolingChannel(cowlCoolU, cowlCoolL), False, Q_(400, unitReg.psi))
+    cooling2.AssignCoolantFlow(domain.CoolingChannel(plugCoolU, plugCoolL), True, Q_(400, unitReg.psi))
 
     cooling2.DumpFile("coolmesh.msh")
 

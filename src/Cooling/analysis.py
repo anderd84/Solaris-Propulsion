@@ -13,8 +13,7 @@ from Cooling import domain
 from Cooling import material
 from Cooling import analysisCoolingRef
 
-def AnalyzeMC(domain: domain.DomainMMAP, fig, plugC, cowlC, MAX_CORES: int = mp.cpu_count() - 1, tol: float = 1e-2):
-    plt.ion()
+def AnalyzeMC(domain: domain.DomainMMAP, fig, plugC, cowlC, MAX_CORES: int = mp.cpu_count() - 1, tol: float = 1e-2, convPlot: bool = True):
     # plt.show()
 
     # for col in range(domain.hpoints):
@@ -34,14 +33,16 @@ def AnalyzeMC(domain: domain.DomainMMAP, fig, plugC, cowlC, MAX_CORES: int = mp.
             #     fig.canvas.flush_events()
             #     plt.waitforbuttonpress()
             #     input("Press Enter to continue...")
-    diffArr = []
-    convergePlot, ax = plt.subplots()
-    ax.set_title("Convergence")
-    ax.set_xlabel("Iteration")
-    ax.set_ylabel("Max % Difference")
-    ax.grid(True)
+    if convPlot:
+        plt.ion()
+        convergePlot, ax = plt.subplots()
+        ax.set_title("Convergence")
+        ax.set_xlabel("Iteration")
+        ax.set_ylabel("Max % Difference")
+        ax.grid(True)
+        convergeP, = ax.plot([1], [1], 'r-')
 
-    convergeP, = ax.plot([1], [1], 'r-')
+    diffArr = []
 
     with joblib.Parallel(n_jobs=MAX_CORES, return_as='generator') as parallel:
         diff = tol + 1
@@ -64,13 +65,13 @@ def AnalyzeMC(domain: domain.DomainMMAP, fig, plugC, cowlC, MAX_CORES: int = mp.
 
             print(f"Max diff: {diff*100}%")
             diffArr.append(diff*100)
-
-            del convergeP
-            convergeP = ax.plot(range(i), diffArr, 'r-')
-            ax.autoscale(axis='y')
-            
-            convergePlot.canvas.draw()
-            convergePlot.canvas.flush_events()
+            if convPlot:
+                del convergeP
+                convergeP = ax.plot(range(i), diffArr, 'r-')
+                ax.autoscale(axis='y')
+                
+                convergePlot.canvas.draw()
+                convergePlot.canvas.flush_events()
 
             if i % 10 == 0:
                 print("saving progress")
