@@ -50,8 +50,9 @@ def heatcoolant(Tprev, Tcell, resSet, Pcell, landHeight, DeltaL):
     A_c = Q_(0.5*DESIGN.coolingChannelAngleSweep/NumberofChannels*(2*(DESIGN.chamberInternalRadius + DESIGN.coolingChannelWallDist)*landHeight + landHeight**2), unitReg.inch**2) # Cooling channel cross-sectional area, height should be variable in the future
     P = Q_(2*landHeight + DESIGN.coolingChannelAngleSweep/NumberofChannels*((DESIGN.chamberInternalRadius + DESIGN.coolingChannelWallDist) + 2*landHeight), unitReg.inch)  # Cooling channel perimeter, height should be variable in the future
     D_h = 4*A_c/P   # Hydraulic diameter
-    Re_D = mdotperchannel*D_h/mu    # Reynolds number
+    Re_D = mdotperchannel*D_h/mu/A_c    # Reynolds number
     DeltaL = Q_(DeltaL, unitReg.inch)   # Step size
+
     f_func = lambda f: -2*np.log10(epsilon/D_h/3.7 + 2.51/(Re_D*np.sqrt(f))) - 1/np.sqrt(f)
     f = fsolve(f_func, 0.05)    # Darcy friction factor
     DeltaP = (f*DeltaL/D_h*rho*(mdotperchannel/rho/A_c)**2/2).to(unitReg.psi)   # Pressure drop

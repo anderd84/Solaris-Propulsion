@@ -17,23 +17,23 @@ def AnalyzeMC(domain: domain.DomainMMAP, fig, plugC, cowlC, MAX_CORES: int = mp.
     # plt.ion()
     # plt.show()
 
-    # for col in range(658, domain.hpoints):
-    #     for row in range(71, domain.vpoints):
+    # for col in range(domain.hpoints):
+    #     for row in range(domain.vpoints):
     #         outs = analysisCoolingRef.Cell(domain, row, col)
     #         domain.setMEM(row, col, 'temperature', outs[0])
     #         domain.setMEM(row, col, 'pressure', outs[1])
-    #         if domain.material[row, col] not in material.MaterialType.STATIC_TEMP:
-    #             fig.axes[0].clear()
-    #             plots.PlotPlug(fig, plugC)
-    #             plots.PlotPlug(fig, cowlC)
-    #             domain.toDomain().ShowStatePlot(fig)
-    #             fig.axes[0].plot([domain.x[row,col]], [domain.r[row,col]], 'wx')
-    #             print(outs)
+            # if domain.material[row, col] not in material.MaterialType.STATIC_TEMP:
+            #     fig.axes[0].clear()
+            #     plots.PlotPlug(fig, plugC)
+            #     plots.PlotPlug(fig, cowlC)
+            #     domain.toDomain().ShowStatePlot(fig)
+            #     fig.axes[0].plot([domain.x[row,col]], [domain.r[row,col]], 'wx')
+            #     print(outs)
 
-    #             fig.canvas.draw()
-    #             fig.canvas.flush_events()
-    #             plt.waitforbuttonpress()
-    #             input("Press Enter to continue...")
+            #     fig.canvas.draw()
+            #     fig.canvas.flush_events()
+            #     plt.waitforbuttonpress()
+            #     input("Press Enter to continue...")
 
 
     with joblib.Parallel(n_jobs=MAX_CORES, return_as='generator') as parallel:

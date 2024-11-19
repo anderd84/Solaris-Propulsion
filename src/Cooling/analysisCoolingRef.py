@@ -194,7 +194,7 @@ def CalculateBorderResistors(domain: domain.DomainMMAP, row: int, col: int):
         resSet.R[Direction.RIGHT] = GetResistor(domain, (row, col), (row, col+1))
         resSet.T[Direction.RIGHT] = domain.temperature[row, col+1]
 
-    print(resSet.R, resSet.T)
+    # print(resSet.R, resSet.T)
     return resSet
 
 def CalculateCoolant(domain: domain.DomainMMAP, row: int, col: int):
@@ -203,7 +203,10 @@ def CalculateCoolant(domain: domain.DomainMMAP, row: int, col: int):
     resSet = CalculateBorderResistors(domain, row, col)
     Tprev = domain.temperature[row, col]
 
-    return cooling2d.heatcoolant(domain.temperature[previousFlow], Tprev, resSet, domain.pressure[row, col])
+    deltaL = Q_(np.sqrt((domain.x[row, col] - domain.x[previousFlow])**2 + (domain.r[row, col] - domain.r[previousFlow])**2), unitReg.inch).to(unitReg.foot)
+    flowHeight = (domain.flowHeight[row, col] + domain.flowHeight[previousFlow]) / 2
+
+    return cooling2d.heatcoolant(domain.temperature[previousFlow], Tprev, resSet, domain.pressure[row, col], flowHeight, deltaL)
 
 def CalculateCell(domain: domain.DomainMMAP, row: int, col: int):
     if domain.material[row,col] in MaterialType.STATIC_TEMP:
