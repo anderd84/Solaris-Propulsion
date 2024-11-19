@@ -29,6 +29,7 @@ gamma_throat = DESIGN.gamma #TODO gotta make this better so it's not constant R 
 A_star = DESIGN.chokeArea
 NumberofChannels = DESIGN.NumberofChannels
 mdot_tot = DESIGN.totalmdot
+Fuel_Total = DESIGN.Fuel_Total
 
 #First step always is to update doublet.py file and run beforehand to grab all mdot and density values at injector side
 
@@ -36,24 +37,32 @@ mdot_tot = DESIGN.totalmdot
 
 ChannelShape =  np.array([.25, .25]) #inches Width,Height
 
-mdotperchannel = mdot_tot / NumberofChannels
+mdotperchannel = Fuel_Total / NumberofChannels
 
 
 
 
 
 
-def heatcoolant(Qdotin, temperature_previous, pressure_previous):
+def heatcoolant(Tprev, Tcell, resSet, Pcell, landHeight, DeltaL):
+    TRsum, Rsum = resSet.getSums()
+    (mu, cp, _, _, rho, _, _, _, _) = get_fluid_properties(fuelname, Tcell, Pcell)
+    A_c = Q_(0.5*DESIGN.coolingChannelAngleSweep/NumberofChannels*(2*(DESIGN.chamberInternalRadius + DESIGN.coolingChannelWallDist)*landHeight + landHeight**2), unitReg.inch**2) # Cooling channel cross-sectional area, height should be variable in the future
+    P = Q_(2*landHeight + DESIGN.coolingChannelAngleSweep/NumberofChannels*((DESIGN.chamberInternalRadius + DESIGN.coolingChannelWallDist) + 2*landHeight), unitReg.inch)  # Cooling channel perimeter, height should be variable in the future
+    D_h = 4*A_c/P   # Hydraulic diameter
+    Re_D = mdotperchannel*D_h/mu    # Reynolds number
+    DeltaL = Q_(DeltaL, unitReg.inch)   # Step size
+    f_func = lambda f: -2*np.log10(epsilon/D_h/3.7 + 2.51/(Re_D*np.sqrt(f))) - 1/np.sqrt(f)
+    f = fsolve(f_func, 0.05)    # Darcy friction factor
+    DeltaP = (f*DeltaL/D_h*rho*(mdotperchannel/rho/A_c)**2/2).to(unitReg.psi)   # Pressure drop
 
-    Qdotin = Q_(Qdotin.magnitude, unitReg.BTU / unitReg.hour)
-    temperature_previous = Q_(temperature_previous.magnitude, unitReg.degR)
-    pressure_previous = Q_(pressure_previous.magnitude, unitReg.psi)
+    Tprev = Q_(Tprev.magnitude, unitReg.degR)
+    Pcell = Q_(Pcell.magnitude, unitReg.psi)
 
-    (_, cp, _, _, _, _, _, _, _) = get_fluid_properties(fuelname, temperature_previous, pressure_previous)
-    new_temp = (temperature_previous + Qdotin / (mdotperchannel * cp)).to(unitReg.degR)
-    newPressure = pressure_previous
+    Tnew = ((TRsum + Tprev*mdotperchannel*cp)/(mdotperchannel*cp + Rsum)).to(unitReg.degR)
+    Pnew = Pcell - DeltaP
 
-    return new_temp, newPressure
+    return Tnew, Pnew
 
 
 
@@ -155,7 +164,7 @@ def internal_flow_convection(Node_Temp, Node_Pressure, Land_Height):
     
      
     # epsilon = epsilon.to(unitReg.inch)     # Surface roughness from Design Table
-    m_dot_c = (DESIGN.Fuel_Total*(1 - DESIGN.percentFilmCooling)).to(unitReg.pound / unitReg.second) / NumberofChannels     # Coolant mass flow rate through one channel from Design Table
+    m_dot_c = mdotperchannel.to(unitReg.pound / unitReg.second)     # Coolant mass flow rate through one channel from Design Table
     mu = mu.to(unitReg.pound / unitReg.foot / unitReg.second)   # Dynamic viscosity #! From RP-1 Grab values from ROcket Prop
     k_c = k_c.to(unitReg.BTU / unitReg.foot / unitReg.hour / unitReg.degR)    # Thermal conductivity of coolant #! From RP-1 Grab values from ROcket Prop
     mu_s = mu.to(unitReg.pound / unitReg.foot / unitReg.second)    # Dynamic viscosity at the heat transfer boundary surface temperature NEEDS CORRECTING
