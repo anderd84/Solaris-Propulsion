@@ -216,7 +216,13 @@ class DomainMC:
 
                     for row, col in cells:
                         if (i==0 and j==0) or self.array[row, col].material == DomainMaterial.COOLANT_INLET:
+                            print(row, col)
+                            # print(xl[j], rl[j])
+                            # print(xu[j], ru[j])
+                            # print( Q_(np.sqrt((xl[j] - xu[j])**2 + (rl[j] - ru[j])**2), unitReg.inch))
                             self.array[row,col].material = DomainMaterial.COOLANT_INLET
+                            self.array[row, col].pressure = initialPressure
+                            self.array[row, col].flowHeight = Q_(np.sqrt((xl[j] - xu[j])**2 + (rl[j] - ru[j])**2), unitReg.inch)
 
                         if row == wallPoint[0] and col == wallPoint[1]:
                             if row != previousWall[0] or col != previousWall[1]:
@@ -232,6 +238,9 @@ class DomainMC:
                         
                         self.array[row, col].pressure = initialPressure
                         self.array[row, col].flowHeight = Q_(np.sqrt((xl[j] - xu[j])**2 + (rl[j] - ru[j])**2), unitReg.inch)
+
+                        if self.array[row, col].material == DomainMaterial.COOLANT_INLET:
+                            print(self.array[row, col].flowHeight)
                 bar()
                 
         print("done")

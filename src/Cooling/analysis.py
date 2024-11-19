@@ -17,8 +17,8 @@ def AnalyzeMC(domain: domain.DomainMMAP, fig, plugC, cowlC, MAX_CORES: int = mp.
     # plt.ion()
     # plt.show()
 
-    # for col in range(1, domain.hpoints):
-    #     for row in range(domain.vpoints):
+    # for col in range(658, domain.hpoints):
+    #     for row in range(71, domain.vpoints):
     #         outs = analysisCoolingRef.Cell(domain, row, col)
     #         domain.setMEM(row, col, 'temperature', outs[0])
     #         domain.setMEM(row, col, 'pressure', outs[1])
@@ -33,12 +33,13 @@ def AnalyzeMC(domain: domain.DomainMMAP, fig, plugC, cowlC, MAX_CORES: int = mp.
     #             fig.canvas.draw()
     #             fig.canvas.flush_events()
     #             plt.waitforbuttonpress()
+    #             input("Press Enter to continue...")
 
 
     with joblib.Parallel(n_jobs=MAX_CORES, return_as='generator') as parallel:
         diff = tol + 1
         numRows = domain.vpoints
-        for i in range(5):
+        for i in range(3):
             with alive_bar(domain.vpoints, title=f"Analyzing iteration {i}") as bar:
                 outputs = parallel(
                     joblib.delayed(CalcRow)(domain, row) for row in range(numRows)

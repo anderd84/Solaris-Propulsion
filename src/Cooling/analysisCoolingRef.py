@@ -17,7 +17,7 @@ class ResistorSet:
     R: list[Q_] = [Q_(0, unitReg.hour * unitReg.degR / unitReg.BTU) for _ in range(4)]
     T: list[Q_] = [Q_(0, unitReg.degR) for _ in range(4)]
 
-    def getTnew(self):
+    def getSums(self):
         TRsum = Q_(0, str((self.T[0]/self.R[0]).units))
         Rsum = Q_(0, str(1/self.R[0].units))
         for i in range(4):
@@ -26,6 +26,10 @@ class ResistorSet:
             TRsum += self.T[i] / self.R[i]
             Rsum += 1/self.R[i]
             # print(TRsum, Rsum)
+        return TRsum, Rsum
+
+    def getTnew(self):
+        TRsum, Rsum = self.getSums()
         return TRsum / Rsum
 
     def getQin(self, Tprev: Q_):
@@ -81,6 +85,8 @@ def ConvectionHalfResistor(domain: domain.DomainMMAP, sink: tuple[int, int], sou
     if domain.material[convectionCell] in MaterialType.COOLANT:
         convectionCoeff = cooling_func.internal_flow_convection((domain.temperature[convectionCell]).to(unitReg.degR),(domain.pressure[convectionCell]).to(unitReg.psi), (domain.flowHeight[convectionCell]).to(unitReg.inch))
         area = CoolantConvectionArea(domain, convectionCell[0], convectionCell[1], isHoriz, sinkTop, sinkSide)
+        # print(convectionCoeff, area)
+        # print(domain.flowHeight[convectionCell])
     else:
         convectionCoeff = cooling_func.combustion_convection(domain.temperature[convectionCell].to(unitReg.degR), domain.velocity[convectionCell].to(unitReg.foot/unitReg.second))
         area = CombustionConvectionArea(domain, convectionCell[0], convectionCell[1], isHoriz, sinkTop, sinkSide)
@@ -188,17 +194,16 @@ def CalculateBorderResistors(domain: domain.DomainMMAP, row: int, col: int):
         resSet.R[Direction.RIGHT] = GetResistor(domain, (row, col), (row, col+1))
         resSet.T[Direction.RIGHT] = domain.temperature[row, col+1]
 
-    # print(resSet.R, resSet.T)
+    print(resSet.R, resSet.T)
     return resSet
 
 def CalculateCoolant(domain: domain.DomainMMAP, row: int, col: int):
     previousFlow = tuple(domain.previousFlow[row, col])
 
-    previousIn = CalculateBorderResistors(domain, previousFlow[0], previousFlow[1])
+    resSet = CalculateBorderResistors(domain, row, col)
     Tprev = domain.temperature[row, col]
 
-    Qin = previousIn.getQin(Tprev)
-    return cooling2d.heatcoolant(Qin, Tprev, domain.pressure[row, col])
+    return cooling2d.heatcoolant(domain.temperature[previousFlow], Tprev, resSet, domain.pressure[row, col])
 
 def CalculateCell(domain: domain.DomainMMAP, row: int, col: int):
     if domain.material[row,col] in MaterialType.STATIC_TEMP:
