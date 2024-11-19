@@ -19,23 +19,25 @@ def main():
     Tt = outputData["thetaThroat"]
     Re = outputData["radiusLip"]
 
-    # fig = plots.CreateNonDimPlot()
+    fig = plots.CreateNonDimPlot()
     plugC, straightLength, plugCoolL, plugCoolU = plug.GenerateDimPlug(cont, Rt, Tt, Re, Q_(5, unitReg.inch), Q_(1.5, unitReg.inch))
     cowlC, cowlCoolL, cowlCoolU = plug.GenerateDimCowl(Rt, Tt, Re, straightLength, DESIGN.chamberInternalRadius, DESIGN.wallThickness, Q_(0.0203, unitReg.inch))
     chamberC, aimpoint = plug.GenerateDimChamber(Rt, Tt, Re, Q_(5, unitReg.inch), DESIGN.chamberInternalRadius, DESIGN.wallThickness, Q_(0.0203, unitReg.inch), Q_(1.5, unitReg.inch))
-    # plots.PlotPlug(fig, plugC)
-    # plots.PlotPlug(fig, cowlC)
-    # plots.PlotPlug(fig, chamberC)
-    # fig.axes[0].plot([p.x for p in cowlCoolL], [p.r for p in cowlCoolL], '-k', linewidth=1)
-    # fig.axes[0].plot([p.x for p in cowlCoolU], [p.r for p in cowlCoolU], '-k', linewidth=1)
-    # fig.axes[0].plot([p.x for p in plugCoolL], [p.r for p in plugCoolL], '-k', linewidth=1)
-    # fig.axes[0].plot([p.x for p in plugCoolU], [p.r for p in plugCoolU], '-k', linewidth=1)
+    plots.PlotPlug(fig, plugC)
+    plots.PlotPlug(fig, cowlC)
+    plots.PlotPlug(fig, chamberC)
+    fig.axes[0].plot([p.x for p in cowlCoolL], [p.r for p in cowlCoolL], '-k', linewidth=1)
+    fig.axes[0].plot([p.x for p in cowlCoolU], [p.r for p in cowlCoolU], '-k', linewidth=1)
+    fig.axes[0].plot([p.x for p in plugCoolL], [p.r for p in plugCoolL], '-k', linewidth=1)
+    fig.axes[0].plot([p.x for p in plugCoolU], [p.r for p in plugCoolU], '-k', linewidth=1)
 
     # to run the saved one use this line:
     coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save.msh")
     # coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("coolmesh.msh")
 
     mmapmesh = domain.DomainMMAP(coolmesh)
+
+
 
     
 

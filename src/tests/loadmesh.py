@@ -31,7 +31,7 @@ fig.axes[0].plot([p.x for p in plugCoolU], [p.r for p in plugCoolU], '-k', linew
 
 # plt.show()
 
-coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("coolmesh.msh")
+# coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("coolmesh.msh")
 
 
 startingpoint = (-5.75, 2.6) # TODO use real point
@@ -48,7 +48,7 @@ startingpoint = (-5.75, 2.6) # TODO use real point
 
 # coolmesh.DumpFile("coolmesh.msh")
 
-coolmesh.ShowStatePlot(fig)
+# coolmesh.ShowStatePlot(fig)
 
 # coolmesh.ShowBorderPlot(fig)
 
