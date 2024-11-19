@@ -39,7 +39,7 @@ def AnalyzeMC(domain: domain.DomainMMAP, fig, plugC, cowlC, MAX_CORES: int = mp.
     with joblib.Parallel(n_jobs=MAX_CORES, return_as='generator') as parallel:
         diff = tol + 1
         numRows = domain.vpoints
-        for i in range(3):
+        for i in range(100):
             with alive_bar(domain.vpoints, title=f"Analyzing iteration {i}") as bar:
                 outputs = parallel(
                     joblib.delayed(CalcRow)(domain, row) for row in range(numRows)
@@ -50,6 +50,11 @@ def AnalyzeMC(domain: domain.DomainMMAP, fig, plugC, cowlC, MAX_CORES: int = mp.
                         domain.setMEM(row, col, 'temperature', tp[0])
                         domain.setMEM(row, col, 'pressure', tp[1])
                     bar()
+
+            if i % 10 == 0:
+                print("saving progress")
+                mesh = domain.toDomain()
+                mesh.DumpFile("save.msh")
 
 
 

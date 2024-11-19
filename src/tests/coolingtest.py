@@ -31,7 +31,9 @@ def main():
     fig.axes[0].plot([p.x for p in plugCoolL], [p.r for p in plugCoolL], '-k', linewidth=1)
     fig.axes[0].plot([p.x for p in plugCoolU], [p.r for p in plugCoolU], '-k', linewidth=1)
 
-    coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("coolmesh.msh")
+    # to run the saved one use this line:
+    coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save.msh")
+    # coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("coolmesh.msh")
 
     mmapmesh = domain.DomainMMAP(coolmesh)
 
@@ -39,7 +41,9 @@ def main():
 
     analysis.AnalyzeMC(mmapmesh, fig, plugC, cowlC)
     
-    mmapmesh.toDomain().ShowStatePlot(fig)
+    cool_mesh = mmapmesh.toDomain()
+    cool_mesh.ShowStatePlot(fig)
+    cool_mesh.DumpFile("coolmesh.msh")
     plt.show()
 
 if __name__ == "__main__":

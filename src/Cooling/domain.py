@@ -529,6 +529,8 @@ class DomainMMAP(DomainMC):
                     for attr in self.attributes:
                         if attr in self.units:
                             domain.array[i,j].__setattr__(attr, Q_(self.memmaps[attr][i,j], self.units[attr]))
+                        elif isinstance(self.memmaps[attr][i,j], np.memmap):
+                            domain.array[i,j].__setattr__(attr, tuple(self.memmaps[attr][i,j]))
                         else:
                             domain.array[i,j].__setattr__(attr, self.memmaps[attr][i,j])
                     bar()
