@@ -55,7 +55,7 @@ def CreateRaoContour(exhaustGas: Gas, chamberPressure: Q_, designAmbient: Q_, ba
 
     formatContour = nozzle.RaoContourFormat(cont, lipRadChoke.to(unitReg.inch).magnitude)
 
-    outputData = {"radiusLip": lipRadChoke, "radiusThroat": Q_(radiusThroat*lipRadChoke, unitReg.inch), "thetaThroat": Q_(thetaThroat, unitReg.radian), "machLip": machLip, "thetaLip": Q_(thetaLip, unitReg.radian), "areaRatio": areaRatio, "Cf": Cf, "lengthRatio": lengthRatio, "rawContour": cont}
+    outputData = {"radiusLip": Q_(lipRadChoke, unitReg.inch), "radiusThroat": Q_(radiusThroat*lipRadChoke, unitReg.inch), "thetaThroat": Q_(thetaThroat, unitReg.radian), "machLip": machLip, "thetaLip": Q_(thetaLip, unitReg.radian), "areaRatio": areaRatio, "Cf": Cf, "lengthRatio": lengthRatio, "rawContour": cont}
 
     return formatContour, field, outputData
 
