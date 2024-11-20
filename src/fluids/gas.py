@@ -2,6 +2,7 @@ import numpy as np
 from dataclasses import dataclass
 from scipy.optimize import fsolve
 from General.units import Q_, unitReg
+from icecream import ic
 
 @dataclass
 class SpHeatRatio:
@@ -121,4 +122,5 @@ def StagTempRatio(mach, gas: Gas):
 def MachToVelocity(mach, gas: Gas):
     gamma = gas.getVariableGamma(mach)
     temp = gas.stagTemp * StagTempRatio(mach, gas)
-    return mach * np.sqrt(gamma[1] * temp * gas.Rgas)
+    ic(temp)
+    return mach * np.sqrt(gamma * temp * gas.Rgas)
