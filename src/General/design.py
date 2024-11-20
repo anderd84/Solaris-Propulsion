@@ -87,6 +87,6 @@ coolingChannelHeightConverge = Q_(0.025, unitReg.inch)
 coolingChannelHeightPlug = Q_(0.025, unitReg.inch)
 coolingChannelShrinkDist = Q_(0.25, unitReg.inch)
 coolingChannelWallDist = Q_(0.025, unitReg.inch)
-NumberofChannels = 30
+NumberofChannels = 60
 landWidth = Q_(0.025, unitReg.inch)    # Width of individual land
 coolingChannelAngleSweep = Q_((2*chamberInternalRadius/NumberofChannels - landWidth)/chamberInternalRadius, unitReg.radians)   # Angle occupied by all cooling channels
