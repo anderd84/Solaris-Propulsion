@@ -67,12 +67,12 @@ class Gas:
 
     def getVariableGamma(self, mach) -> SpHeatRatio:
         T = self.stagTemp * (1 + self.gammaTyp[2] * mach**2)
-        gammaNext = self.SimpleHarmonicGamma(self.gammaTyp, T)
+        gammaNext = self.SimpleHarmonicGamma(T)
         gammaPrev = self.gammaTyp.g
         while (abs(gammaNext - gammaPrev) > 1e-6):
             gammaPrev = gammaNext.g
             T = self.stagTemp * (1 + gammaNext[2] * mach**2)
-            gammaNext = self.SimpleHarmonicGamma(self.gammaTyp, T)
+            gammaNext = self.SimpleHarmonicGamma(T)
         return gammaNext
     
     def getChokedArea(self, mdot):
@@ -81,11 +81,10 @@ class Gas:
         b = np.sqrt(gamma1/self.Rgas)*gamma1[1]**(-gamma1[1]*gamma1[3])
         return a/b
 
-    @staticmethod
-    def SimpleHarmonicGamma(gammaTyp: SpHeatRatio, temp: float):
+    def SimpleHarmonicGamma(self, temp: float):
         THETA = Q_(5500, unitReg.degR)
         tr = THETA/temp
-        return SpHeatRatio(1 + (gammaTyp - 1)/(1 + (gammaTyp - 1)*((tr)**2)*(np.exp(tr))/(np.exp(tr) - 1)**2))
+        return SpHeatRatio(1 + (self.gammaTyp - 1)/(1 + (self.gammaTyp - 1)*((tr)**2)*(np.exp(tr))/(np.exp(tr) - 1)**2))
 
 def PrandtlMeyerFunction(M, gamma):
     a = np.sqrt((gamma+1)/(gamma-1))

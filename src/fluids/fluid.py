@@ -22,6 +22,8 @@ LOX = pm.get('mp.O2')
 
 OF = DESIGN.OFratio
 TotalMdot = DESIGN.totalmdot
+OxMdot = DESIGN.Oxidizer_Total
+FuelMdot = DESIGN.Fuel_Total
 Chamber_Press = DESIGN.chamberPressure
 
 
@@ -90,6 +92,7 @@ class PROP:
         """  
         Area_Actual = (Number * 0.25 * Hole_Diameter**2 * np.pi).to(unitReg.inch**2)
         Velocity_Actual = (self.mdot/(self.rho * Area_Actual)).to(unitReg.feet / unitReg.second)
+        
         self.Area_Actual = Area_Actual
         self.Velocity_Actual = Velocity_Actual
         self.Number_Actual = Number
@@ -125,8 +128,8 @@ def PROPFLOWS(Film_Cooling,oxImpingeAngle, fuelInitalImpingeAngle, filmImpingeAn
     pressure_psi = AirPressure.to(unitReg.psi)
     properties_fuel = get_fluid_properties(fuel_name,temperature_R.magnitude, pressure_psi.magnitude)
     (viscosity_f, specific_heat_p_f, gamma_f, thermal_conductivity_f, density_f, prandtl_f, alpha_f, thermal_diffusivity_f, SurfaceTens_f) = properties_fuel
-    OX_CORE = PROP(gamma=oxImpingeAngle, mdot=OF*TotalMdot/(1+OF), rho=Q_(LOXDensity(Lox_Dewar_Pressure), unitReg.pound / unitReg.foot**3))
-    FUEL_CORE = PROP(gamma = fuelInitalImpingeAngle, mdot = TotalMdot/(1+OF)*(1 - Film_Cooling), rho=density_f) #gamma zero for this one because it's the initialized guess just making the FUEL CORE class requires it ( should change when moving to data classes)
+    OX_CORE = PROP(gamma=oxImpingeAngle, mdot=OxMdot, rho=Q_(LOXDensity(Lox_Dewar_Pressure), unitReg.pound / unitReg.foot**3))
+    FUEL_CORE = PROP(gamma = fuelInitalImpingeAngle, mdot = FuelMdot*(1 - Film_Cooling), rho=density_f) #gamma zero for this one because it's the initialized guess just making the FUEL CORE class requires it ( should change when moving to data classes)
     OUT_FILM_C = PROP(gamma =  filmImpingeAngle, mdot = Film_Cooling* FUEL_CORE.mdot, rho = FUEL_CORE.rho)
  
 #    print("checking that mdots were calculated right... error =", 
@@ -141,8 +144,9 @@ def PROPFLOWS(Film_Cooling,oxImpingeAngle, fuelInitalImpingeAngle, filmImpingeAn
 # Function to retrieve fluid properties using RocketProps defaults (English Engineering units)
 def get_fluid_properties(name, temperature_R, pressure_psi):
     # Ensure inputs are in the correct units for RocketProps methods
-    temperature = Q_(temperature_R, unitReg.degR)
-    pressure = Q_(pressure_psi, unitReg.psi)
+    temperature = Q_(temperature_R.magnitude, unitReg.degR)
+    
+    pressure = Q_(pressure_psi.magnitude, unitReg.psi)
     
     # Create an fluid object
     fluid = get_prop(name)
