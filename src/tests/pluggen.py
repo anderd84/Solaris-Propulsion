@@ -63,22 +63,22 @@ chamberC, aimpoint = plug.GenerateDimChamber(Rt, Tt, Re, Q_(5, unitReg.inch), DE
 plots.PlotPlug(fig, plugC)
 plots.PlotPlug(fig, cowlC)
 # plots.PlotPlug(fig, chamberC)
-# fig.axes[0].plot([p.x for p in cowlCoolL], [p.r for p in cowlCoolL], '-k', linewidth=1)
-# fig.axes[0].plot([p.x for p in cowlCoolU], [p.r for p in cowlCoolU], '-k', linewidth=1)
-# fig.axes[0].plot([p.x for p in plugCoolL], [p.r for p in plugCoolL], '-k', linewidth=1)
-# fig.axes[0].plot([p.x for p in plugCoolU], [p.r for p in plugCoolU], '-k', linewidth=1)
-print(units.PRESCOTT_PRESSURE)
-rlines, llines, streams = analysis.CalculateComplexField(cont, units.PRESCOTT_PRESSURE, exhaust, 1, Tt, Rt, Re.magnitude, 150, 0, 3)
-istream = streams[0]
-fig.axes[0].plot([p.x for p in istream], [p.r for p in istream], '--b', linewidth=1.5)
-ostream = streams[1]
-fig.axes[0].plot([p.x for p in ostream], [p.r for p in ostream], '--b', linewidth=1.5)
-fieldGrid = analysis.GridifyComplexField(rlines, llines)
+fig.axes[0].plot([p.x for p in cowlCoolL], [p.r for p in cowlCoolL], '-k', linewidth=1)
+fig.axes[0].plot([p.x for p in cowlCoolU], [p.r for p in cowlCoolU], '-k', linewidth=1)
+fig.axes[0].plot([p.x for p in plugCoolL], [p.r for p in plugCoolL], '-k', linewidth=1)
+fig.axes[0].plot([p.x for p in plugCoolU], [p.r for p in plugCoolU], '-k', linewidth=1)
+# print(units.PRESCOTT_PRESSURE)
+# rlines, llines, streams = analysis.CalculateComplexField(cont, units.PRESCOTT_PRESSURE, exhaust, 1, Tt, Rt, Re.magnitude, 150, 0, 3)
+# istream = streams[0]
+# fig.axes[0].plot([p.x for p in istream], [p.r for p in istream], '--b', linewidth=1.5)
+# ostream = streams[1]
+# fig.axes[0].plot([p.x for p in ostream], [p.r for p in ostream], '--b', linewidth=1.5)
+# fieldGrid = analysis.GridifyComplexField(rlines, llines)
 
-analysis.PlotFieldData(fig, fieldGrid)
-analysis.PlotCharacteristicLines(fig, np.concatenate((rlines, llines), axis=0))
+# analysis.PlotFieldData(fig, fieldGrid)
+# analysis.PlotCharacteristicLines(fig, np.concatenate((rlines, llines), axis=0))
 plt.show()
 
-analysis.CalculateThrust(exhaust, units.PRESCOTT_PRESSURE, Tt, Rt, Re, istream, cont[-1].r)
+# analysis.CalculateThrust(exhaust, units.PRESCOTT_PRESSURE, Tt, Rt, Re, istream, cont[-1].r)
 
 # plots.WriteContourTXT(plugC, "plug.txt")
