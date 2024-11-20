@@ -47,7 +47,7 @@ designAtm = Atmosphere(designAltitude.to(unitReg.meter).magnitude)
 
 designAmbientPressure = Q_(designAtm.pressure[0], unitReg.pascal)
 lengthMax = Q_(1.75, unitReg.inch)
-basePressure = Q_(5, unitReg.psi)
+basePressure = Q_(5.5, unitReg.psi)
 chokePercent = 0.9
 
 #Cooling inputs

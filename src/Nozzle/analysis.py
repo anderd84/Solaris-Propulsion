@@ -184,8 +184,6 @@ class CharacteristicPoint:
 
         Hfact = (r - PV.r) if isRight else (x - PV.x)
 
-        ic(PV.H)
-
         machStar = PV.machStar + (-(theta - PV.theta) - PV.H*Hfact - PV.J*(s - PV.s))/PV.G
 
         return CharacteristicPoint(x, r, theta, machStar, s, machStar2mach(machStar, workingGas.gammaTyp), MachAngle(machStar2mach(machStar, workingGas.gammaTyp)))
@@ -258,7 +256,6 @@ class CharacteristicPoint:
         theta = 0
 
         x = (r - PV.r)/PV.F + PV.x
-        ic(x)
 
         s = 0 # TODO entropy of contour streamline
         Hfact = (r - PV.r) if isRight else (x - PV.x)
@@ -377,7 +374,7 @@ def DoReflect(point: CharacteristicPoint, isRight: bool, innerStreamline: np.nda
         newPoint = None
         doInnerLine = innerStreamline[-1].r > 1e-3
         doIntersect = innerStreamline[-1].r > contour[-1].r
-        ic(innerStreamline[-1].r, doInnerLine)
+        # ic(innerStreamline[-1].r, doInnerLine)
         if doInnerLine and doIntersect:
             newPoint = CharacteristicPoint.CalculateSolidReflect(point, isRight, contour, workingGas)
         if newPoint is None and doInnerLine: # it missed the contour
@@ -487,11 +484,10 @@ def CalculateThrust(exhaust: Gas, Pamb, Tt: Q_, Rt: Q_, Re: Q_, innerStreamline,
     lasti = 0
     for i in range(len(innerStreamline)):
         if innerStreamline[i].r < baseRadius:
-            lasti = i
             break
     
-    ic(lasti, len(innerStreamline))
-    contPoints = innerStreamline[0:lasti]
+    ic(i, len(innerStreamline))
+    contPoints = innerStreamline[0:i]
 
     
     for point in contPoints:

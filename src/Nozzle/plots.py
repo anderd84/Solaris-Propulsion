@@ -9,8 +9,8 @@ import copy
 def CreateNonDimPlot() -> plt.Figure:
     fig, ax = plt.subplots()
     ax.set_aspect('equal')
-    ax.set_xlabel('X/Re')
-    ax.set_ylabel('R/Re')
+    ax.set_xlabel('X')
+    ax.set_ylabel('R')
     return fig
 
 def PlotField(fig: plt.Figure, field: np.ndarray, scale = 1, csarrows: int = 15, fanarrows: int = 10) -> plt.Figure:
