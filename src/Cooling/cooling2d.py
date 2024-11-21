@@ -59,6 +59,7 @@ def heatcoolant(Tprev, Tcell, resSet, Pprev, Pcell, landHeight, DeltaL):
 
     Tprev = Q_(Tprev.magnitude, unitReg.degR)
     Pcell = Q_(Pcell.magnitude, unitReg.psi)
+    Pprev = Q_(Pprev.magnitude, unitReg.psi)
 
     Tnew = ((TRsum + Tprev*mdotperchannel*cp)/(mdotperchannel*cp + Rsum)).to(unitReg.degR)
     Pnew = Pprev - DeltaP
