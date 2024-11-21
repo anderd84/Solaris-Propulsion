@@ -5,6 +5,8 @@ from Nozzle import plots
 import General.design as DESIGN
 from Nozzle import plug
 from General.units import Q_, unitReg
+import matrix_viewer as mv
+import numpy as np
 
 Re = Q_(3.2, unitReg.inch)
 exhaust = DESIGN.exhaustGas
@@ -18,9 +20,11 @@ Re = outputData["radiusLip"]
 fig = plots.CreateNonDimPlot()
 # plots.PlotContour(fig, cont, Rt, Tt, Re)
 # plots.PlotField(fig, field, Re)
-plugC, straightLength, plugCoolL, plugCoolU = plug.GenerateDimPlug(cont, Rt, Tt, Re, Q_(5, unitReg.inch), Q_(1.5, unitReg.inch))
-cowlC, cowlCoolL, cowlCoolU = plug.GenerateDimCowl(Rt, Tt, Re, straightLength, DESIGN.chamberInternalRadius, DESIGN.wallThickness, Q_(0.0203, unitReg.inch))
-chamberC, aimpoint = plug.GenerateDimChamber(Rt, Tt, Re, Q_(5, unitReg.inch), DESIGN.chamberInternalRadius, DESIGN.wallThickness, Q_(0.0203, unitReg.inch), Q_(1.5, unitReg.inch))
+overchoke = plug.getOverchokeDist(Re, Rt, Tt, DESIGN.chokePercent)
+
+plugC, straightLength, plugCoolL, plugCoolU = plug.GenerateDimPlug(cont, Rt, Tt, Re, Q_(6.3, unitReg.inch), Q_(1.5, unitReg.inch))
+cowlC, cowlCoolL, cowlCoolU = plug.GenerateDimCowl(Rt, Tt, Re, straightLength, DESIGN.chamberInternalRadius, DESIGN.wallThickness, overchoke)
+chamberC, aimpoint = plug.GenerateDimChamber(Rt, Tt, Re, Q_(6.3, unitReg.inch), DESIGN.chamberInternalRadius, DESIGN.wallThickness, overchoke, Q_(1.5, unitReg.inch))
 plots.PlotPlug(fig, plugC)
 plots.PlotPlug(fig, cowlC)
 plots.PlotPlug(fig, chamberC)
@@ -31,8 +35,11 @@ fig.axes[0].plot([p.x for p in plugCoolU], [p.r for p in plugCoolU], '-k', linew
 
 # plt.show()
 
-coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("coolmesh.msh")
+coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save.msh")
 
+mmapmesh = domain.DomainMMAP(coolmesh)
+mv.view(np.asarray(mmapmesh.pressure.magnitude))
+mv.show()
 
 startingpoint = (-5.75, 2.6) # TODO use real point
 # plt.plot([startingpoint[0], aimpoint[0]], [startingpoint[1], aimpoint[1]], 'rx-')
@@ -48,7 +55,7 @@ startingpoint = (-5.75, 2.6) # TODO use real point
 
 # coolmesh.DumpFile("coolmesh.msh")
 
-coolmesh.ShowMaterialPlot(fig)
+# coolmesh.ShowStatePlot(fig)
 
 # coolmesh.ShowBorderPlot(fig)
 
