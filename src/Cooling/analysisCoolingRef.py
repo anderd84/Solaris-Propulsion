@@ -206,7 +206,7 @@ def CalculateCoolant(domain: domain.DomainMMAP, row: int, col: int):
     deltaL = Q_(np.sqrt((domain.x[row, col] - domain.x[previousFlow])**2 + (domain.r[row, col] - domain.r[previousFlow])**2), unitReg.inch).to(unitReg.foot)
     flowHeight = (domain.flowHeight[row, col] + domain.flowHeight[previousFlow]) / 2
 
-    return cooling2d.heatcoolant(domain.temperature[previousFlow], Tprev, resSet, domain.pressure[row, col], flowHeight, deltaL)
+    return cooling2d.heatcoolant(domain.temperature[previousFlow], Tprev, resSet, domain.pressure[previousFlow], domain.pressure[row, col], flowHeight, deltaL)
 
 def CalculateCell(domain: domain.DomainMMAP, row: int, col: int):
     if domain.material[row,col] in MaterialType.STATIC_TEMP:

@@ -24,9 +24,11 @@ def main():
     fig = plots.CreateNonDimPlot()
     # plots.PlotContour(fig, cont, Rt, Tt, Re)
     # plots.PlotField(fig, field, Re)
-    plugC, straightLength, plugCoolL, plugCoolU = plug.GenerateDimPlug(cont, Rt, Tt, Re, Q_(5, unitReg.inch), Q_(1.5, unitReg.inch))
-    cowlC, cowlCoolL, cowlCoolU = plug.GenerateDimCowl(Rt, Tt, Re, straightLength, DESIGN.chamberInternalRadius, DESIGN.wallThickness, Q_(0.0203, unitReg.inch))
-    chamberC, aimpoint = plug.GenerateDimChamber(Rt, Tt, Re, Q_(5, unitReg.inch), DESIGN.chamberInternalRadius, DESIGN.wallThickness, Q_(0.0203, unitReg.inch), Q_(1.5, unitReg.inch))
+    overchoke = plug.getOverchokeDist(Re, Rt, Tt, DESIGN.chokePercent)
+
+    plugC, straightLength, plugCoolL, plugCoolU = plug.GenerateDimPlug(cont, Rt, Tt, Re, Q_(6.3, unitReg.inch), Q_(1.5, unitReg.inch))
+    cowlC, cowlCoolL, cowlCoolU = plug.GenerateDimCowl(Rt, Tt, Re, straightLength, DESIGN.chamberInternalRadius, DESIGN.wallThickness, overchoke)
+    chamberC, aimpoint = plug.GenerateDimChamber(Rt, Tt, Re, Q_(6.3, unitReg.inch), DESIGN.chamberInternalRadius, DESIGN.wallThickness, overchoke, Q_(1.5, unitReg.inch))
     plots.PlotPlug(fig, plugC)
     plots.PlotPlug(fig, cowlC)
     plots.PlotPlug(fig, chamberC)
@@ -34,7 +36,7 @@ def main():
     fig.axes[0].plot([p.x for p in cowlCoolU], [p.r for p in cowlCoolU], '-k', linewidth=1)
     # plt.show()
 
-    cooling2 = domain.DomainMC(-6, 4.5, 7, 5, .01)
+    cooling2 = domain.DomainMC(-7.3, 4.1, 7.9, 3, .01)
     cooling2.DefineMaterials(cowlC, np.array([]), chamberC, plugC, 15)
 
 
@@ -43,7 +45,7 @@ def main():
     # cooling.DefineMaterials(cowlC, np.array([]), chamberC, plugC, fig)
     # toc = time.perf_counter()
 
-    startingpoint = (-5.75, 2.6) # TODO use real point
+    startingpoint = (-6.75, 2.6) # TODO use real point
     plt.plot([startingpoint[0], aimpoint[0]], [startingpoint[1], aimpoint[1]], 'rx-')
     cooling2.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius, DESIGN.plugBaseRadius, DESIGN.chokeArea, fig)
 

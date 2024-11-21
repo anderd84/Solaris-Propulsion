@@ -20,7 +20,7 @@ totalmdot = Q_(7.5, unitReg.pound / unitReg.sec)
 Fuel_Total = totalmdot /(1+percentFilmCooling + OFratio)
 Oxidizer_Total = totalmdot - Fuel_Total
 
-chamberInternalRadius = Q_(3.825, unitReg.inch)
+chamberInternalRadius = Q_(3.8, unitReg.inch)
 wallThickness = Q_(0.25, unitReg.inch)
 plugThickness = Q_(0.25, unitReg.inch)
 maxRadius = chamberInternalRadius + wallThickness
@@ -47,7 +47,7 @@ designAtm = Atmosphere(designAltitude.to(unitReg.meter).magnitude)
 
 designAmbientPressure = Q_(designAtm.pressure[0], unitReg.pascal)
 lengthMax = Q_(1.75, unitReg.inch)
-basePressure = Q_(5, unitReg.psi)
+basePressure = Q_(5.5, unitReg.psi)
 chokePercent = 0.9
 
 #Cooling inputs
@@ -78,7 +78,7 @@ chokeArea = exhaustGas.getChokedArea(totalmdot).to(unitReg.inch**2)
 
 # nozzle design table
 # plugDesignTable = {"throatArcRadFactor": .1, "convergeAngle": 25, "turnArcRadFactor": 2, "straightAngle": 10, "lipAngle":15, "manifoldDistanceFactor": .1}
-plugDesignTable = {"throatArcRadFactor": .1, "convergeAngle": 45, "turnArcRadFactor": 1.75, "straightAngle": 9, "lipAngle":15, "manifoldDistanceFactor": .1}
+plugDesignTable = {"throatArcRadFactor": .1, "convergeAngle": 45, "turnArcRadFactor": 1.75, "straightAngle": 9, "lipAngle":15, "manifoldDistanceFactor": .05}
 
 
 # cooling channels
@@ -87,6 +87,6 @@ coolingChannelHeightConverge = Q_(0.025, unitReg.inch)
 coolingChannelHeightPlug = Q_(0.025, unitReg.inch)
 coolingChannelShrinkDist = Q_(0.25, unitReg.inch)
 coolingChannelWallDist = Q_(0.025, unitReg.inch)
-NumberofChannels = 30
+NumberofChannels = 60
 landWidth = Q_(0.025, unitReg.inch)    # Width of individual land
 coolingChannelAngleSweep = Q_((2*chamberInternalRadius/NumberofChannels - landWidth)/chamberInternalRadius, unitReg.radians)   # Angle occupied by all cooling channels

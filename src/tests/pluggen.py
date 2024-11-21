@@ -1,3 +1,4 @@
+from General import units
 from Nozzle import plug
 from fluids import gas
 from Nozzle import plots
@@ -5,8 +6,11 @@ from Nozzle import analysis
 import matplotlib.pyplot as plt
 from icecream import ic
 import numpy as np
+np.product = np.prod
 import General.design as DESIGN
 from General.units import Q_, unitReg
+import matrix_viewer as mv
+
 # import pint
 
 # ureg = pint.UnitRegistry()
@@ -50,23 +54,33 @@ ic(overchoke)
 
 
 fig = plots.CreateNonDimPlot()
-# plots.PlotContour(fig, cont, Rt, Tt, Re)
+plots.PlotContour(fig, cont, Rt, Tt, Re)
+plt.plot([cont[-1].x], [cont[-1].r], 'ro')
 # plots.PlotField(fig, field, Re)
-plugC, straightLength = plug.GenerateDimPlug(cont, Rt, Tt, Re, Q_(6.3, unitReg.inch), Q_(1.5, unitReg.inch))
-cowlC, cowlCool, asv = plug.GenerateDimCowl(Rt, Tt, Re, straightLength, DESIGN.chamberInternalRadius, DESIGN.wallThickness, overchoke)
-chamberC = plug.GenerateDimChamber(Rt, Tt, Re, Q_(6.3, unitReg.inch), DESIGN.chamberInternalRadius, DESIGN.wallThickness, overchoke, Q_(1.5, unitReg.inch))
-ic(chamberC)
+plugC, straightLength, plugCoolL, plugCoolU = plug.GenerateDimPlug(cont, Rt, Tt, Re, Q_(5, unitReg.inch), Q_(1.5, unitReg.inch))
+cowlC, cowlCoolL, cowlCoolU = plug.GenerateDimCowl(Rt, Tt, Re, straightLength, DESIGN.chamberInternalRadius, DESIGN.wallThickness, overchoke)
+chamberC, aimpoint = plug.GenerateDimChamber(Rt, Tt, Re, Q_(5, unitReg.inch), DESIGN.chamberInternalRadius, DESIGN.wallThickness, overchoke, Q_(1.5, unitReg.inch))
 plots.PlotPlug(fig, plugC)
 plots.PlotPlug(fig, cowlC)
 # plots.PlotPlug(fig, chamberC)
-plt.plot([p.x for p in cowlCool], [p.r for p in cowlCool], '-b', linewidth=1.5)
-plt.plot([p.x for p in asv], [p.r for p in asv], '-r', linewidth=1.5)
-# mat, stream = analysis.CalculateComplexField(cont, Q_(1, unitReg.psi), exhaust, 1, Tt, Re.magnitude, 25, 0, 1)
-# fig.axes[0].plot([p.x for p in stream], [p.r for p in stream], '--b', linewidth=1.5)
-# fieldGrid = analysis.GridifyComplexField(mat, np.array([]))
+fig.axes[0].plot([p.x for p in cowlCoolL], [p.r for p in cowlCoolL], '-k', linewidth=1)
+fig.axes[0].plot([p.x for p in cowlCoolU], [p.r for p in cowlCoolU], '-k', linewidth=1)
+fig.axes[0].plot([p.x for p in plugCoolL], [p.r for p in plugCoolL], '-k', linewidth=1)
+fig.axes[0].plot([p.x for p in plugCoolU], [p.r for p in plugCoolU], '-k', linewidth=1)
+print(units.PRESCOTT_PRESSURE)
+p = Q_(14.8, unitReg.psi)
+p = units.PRESCOTT_PRESSURE
+rlines, llines, streams = analysis.CalculateComplexField(cont, p, exhaust, 1, Tt, Rt, Re.magnitude, 150, 0, 3)
+istream = streams[0]
+fig.axes[0].plot([p.x for p in istream], [p.r for p in istream], '--b', linewidth=1.5)
+ostream = streams[1]
+fig.axes[0].plot([p.x for p in ostream], [p.r for p in ostream], '--b', linewidth=1.5)
+fieldGrid = analysis.GridifyComplexField(rlines, llines)
+
 # analysis.PlotFieldData(fig, fieldGrid)
-# analysis.PlotCharacteristicLines(fig, mat)
-# analysis.CalculateThrust(exhaust, Q_(1, unitReg.psi), Tt, Rt, Re, fieldGrid, cont[-1])
+analysis.PlotCharacteristicLines(fig, np.concatenate((rlines, llines), axis=0))
 plt.show()
+
+analysis.CalculateThrust(exhaust, p, Tt, Rt, Re, istream, cont[-1].r)
 
 # plots.WriteContourTXT(plugC, "plug.txt")
