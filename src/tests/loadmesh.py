@@ -38,6 +38,7 @@ fig.axes[0].plot([p.x for p in plugCoolU], [p.r for p in plugCoolU], '-k', linew
 coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save.msh")
 
 mmapmesh = domain.DomainMMAP(coolmesh)
+mmapmesh.plotTemp(fig)
 mv.view(np.asarray(mmapmesh.pressure.magnitude))
 mv.show()
 

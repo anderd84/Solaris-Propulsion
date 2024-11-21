@@ -44,7 +44,7 @@ mdotperchannel = Fuel_Total / NumberofChannels
 
 
 
-def heatcoolant(Tprev, Tcell, resSet, Pcell, landHeight, DeltaL):
+def heatcoolant(Tprev, Tcell, resSet, Pprev, Pcell, landHeight, DeltaL):
     TRsum, Rsum = resSet.getSums()
     (mu, cp, _, _, rho, _, _, _, _) = get_fluid_properties(fuelname, Tcell, Pcell)
     A_c = Q_(0.5*DESIGN.coolingChannelAngleSweep/NumberofChannels*(2*(DESIGN.chamberInternalRadius + DESIGN.coolingChannelWallDist)*landHeight + landHeight**2), unitReg.inch**2) # Cooling channel cross-sectional area, height should be variable in the future
