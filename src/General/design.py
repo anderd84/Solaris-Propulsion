@@ -90,4 +90,4 @@ coolingChannelShrinkDist = Q_(0.25, unitReg.inch)
 coolingChannelWallDist = Q_(0.025, unitReg.inch)
 NumberofChannels = 60
 landWidth = Q_(0.025, unitReg.inch)    # Width of individual land
-coolingChannelAngleSweep = Q_((1 - landWidth)/chamberInternalRadius, unitReg.radians)   # Angle occupied by all cooling channels
+coolingChannelAngleSweep = Q_((1 - landWidth*NumberofChannels)/chamberInternalRadius, unitReg.radians)   # Angle occupied by all cooling channels
