@@ -222,7 +222,8 @@ def CalculateCell(domain: domain.DomainMMAP, row: int, col: int):
     
     if domain.material[row,col] in MaterialType.COOLANT:
         if domain.material[row,col] == DomainMaterial.COOLANT_BULK:
-            return domain.temperature[tuple(domain.previousFlow[row,col])]
+            prevFlow = tuple(domain.previousFlow[row, col])
+            return (domain.temperature[prevFlow], domain.pressure[prevFlow])
         return CalculateCoolant(domain, row, col)
     raise ValueError("Material not recognized")
 
