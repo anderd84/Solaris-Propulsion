@@ -546,10 +546,10 @@ class DomainMMAP(DomainMC):
         self.memmaps[name].flush()
 
     def plotTemp(self, fig):
-        temps = self.pressure.magnitude.copy()
+        temps = self.temperature.magnitude.copy()
         for i in range(self.vpoints):
             for j in range(self.hpoints):
-                if self.material[i,j] not in MaterialType.COOLANT:
+                if self.material[i,j] in MaterialType.STATIC_TEMP:
                     temps[i,j] = np.nan
         ax = fig.axes[0]
         contf = ax.contourf(self.x, self.r, temps, 100, cmap='jet')

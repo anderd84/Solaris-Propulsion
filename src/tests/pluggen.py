@@ -55,11 +55,11 @@ ic(overchoke)
 
 fig = plots.CreateNonDimPlot()
 plots.PlotContour(fig, cont, Rt, Tt, Re)
-plt.plot([cont[-1].x], [cont[-1].r], 'ro')
+# plt.plot([cont[-1].x], [cont[-1].r], 'ro')
 # plots.PlotField(fig, field, Re)
-plugC, straightLength, plugCoolL, plugCoolU = plug.GenerateDimPlug(cont, Rt, Tt, Re, Q_(5, unitReg.inch), Q_(1.5, unitReg.inch))
+plugC, straightLength, plugCoolL, plugCoolU = plug.GenerateDimPlug(cont, Rt, Tt, Re, Q_(6.3, unitReg.inch), Q_(1.5, unitReg.inch))
 cowlC, cowlCoolL, cowlCoolU = plug.GenerateDimCowl(Rt, Tt, Re, straightLength, DESIGN.chamberInternalRadius, DESIGN.wallThickness, overchoke)
-chamberC, aimpoint = plug.GenerateDimChamber(Rt, Tt, Re, Q_(5, unitReg.inch), DESIGN.chamberInternalRadius, DESIGN.wallThickness, overchoke, Q_(1.5, unitReg.inch))
+chamberC, aimpoint = plug.GenerateDimChamber(Rt, Tt, Re, Q_(6.3, unitReg.inch), DESIGN.chamberInternalRadius, DESIGN.wallThickness, overchoke, Q_(1.5, unitReg.inch))
 plots.PlotPlug(fig, plugC)
 plots.PlotPlug(fig, cowlC)
 # plots.PlotPlug(fig, chamberC)
@@ -67,18 +67,18 @@ fig.axes[0].plot([p.x for p in cowlCoolL], [p.r for p in cowlCoolL], '-k', linew
 fig.axes[0].plot([p.x for p in cowlCoolU], [p.r for p in cowlCoolU], '-k', linewidth=1)
 fig.axes[0].plot([p.x for p in plugCoolL], [p.r for p in plugCoolL], '-k', linewidth=1)
 fig.axes[0].plot([p.x for p in plugCoolU], [p.r for p in plugCoolU], '-k', linewidth=1)
-print(units.PRESCOTT_PRESSURE)
-p = Q_(14.8, unitReg.psi)
-p = units.PRESCOTT_PRESSURE
-rlines, llines, streams = analysis.CalculateComplexField(cont, p, exhaust, 1, Tt, Rt, Re.magnitude, 150, 0, 3)
-istream = streams[0]
-fig.axes[0].plot([p.x for p in istream], [p.r for p in istream], '--b', linewidth=1.5)
-ostream = streams[1]
-fig.axes[0].plot([p.x for p in ostream], [p.r for p in ostream], '--b', linewidth=1.5)
-fieldGrid = analysis.GridifyComplexField(rlines, llines)
+# print(units.PRESCOTT_PRESSURE)
+# p = Q_(0.1, unitReg.psi)
+# # p = units.PRESCOTT_PRESSURE
+# rlines, llines, streams = analysis.CalculateComplexField(cont, p, exhaust, 1, Tt, Rt, Re.magnitude, 75, 0, 2)
+# istream = streams[0]
+# fig.axes[0].plot([p.x for p in istream], [p.r for p in istream], '--b', linewidth=1.5)
+# ostream = streams[1]
+# fig.axes[0].plot([p.x for p in ostream], [p.r for p in ostream], '--b', linewidth=1.5)
+# fieldGrid = analysis.GridifyComplexField(rlines, llines)
 
 # analysis.PlotFieldData(fig, fieldGrid)
-analysis.PlotCharacteristicLines(fig, np.concatenate((rlines, llines), axis=0))
+# analysis.PlotCharacteristicLines(fig, np.concatenate((rlines, llines), axis=0))
 plt.show()
 
 analysis.CalculateThrust(exhaust, p, Tt, Rt, Re, istream, cont[-1].r)
