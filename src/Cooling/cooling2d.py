@@ -57,9 +57,9 @@ def heatcoolant(Tprev, Tcell, resSet, Pprev, Pcell, landHeight, DeltaL):
     f = fsolve(f_func, 0.05)    # Darcy friction factor
     DeltaP = (f*DeltaL/D_h*rho*(mdotperchannel/rho/A_c)**2/2).to(unitReg.psi)   # Pressure drop
 
-    Tprev = Q_(Tprev.magnitude, unitReg.degR)
-    Pcell = Q_(Pcell.magnitude, unitReg.psi)
-    Pprev = Q_(Pprev.magnitude, unitReg.psi)
+    Tprev = Tprev.to(unitReg.degR)
+    Pcell = Pcell.to(unitReg.psi)
+    Pprev = Pprev.to(unitReg.psi)
 
     Tnew = ((TRsum + Tprev*mdotperchannel*cp)/(mdotperchannel*cp + Rsum)).to(unitReg.degR)
     Pnew = Pprev - DeltaP

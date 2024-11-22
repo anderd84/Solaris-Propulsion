@@ -1,5 +1,6 @@
 from rocketcea.cea_obj import CEA_Obj
 from ambiance import Atmosphere
+import numpy as np
 
 from General.units import Q_, unitReg
 from General.units import R_UNIVERSAL
@@ -89,4 +90,4 @@ coolingChannelShrinkDist = Q_(0.25, unitReg.inch)
 coolingChannelWallDist = Q_(0.025, unitReg.inch)
 NumberofChannels = 60
 landWidth = Q_(0.025, unitReg.inch)    # Width of individual land
-coolingChannelAngleSweep = Q_((2*chamberInternalRadius/NumberofChannels - landWidth)/chamberInternalRadius, unitReg.radians)   # Angle occupied by all cooling channels
+coolingChannelAngleSweep = Q_((1 - landWidth*NumberofChannels)/chamberInternalRadius, unitReg.radians)   # Angle occupied by all cooling channels

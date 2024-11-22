@@ -39,8 +39,8 @@ coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save.msh")
 
 mmapmesh = domain.DomainMMAP(coolmesh)
 mmapmesh.plotTemp(fig)
-mv.view(np.asarray(mmapmesh.pressure.magnitude))
-mv.show()
+# mv.view(np.asarray(mmapmesh.pressure.magnitude))
+# mv.show()
 
 startingpoint = (-5.75, 2.6) # TODO use real point
 # plt.plot([startingpoint[0], aimpoint[0]], [startingpoint[1], aimpoint[1]], 'rx-')
