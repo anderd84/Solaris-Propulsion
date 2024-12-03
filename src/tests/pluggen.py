@@ -68,7 +68,8 @@ plt.plot([cont[-1].x], [cont[-1].r], 'ro')
 # fig.axes[0].plot([p.x for p in plugCoolL], [p.r for p in plugCoolL], '-k', linewidth=1)
 # fig.axes[0].plot([p.x for p in plugCoolU], [p.r for p in plugCoolU], '-k', linewidth=1)
 # print(units.PRESCOTT_PRESSURE)
-rlines, llines, streams = analysis.CalculateComplexField(cont, units.PRESCOTT_PRESSURE, exhaust, 1, Tt, Rt, Re.magnitude, 25, 5, 3)
+p = Q_(6.75, unitReg.psi)
+rlines, llines, streams = analysis.CalculateComplexField(cont, p, exhaust, 1, Tt, Rt, Re.magnitude, 200, 0, 3)
 istream = streams[0]
 fig.axes[0].plot([p.x for p in istream], [p.r for p in istream], '--b', linewidth=1.5)
 ostream = streams[1]
@@ -79,6 +80,6 @@ analysis.PlotFieldData(fig, fieldGrid, 20000000, 2000000)
 analysis.PlotCharacteristicLines(fig, np.concatenate((rlines, llines), axis=0))
 plt.show()
 
-# analysis.CalculateThrust(exhaust, units.PRESCOTT_PRESSURE, Tt, Rt, Re, istream, cont[-1].r)
+ic(analysis.CalculateThrust(exhaust, p, Tt, Rt, Re, istream, cont[-1].r).to(unitReg.pound_force))
 
 # plots.WriteContourTXT(plugC, "plug.txt")

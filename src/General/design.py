@@ -16,7 +16,7 @@ OFratio = 2
 # geometry
 chamberPressure = Q_(300, unitReg.psi)
 percentFilmCooling = 0.15 #Outer Film Cooling Percentage
-totalmdot = Q_(7.5, unitReg.pound / unitReg.sec)
+totalmdot = Q_(7.37, unitReg.pound / unitReg.sec)
 Fuel_Total = totalmdot /(1+percentFilmCooling + OFratio)
 Oxidizer_Total = totalmdot - Fuel_Total
 

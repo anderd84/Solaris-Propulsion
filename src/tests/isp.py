@@ -18,9 +18,10 @@ def getIsp(i, pamb, cont, exhaust, Tt, Rt, Re, mdot):
     from General.units import Q_, unitReg
     from General.units import PSI, FT, IN, S, LBF, LBM
     g0 = Q_(32.2, FT/S/S)
-    janusVacThrust = Q_(2178, LBF)
+    janusVacIsp = Q_(297, S)
     janusmdot = Q_(7.5, LBM/S)
-    janusAe = Q_(30.87, IN**2)
+    janusVacThrust = janusVacIsp * janusmdot * g0
+    janusAe = np.pi * (Q_(6.25, IN)/2)**2
     exhaust = DESIGN.exhaustGas
 
     Tt = Q_(Tt, unitReg.radian)
@@ -29,7 +30,7 @@ def getIsp(i, pamb, cont, exhaust, Tt, Rt, Re, mdot):
     mdot = Q_(mdot, LBM/S)
 
     pamb = Q_(pamb, PSI)
-    rlines, llines, streams = analysis.CalculateComplexField(cont, pamb, exhaust, 1, Tt, Rt, Re.magnitude, 200, 0, 3)
+    rlines, llines, streams = analysis.CalculateComplexField(cont, pamb, exhaust, 1, Tt, Rt, Re.magnitude, 50, 0, 3)
     T = analysis.CalculateThrust(exhaust, pamb, Tt, Rt, Re, streams[0], cont[-1].r)
     print(T.to(LBF))
 
@@ -49,16 +50,17 @@ def main():
     Rt = outputData["radiusThroat"]
     Tt = outputData["thetaThroat"]
     Re = outputData["radiusLip"]
+    ic(outputData["areaRatio"])
 
     phi = np.pi/2 + Tt
     Astar = np.pi/np.sin(phi) * (Re**2 - Rt**2)
 
     h0 = Q_(0, FT)
-    hf = Q_(100000, FT)
+    hf = Q_(80000, unitReg.meter)
 
     mdot = DESIGN.totalmdot
 
-    pts = 20
+    pts = 50
     ispSpike = np.zeros(pts)
     ispJanus = np.zeros(pts)
 
