@@ -518,11 +518,13 @@ def CalculateThrust(exhaust: Gas, Pamb, Tt: Q_, Rt: Q_, Re: Q_, innerStreamline,
 
     for i in range(len(contPoints[:-1])):
         angle = np.pi - np.arctan2(contPoints[i].r - contPoints[i+1].r, contPoints[i].x - contPoints[i+1].x)
-        area = Q_(np.pi / np.sin(angle) * (contPoints[i].r**2 - contPoints[i+1].r**2), unitReg.inch**2)
+        area = Q_(np.pi*(contPoints[i].r**2 - contPoints[i+1].r**2), unitReg.inch**2)
         pressure = gas.StagPressRatio(contPoints[i].mach, exhaust)*exhaust.stagPress
-        thrusts.append((pressure - Pamb) * area * np.cos(angle))
+        thrusts.append((pressure - Pamb) * area)
     pressureIntegral = sum(thrusts)
     # ic(pressureIntegral.to(unitReg.pound_force))
+
+    baseThrust = (DESIGN.basePressure - Pamb)*np.pi*baseRadius**2
 
     total = momThrust + pressThrust + pressureIntegral
     # ic(total.to(unitReg.pound_force))

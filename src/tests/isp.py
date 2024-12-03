@@ -18,7 +18,7 @@ def getIsp(i, pamb, cont, exhaust, Tt, Rt, Re, mdot):
     from General.units import Q_, unitReg
     from General.units import PSI, FT, IN, S, LBF, LBM
     g0 = Q_(32.2, FT/S/S)
-    janusVacIsp = Q_(297, S)
+    janusVacIsp = Q_(304, S)
     janusmdot = Q_(7.5, LBM/S)
     janusVacThrust = janusVacIsp * janusmdot * g0
     janusAe = np.pi * (Q_(6.25, IN)/2)**2
@@ -56,18 +56,18 @@ def main():
     Astar = np.pi/np.sin(phi) * (Re**2 - Rt**2)
 
     h0 = Q_(0, FT)
-    hf = Q_(80000, unitReg.meter)
+    hf = Q_(30000, FT)
 
     mdot = DESIGN.totalmdot
 
-    pts = 50
+    pts = 20
     ispSpike = np.zeros(pts)
     ispJanus = np.zeros(pts)
 
     alts = [h.to(unitReg.meter).magnitude for h in np.linspace(h0, hf, pts)]
     pressures = [Q_(p, unitReg.pascal).to(unitReg.psi).magnitude for p in Atmosphere(alts).pressure]
 
-    with joblib.Parallel(n_jobs=8) as parallel:
+    with joblib.Parallel(n_jobs=10) as parallel:
 
         outputs = parallel(joblib.delayed(getIsp)(i, p, cont, exhaust, Tt.magnitude, Rt.magnitude, Re.magnitude, mdot.magnitude) for i, p in enumerate(pressures))
 

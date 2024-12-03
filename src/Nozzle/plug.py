@@ -21,6 +21,7 @@ def CreateRaoContour(exhaustGas: Gas, chamberPressure: Q_, designAmbient: Q_, ba
     PambPc = designAmbient / chamberPressure
 
     machLip = fsolve(lambda m: gas.StagPressRatio(m, exhaustGas) - PambPc, 2)[0]
+    ic(machLip)
     
     GUESS_T = -.1
     length = CalcPlugLength(machLip, np.deg2rad(GUESS_T), exhaustGas, PbPc)
