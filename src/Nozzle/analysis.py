@@ -524,8 +524,8 @@ def CalculateThrust(exhaust: Gas, Pamb, Tt: Q_, Rt: Q_, Re: Q_, innerStreamline,
     pressureIntegral = sum(thrusts)
     # ic(pressureIntegral.to(unitReg.pound_force))
 
-    baseThrust = (DESIGN.basePressure - Pamb)*np.pi*baseRadius**2
+    baseThrust = (DESIGN.basePressure - Pamb)*np.pi*Q_(baseRadius, unitReg.inch)**2
 
-    total = momThrust + pressThrust + pressureIntegral
+    total = momThrust + pressThrust + pressureIntegral + baseThrust
     # ic(total.to(unitReg.pound_force))
     return total
