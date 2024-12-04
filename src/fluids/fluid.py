@@ -126,7 +126,7 @@ Pressure_Drop_Lox = 0.2 #Pressure drop Percentage (ROT: Always in terms of Chamb
 def PROPFLOWS(Film_Cooling,oxImpingeAngle, fuelInitalImpingeAngle, filmImpingeAngle,Lox_Dewar_Pressure, AirTemperature, AirPressure,fuel_name):
     temperature_R = AirTemperature.to(unitReg.degR)
     pressure_psi = AirPressure.to(unitReg.psi)
-    properties_fuel = get_fluid_properties(fuel_name,temperature_R.magnitude, pressure_psi.magnitude)
+    properties_fuel = get_fluid_properties(fuel_name,temperature_R, pressure_psi)
     (viscosity_f, specific_heat_p_f, gamma_f, thermal_conductivity_f, density_f, prandtl_f, alpha_f, thermal_diffusivity_f, SurfaceTens_f) = properties_fuel
     OX_CORE = PROP(gamma=oxImpingeAngle, mdot=OxMdot, rho=Q_(LOXDensity(Lox_Dewar_Pressure), unitReg.pound / unitReg.foot**3))
     FUEL_CORE = PROP(gamma = fuelInitalImpingeAngle, mdot = FuelMdot*(1 - Film_Cooling), rho=density_f) #gamma zero for this one because it's the initialized guess just making the FUEL CORE class requires it ( should change when moving to data classes)
