@@ -44,7 +44,7 @@ mdotperchannel = Fuel_Total / NumberofChannels
 
 
 
-def heatcoolant(Tprev, Tcell, resSet, Pcell, landHeight, DeltaL):
+def heatcoolant(Tprev, Tcell, resSet, Pprev, Pcell, landHeight, DeltaL):
     TRsum, Rsum = resSet.getSums()
     (mu, cp, _, _, rho, _, _, _, _) = get_fluid_properties(fuelname, Tcell, Pcell)
     A_c = Q_(0.5*DESIGN.coolingChannelAngleSweep/NumberofChannels*(2*(DESIGN.chamberInternalRadius + DESIGN.coolingChannelWallDist)*landHeight + landHeight**2), unitReg.inch**2) # Cooling channel cross-sectional area, height should be variable in the future
@@ -57,11 +57,12 @@ def heatcoolant(Tprev, Tcell, resSet, Pcell, landHeight, DeltaL):
     f = fsolve(f_func, 0.05)    # Darcy friction factor
     DeltaP = (f*DeltaL/D_h*rho*(mdotperchannel/rho/A_c)**2/2).to(unitReg.psi)   # Pressure drop
 
-    Tprev = Q_(Tprev.magnitude, unitReg.degR)
-    Pcell = Q_(Pcell.magnitude, unitReg.psi)
+    Tprev = Tprev.to(unitReg.degR)
+    Pcell = Pcell.to(unitReg.psi)
+    Pprev = Pprev.to(unitReg.psi)
 
     Tnew = ((TRsum + Tprev*mdotperchannel*cp)/(mdotperchannel*cp + Rsum)).to(unitReg.degR)
-    Pnew = Pcell - DeltaP
+    Pnew = Pprev - DeltaP
 
     return Tnew, Pnew
 
@@ -194,9 +195,9 @@ def internal_flow_convection(Node_Temp, Node_Pressure, Land_Height):
         Nu_D = 0.027*Re_D**0.8*Pr**(1/3)*(mu/mu_s)**0.14    # Use Sieder-Tate anyway
     return (Nu_D*k_c/D_h).to((unitReg.BTU / unitReg.foot**2 / unitReg.hour / unitReg.degR))      # Convective heat transfer coefficient
 
-def free_convection(beta, T_s, T_infinity, P_atm, D_outer):
+def free_convection(T_s, T_infinity, P_atm, D_outer):
     # Properties
-    beta = beta.to(1 / unitReg.degR)
+    beta = 1/T_s.to(1 / unitReg.degR)
     T_s = T_s.to(unitReg.degR)
     T_infinity = T_infinity.to(unitReg.degR)
     P_atm = P_atm.to(unitReg.pound / unitReg.inch**2)
@@ -246,7 +247,7 @@ def film_cooling(m_dot_g, m_dot_c, A_c, P, u_g, u_c, P_cc, c_p_g, mu_g, Pr_g,
     G_g = rho_g*u_g # Combustion gas mass velocity
     G_mean = G_g*(u_g - u_c)/u_g    # Mean mass velocity
     Re_g = G_mean*D_h/mu_g # Combustion gas Reynolds number
-    lambda_func = lambda Lambda: 1.930*np.log10(Re_g*np.sqrt(Lambda)) - 1/np.sqrt(Lambda)
+    lambda_func = lambda Lambda: 1.930*np.log10(Re_g*np.sqrt(Lambda)) - 0.537 - 1/np.sqrt(Lambda)
     Lambda = fsolve(lambda_func, 0.1) # Friction factor
     e_t = 0.1   # RMS turbulence fraction Must be found from testing data?
     K_t = 1 + 4*e_t # Corrective turbulence factor

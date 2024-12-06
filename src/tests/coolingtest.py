@@ -20,9 +20,11 @@ def main():
     Re = outputData["radiusLip"]
 
     # fig = plots.CreateNonDimPlot()
-    plugC, straightLength, plugCoolL, plugCoolU = plug.GenerateDimPlug(cont, Rt, Tt, Re, Q_(5, unitReg.inch), Q_(1.5, unitReg.inch))
-    cowlC, cowlCoolL, cowlCoolU = plug.GenerateDimCowl(Rt, Tt, Re, straightLength, DESIGN.chamberInternalRadius, DESIGN.wallThickness, Q_(0.0203, unitReg.inch))
-    chamberC, aimpoint = plug.GenerateDimChamber(Rt, Tt, Re, Q_(5, unitReg.inch), DESIGN.chamberInternalRadius, DESIGN.wallThickness, Q_(0.0203, unitReg.inch), Q_(1.5, unitReg.inch))
+    overchoke = plug.getOverchokeDist(Re, Rt, Tt, DESIGN.chokePercent)
+
+    plugC, straightLength, plugCoolL, plugCoolU = plug.GenerateDimPlug(cont, Rt, Tt, Re, Q_(6.3, unitReg.inch), Q_(1.5, unitReg.inch))
+    cowlC, cowlCoolL, cowlCoolU = plug.GenerateDimCowl(Rt, Tt, Re, straightLength, DESIGN.chamberInternalRadius, DESIGN.wallThickness, overchoke)
+    chamberC, aimpoint = plug.GenerateDimChamber(Rt, Tt, Re, Q_(6.3, unitReg.inch), DESIGN.chamberInternalRadius, DESIGN.wallThickness, overchoke, Q_(1.5, unitReg.inch))
     # plots.PlotPlug(fig, plugC)
     # plots.PlotPlug(fig, cowlC)
     # plots.PlotPlug(fig, chamberC)
@@ -41,7 +43,7 @@ def main():
 
     
 
-    analysis.AnalyzeMC(mmapmesh, 0, plugC, cowlC, 10, 1e-5, False)
+    analysis.AnalyzeMC(mmapmesh, 0, plugC, cowlC, 10, 1e-5, True)
     
     cool_mesh = mmapmesh.toDomain()
     cool_mesh.ShowStatePlot(0)

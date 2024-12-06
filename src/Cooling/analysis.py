@@ -14,25 +14,14 @@ from Cooling import material
 from Cooling import analysisCoolingRef
 
 def AnalyzeMC(domain: domain.DomainMMAP, fig, plugC, cowlC, MAX_CORES: int = mp.cpu_count() - 1, tol: float = 1e-2, convPlot: bool = True):
-    # plt.show()
+    calcPoints = []
+    with alive_bar(domain.vpoints*domain.hpoints, title="Finding calculation points") as bar:
+        for row in range(domain.vpoints):
+            for col in range(domain.hpoints):
+                if domain.material[row, col] not in material.MaterialType.STATIC_TEMP:
+                    calcPoints.append((row, col))
+                bar()
 
-    # for col in range(domain.hpoints):
-    #     for row in range(domain.vpoints):
-    #         outs = analysisCoolingRef.Cell(domain, row, col)
-    #         domain.setMEM(row, col, 'temperature', outs[0])
-    #         domain.setMEM(row, col, 'pressure', outs[1])
-            # if domain.material[row, col] not in material.MaterialType.STATIC_TEMP:
-            #     fig.axes[0].clear()
-            #     plots.PlotPlug(fig, plugC)
-            #     plots.PlotPlug(fig, cowlC)
-            #     domain.toDomain().ShowStatePlot(fig)
-            #     fig.axes[0].plot([domain.x[row,col]], [domain.r[row,col]], 'wx')
-            #     print(outs)
-
-            #     fig.canvas.draw()
-            #     fig.canvas.flush_events()
-            #     plt.waitforbuttonpress()
-            #     input("Press Enter to continue...")
     if convPlot:
         plt.ion()
         convergePlot, ax = plt.subplots()
@@ -40,7 +29,6 @@ def AnalyzeMC(domain: domain.DomainMMAP, fig, plugC, cowlC, MAX_CORES: int = mp.
         ax.set_xlabel("Iteration")
         ax.set_ylabel("Max % Difference")
         ax.grid(True)
-        convergeP, = ax.plot([1], [1], 'r-')
 
     diffArr = []
 
@@ -51,9 +39,9 @@ def AnalyzeMC(domain: domain.DomainMMAP, fig, plugC, cowlC, MAX_CORES: int = mp.
         while diff > tol:
             i += 1
             diff = 0
-            with alive_bar(domain.vpoints, title=f"Analyzing iteration {i}") as bar:
+            with alive_bar(len(calcPoints), title=f"Analyzing iteration {i}") as bar:
                 outputs = parallel(
-                    joblib.delayed(CalcRow)(domain, row) for row in range(numRows)
+                    joblib.delayed(CalcCell)(domain, row, col) for row, col in calcPoints
                 )
 
                 for output in outputs:
@@ -66,8 +54,12 @@ def AnalyzeMC(domain: domain.DomainMMAP, fig, plugC, cowlC, MAX_CORES: int = mp.
             print(f"Max diff: {diff*100}%")
             diffArr.append(diff*100)
             if convPlot:
-                del convergeP
-                convergeP = ax.plot(range(i), diffArr, 'r-')
+                # del convergeP
+                ax.clear()
+                ax.grid(True)
+                iarr = max(0, i - 15)
+                ax.plot(range(iarr, i), diffArr[iarr:], 'k-')
+                # convergeP = ax.plot(range(i), diffArr, 'r-')
                 ax.autoscale(axis='y')
                 
                 convergePlot.canvas.draw()
@@ -87,3 +79,6 @@ def CalcRow(domain: domain.DomainMMAP, row: int):
     for col in range(domain.hpoints):
         res.append((row, col, analysisCoolingRef.Cell(domain, row, col)))
     return res
+
+def CalcCell(domain: domain.DomainMMAP, row: int, col: int):
+    return [(row, col, analysisCoolingRef.Cell(domain, row, col))]
