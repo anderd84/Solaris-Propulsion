@@ -30,9 +30,10 @@ def getIsp(i, pamb, cont, exhaust, Tt, Rt, Re, mdot):
     mdot = Q_(mdot, LBM/S)
 
     pamb = Q_(pamb, PSI)
-    rlines, llines, streams = analysis.CalculateComplexField(cont, pamb, exhaust, 1, Tt, Rt, Re.magnitude, 50, 0, 3)
+    rlines, llines, streams = analysis.CalculateComplexField(cont, pamb, exhaust, 1, Tt, Rt, Re.magnitude, 75, 0, 3 if pamb.magnitude > 6.75 else 1)
     T = analysis.CalculateThrust(exhaust, pamb, Tt, Rt, Re, streams[0], cont[-1].r)
-    print(T.to(LBF))
+    print(f"Spike {i}: {T.to(LBF)}")
+    print(f"Janus {i}: {(janusVacThrust - pamb*janusAe).to(LBF)}")
 
     ispSpike = ((T/mdot)/g0).to(S).magnitude
 
@@ -55,19 +56,19 @@ def main():
     phi = np.pi/2 + Tt
     Astar = np.pi/np.sin(phi) * (Re**2 - Rt**2)
 
-    h0 = Q_(0, FT)
+    h0 = Q_(3500, FT)
     hf = Q_(30000, FT)
 
     mdot = DESIGN.totalmdot
 
-    pts = 20
+    pts = 30
     ispSpike = np.zeros(pts)
     ispJanus = np.zeros(pts)
 
-    alts = [h.to(unitReg.meter).magnitude for h in np.linspace(h0, hf, pts)]
+    alts = [min(h.to(unitReg.meter).magnitude, 81000) for h in np.linspace(h0, hf, pts)]
     pressures = [Q_(p, unitReg.pascal).to(unitReg.psi).magnitude for p in Atmosphere(alts).pressure]
 
-    with joblib.Parallel(n_jobs=10) as parallel:
+    with joblib.Parallel(n_jobs=15) as parallel:
 
         outputs = parallel(joblib.delayed(getIsp)(i, p, cont, exhaust, Tt.magnitude, Rt.magnitude, Re.magnitude, mdot.magnitude) for i, p in enumerate(pressures))
 
@@ -77,11 +78,11 @@ def main():
             ispJanus[i] = _ispJanus
 
     # ic(isp)
-    plt.plot(np.array(alts)*3.28084, ispSpike)
-    plt.plot(np.array(alts)*3.28084, ispJanus)
+    plt.plot(np.array(alts)*3.28084, ispSpike, '-r', linewidth=2)
+    plt.plot(np.array(alts)*3.28084, ispJanus, '-b', linewidth=2)
     plt.xlabel("Altitude (ft)")
     plt.ylabel("ISP (s)")
-    plt.legend(["Spike", "Janus"])
+    plt.legend(["Aerospike", "Janus 4.2"])
     plt.show()
 
 

@@ -434,7 +434,7 @@ def PlotFieldData(fig: plt.Figure, fieldGrid: np.ndarray[CharacteristicPoint], l
     thetaVx = np.cos(theta[::(fieldGrid.shape[0]//stations + 1), ::(fieldGrid.shape[1]//lines + 1)])
     thetaVy = np.sin(theta[::(fieldGrid.shape[0]//stations + 1), ::(fieldGrid.shape[1]//lines + 1)])
 
-    # machContours = ax.contourf(x, r, mach, levels=100, cmap='jet')
+    machContours = ax.contourf(x, r, mach, levels=100, cmap='jet')
     # fig.colorbar(machContours, orientation='vertical')
 
     ax.quiver(qx, qy, thetaVx, thetaVy, scale=10, scale_units='xy', angles='xy', headwidth=3, headlength=5, width=.002, color='black')

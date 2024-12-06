@@ -168,6 +168,7 @@ def GenerateDimCowl(throatRadius: Q_, throatTheta: Q_, Re: Q_, straightLength: Q
     absThetaT = abs(throatTheta)
     xt = (Re - throatRadius)*np.tan(throatTheta)
     xc = xt - (np.cos(np.pi/2 - absThetaT)*designTable["throatArcRad"])
+    ic(xc, straightLength)
 
     #! New stuff
     thetaL = np.deg2rad(designTable["lipAngle"])
