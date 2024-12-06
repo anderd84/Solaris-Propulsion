@@ -8,6 +8,29 @@ from fluids.fluid import CD_drill, Pressure_Drop_Fuel, Pressure_Drop_Lox
 import numpy as np
 from icecream import ic
 import General.design as DESIGN
+from General.units import Q_, unitReg
+from Nozzle import plug
+from Nozzle import plots
+
+# davids stuff
+Re = Q_(3.2, unitReg.inch)
+exhaust = DESIGN.exhaustGas
+
+cont, field, outputData = plug.CreateRaoContour(exhaust, DESIGN.chamberPressure, DESIGN.designAmbientPressure, DESIGN.basePressure, Re, DESIGN.lengthMax)
+Rt = outputData["radiusThroat"]
+Tt = outputData["thetaThroat"]
+Re = outputData["radiusLip"]
+
+overchoke = plug.getOverchokeDist(Re, Rt, Tt, DESIGN.chokePercent)
+
+plugC, straightLength, plugCoolL, plugCoolU = plug.GenerateDimPlug(cont, Rt, Tt, Re, Q_(6.3, unitReg.inch), Q_(1.5, unitReg.inch))
+cowlC, cowlCoolL, cowlCoolU = plug.GenerateDimCowl(Rt, Tt, Re, straightLength, DESIGN.chamberInternalRadius, DESIGN.wallThickness, overchoke)
+
+plugx = np.array([p.x for p in plugC])
+plugr = np.array([p.r for p in plugC])
+offset = min(plugx)
+cowlx = np.array([p.x for p in cowlC])
+cowlr = np.array([p.r for p in cowlC])
 
 
 # -------------- Design Inputs -------------- #    
@@ -24,7 +47,7 @@ AirTemperature = DESIGN.prescottAmbientTemp
 AirPressure = DESIGN.prescottAmbientPressure
 FuelName = DESIGN.fuelName
 Points = 1000 #also used in other plots if this section ends up getting deleted
-AimX = 8
+AimX = straightLength.magnitude
 AimY = 3.66
 chamberatInjectorRadius = DESIGN.chamberatInjectorRadius
 OX_CORE,FUEL_CORE,OUT_FILM_C,viscosity_f, specific_heat_p_f, thermal_conductivity_f, SurfaceTens_f = doublet.initialize_prop_flows(
@@ -43,17 +66,4 @@ D_f_Dickerson, D_f_NASA =doublet.droplet_sizing(FUEL_CORE, OX_CORE, fuel_Doublet
 Dickerson, NASA = doublet.calculate_vaporization_time_and_chamber_length(OX_CORE, FUEL_CORE, specific_heat_p_f, thermal_conductivity_f,D_f_Dickerson, D_f_NASA)
 doublet.table_results(fuel_Doublet, film_Cool_Doublet, Dickerson, NASA, Doublet_Diameter_LOX, OX_CORE, FUEL_CORE,OUT_FILM_C,FuelName,gamma_FUEL_original)
 
-x_profile,y_profile = spike_contour(Points) #Will be the spike Contour
-
-x_graph = np.linspace(0, max(x_profile), Points) # -------------- Making and Plotting a Shitty Chamber Drawing  -------------- 
-thetaRange4 = np.linspace(np.radians(90), 0, Points)
-Chamber_Cowl_r = 0.5  # in
-Past_Peak = 1.15 #some terrible constant for shitty chamber I made drawn
-ChamberX = x_graph / x_graph[-1] * AimX * Past_Peak
-ChamberY = np.ones(len(ChamberX)) * ri.magnitude
-ChamberArcX = ChamberX[-1] + Chamber_Cowl_r * np.cos(thetaRange4)
-ChamberArcY = ChamberY[-1] + Chamber_Cowl_r * (-1 + np.sin(thetaRange4))
-Chamber_ContourX = np.concatenate([ChamberX, ChamberArcX])
-Chamber_ContourY = np.concatenate([ChamberY, ChamberArcY])
-
-#doublet.plot_results(OX_CORE, FUEL_CORE,OUT_FILM_C,Spacing,Rgamma_lox, ri, FilmCoolingSpacing, AimX, AimY, x_profile, y_profile, Chamber_ContourX, Chamber_ContourY)
+doublet.plot_results(OX_CORE, FUEL_CORE,OUT_FILM_C, Spacing, Rgamma_lox, ri, FilmCoolingSpacing, AimX, AimY, plugx - offset, plugr, cowlx - offset, cowlr)

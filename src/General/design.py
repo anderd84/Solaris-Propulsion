@@ -29,8 +29,8 @@ plugBaseRadius = Q_(2, unitReg.inch)
 chamberatInjectorRadius = Q_(6.25/2, unitReg.inch)
 
 # injector inputs
-Spacing = Q_(0.55, unitReg.inch)  #Spacing between centear of impingement Holes
-oxHoleRadius = Q_(1.75, unitReg.inch)  #Radial distance between centerline and LOX hole
+Spacing = Q_(0.75, unitReg.inch)  #Spacing between centear of impingement Holes
+oxHoleRadius = Q_(2, unitReg.inch)  #Radial distance between centerline and LOX hole
 filmCoolingSpacing = Q_(0.45, unitReg.inch) #inches Outer
 oxDoubletDiameter = Q_(0.0625, unitReg.inch)  #Design choise for DOublet Diameter size (Need to look more properly into it as 1/4 holes might make vaporization time too long)\
 oxImpingeAngle = Q_(25, unitReg.degrees)
@@ -90,4 +90,4 @@ coolingChannelShrinkDist = Q_(0.25, unitReg.inch)
 coolingChannelWallDist = Q_(0.025, unitReg.inch)
 NumberofChannels = 60
 landWidth = Q_(0.025, unitReg.inch)    # Width of individual land
-coolingChannelAngleSweep = Q_((1 - landWidth*NumberofChannels)/chamberInternalRadius, unitReg.radians)   # Angle occupied by all cooling channels
+# coolingChannelAngleSweep = Q_((1 - landWidth*NumberofChannels)/chamberInternalRadius, unitReg.radians)   # Angle occupied by all cooling channels
