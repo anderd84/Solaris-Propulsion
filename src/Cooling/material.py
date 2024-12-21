@@ -18,7 +18,7 @@ class DomainMaterial(IntEnum):
 
 @dataclass
 class MaterialType:
-    COOLANT = {DomainMaterial.COOLANT, DomainMaterial.COOLANT_WALL, DomainMaterial.COOLANT_BULK, DomainMaterial.COOLANT_INLET}
+    COOLANT = {DomainMaterial.COOLANT, DomainMaterial.COOLANT_WALL, DomainMaterial.COOLANT_BULK}
     COOLANT_WALL = {DomainMaterial.COOLANT_WALL}
     WALL = {DomainMaterial.COWL, DomainMaterial.PLUG}
     EXHAUST = {DomainMaterial.CHAMBER}

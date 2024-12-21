@@ -44,12 +44,11 @@ mdotperchannel = Fuel_Total / NumberofChannels
 
 
 
-def heatcoolant(Tprev, Tcell, resSet, Pprev, Pcell, landHeight, DeltaL):
+def heatcoolant(Tprev, Tcell, resSet, Pprev, Pcell, channelArea, channelHydroD, DeltaL):
     TRsum, Rsum = resSet.getSums()
     (mu, cp, _, _, rho, _, _, _, _) = get_fluid_properties(fuelname, Tcell, Pcell)
-    A_c = Q_(0.5*DESIGN.coolingChannelAngleSweep/NumberofChannels*(2*(DESIGN.chamberInternalRadius + DESIGN.coolingChannelWallDist)*landHeight + landHeight**2), unitReg.inch**2) # Cooling channel cross-sectional area, height should be variable in the future
-    P = Q_(2*landHeight + DESIGN.coolingChannelAngleSweep/NumberofChannels*((DESIGN.chamberInternalRadius + DESIGN.coolingChannelWallDist) + 2*landHeight), unitReg.inch)  # Cooling channel perimeter, height should be variable in the future
-    D_h = 4*A_c/P   # Hydraulic diameter
+    A_c = channelArea # Cooling channel cross-sectional area, height should be variable in the future
+    D_h = channelHydroD   # Hydraulic diameter
     Re_D = mdotperchannel*D_h/mu/A_c    # Reynolds number
     DeltaL = Q_(DeltaL, unitReg.inch)   # Step size
 
@@ -154,12 +153,11 @@ def combustion_convection(Node_Temp, Velocity):
 #Temp_test = Q_(5800, unitReg.degR)
 #ic(combustion_convection2(Temp_test,Velocity_test))
 
-def internal_flow_convection(Node_Temp, Node_Pressure, Land_Height):
+def internal_flow_convection(Node_Temp, Node_Pressure, channelArea, channelHydroD):
     # Gnielinski/Sieder & Tate for channel side
     # Inputs (Cooling channel)
     Temp = Q_(Node_Temp.magnitude, unitReg.degR)    # Not sure about this being the right temperature for properties
     Pressure = Q_(Node_Pressure.magnitude, unitReg.psi)
-    Land_Height = Q_(Land_Height.magnitude, unitReg.inch)
     (mu, _,_, k_c, _, Pr, _, _, _) = get_fluid_properties(fuelname, Temp, Pressure) # Coolant property lookup
     
     
@@ -172,9 +170,8 @@ def internal_flow_convection(Node_Temp, Node_Pressure, Land_Height):
     mu_s = mu.to(unitReg.pound / unitReg.foot / unitReg.second)    # Dynamic viscosity at the heat transfer boundary surface temperature NEEDS CORRECTING
 
     # Calculations
-    A_c = Q_(0.5*DESIGN.coolingChannelAngleSweep/NumberofChannels*(2*(DESIGN.chamberInternalRadius + DESIGN.coolingChannelWallDist)*Land_Height + Land_Height**2), unitReg.inch**2) # Cooling channel cross-sectional area, height should be variable in the future
-    P = Q_(2*Land_Height + DESIGN.coolingChannelAngleSweep/NumberofChannels*((DESIGN.chamberInternalRadius + DESIGN.coolingChannelWallDist) + 2*Land_Height), unitReg.inch)  # Cooling channel perimeter, height should be variable in the future
-    D_h = 4*A_c/P   # Hydraulic diameter
+    A_c = channelArea # Cooling channel cross-sectional area, height should be variable in the future
+    D_h = channelHydroD   # Hydraulic diameter
     Re_D = (m_dot_c/A_c)*D_h/mu   # Reynolds number
     # Re_D = Re_D.to(unitReg.inch / unitReg.inch)
     # Darcy Friction Factor

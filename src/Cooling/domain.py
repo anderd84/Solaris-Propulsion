@@ -1,3 +1,4 @@
+from calendar import c
 from dataclasses import dataclass
 from enum import Enum
 import os
@@ -6,6 +7,7 @@ import shutil
 import string
 import tempfile
 import time
+from General import design
 from fluids.gas import Gas
 import numpy as np
 import pint
@@ -41,15 +43,24 @@ class CoolingChannel:
 class DomainPoint:
     x: float
     r: float
-    area: float
+    area: pint.Quantity = Q_(0, unitReg.inch**2)
     material: DomainMaterial = DomainMaterial.FREE
     border: bool = False
-    temperature: Q_ = Q_(70, unitReg.degF).to(unitReg.degR)
-    pressure: Q_ = Q_(12.1, unitReg.psi)
-    velocity: Q_ = Q_(0, unitReg.ft/unitReg.s)
-    hydraulicDiameter: Q_ = Q_(0, unitReg.inch)
+    temperature: pint.Quantity = Q_(70, unitReg.degF).to(unitReg.degR)
+    pressure: pint.Quantity = Q_(12.1, unitReg.psi)
+    velocity: pint.Quantity = Q_(0, unitReg.ft/unitReg.s)
+    hydraulicDiameter: pint.Quantity = Q_(0, unitReg.inch)
     previousFlow: tuple[int, int] = (0,0)
-    flowHeight: Q_ = Q_(0, unitReg.inch)
+    flowHeight: pint.Quantity = Q_(0, unitReg.inch)
+
+    def getState(self, state: str):
+        try:
+            s = self.__getattribute__(state)
+        except AttributeError:
+            raise AttributeError(f"DomainPoint has no attribute {state}")
+        if isinstance(s, pint.Quantity):
+            return s.magnitude
+        return s
 
 class DomainMC:
     array: np.ndarray
@@ -80,7 +91,7 @@ class DomainMC:
         with alive_bar(vpoints*hpoints) as bar:
             for i in range(vpoints):
                 for j in range(hpoints):
-                    self.array[i,j] = DomainPoint(x0 + j*self.xstep, r0 - i*self.rstep, self.xstep*self.rstep)
+                    self.array[i,j] = DomainPoint(x0 + j*self.xstep, r0 - i*self.rstep, Q_(self.xstep*self.rstep, unitReg.inch**2))
                     bar()
         print("Domain created")
 
@@ -133,31 +144,35 @@ class DomainMC:
         # ax.plot(xl, rl, 'k', linewidth=0.25)
         # ax.plot(np.transpose(xl), np.transpose(rl), 'k', linewidth=0.25)  
           
-        # for i in range(self.vpoints):
-        #     for j in range(self.hpoints):
-        #         flow = self.array[i,j].previousFlow
-        #         if flow[0] != 0:
-        #             if self.array[i,j].material == DomainMaterial.COOLANT_WALL:
-        #                 ax.plot([self.array[i,j].x, self.array[flow].x], [self.array[i,j].r, self.array[flow].r], '-b', linewidth=1)
-        #             else:
-        #                 ax.plot([self.array[i,j].x, self.array[flow].x], [self.array[i,j].r, self.array[flow].r], '-k', linewidth=1)        
+        for i in range(self.vpoints):
+            for j in range(self.hpoints):
+                flow = self.array[i,j].previousFlow
+                if flow[0] != 0:
+                    if self.array[i,j].material == DomainMaterial.COOLANT_WALL:
+                        # ax.plot([self.array[i,j].x, self.array[flow].x], [self.array[i,j].r, self.array[flow].r], '-b', linewidth=1)
+                        ax.quiver(self.array[flow].x, self.array[flow].r, self.array[i,j].x - self.array[flow].x, self.array[i,j].r - self.array[flow].r, scale=1, scale_units='xy', angles='xy', color='b', width=0.002)
+                    else:
+                        # ax.plot([self.array[i,j].x, self.array[flow].x], [self.array[i,j].r, self.array[flow].r], '-k', linewidth=1)     
+                        ax.quiver(self.array[flow].x, self.array[flow].r, self.array[i,j].x - self.array[flow].x, self.array[i,j].r - self.array[flow].r, scale=1, scale_units='xy', angles='xy', color='k', width=0.002)   
 
-    def ShowStatePlot(self, fig: plt.Figure):
+
+    def ShowStatePlot(self, fig: plt.Figure, state: str):
         print("state plot!")
         xarr = np.array([[point.x for point in row] for row in self.array])
         print("xarr done!")
         rarr = np.array([[point.r for point in row] for row in self.array])
         print("rarr done!")
         
-        matarr = np.array([[point.temperature.to(unitReg.degR).magnitude for point in row] for row in self.array])
+        matarr = np.array([[point.getState(state) for point in row] for row in self.array])
         print("matarr done!")
 
         ax = fig.axes[0]
         contf = ax.contourf(xarr, rarr, matarr, 100, cmap='jet')
-        # fig.colorbar(contf, ax=ax)
+        fig.colorbar(contf, ax=ax)
         xcells = np.linspace(self.x0 - self.xstep/2, self.x0 + self.width + self.xstep/2, self.hpoints+1)
         rcells = np.linspace(self.r0 + self.rstep/2, self.r0 - self.height - self.rstep/2, self.vpoints+1)
         xl, rl = np.meshgrid(xcells, rcells)
+        print(np.min(matarr), np.max(matarr))
         print("done!")
         # ax.plot(xl, rl, 'k', linewidth=0.25)
         # ax.plot(np.transpose(xl), np.transpose(rl), 'k', linewidth=0.25)
@@ -214,15 +229,21 @@ class DomainMC:
 
                     # plt.plot([xl[j], xu[j]], [rl[j], ru[j]], '-b', linewidth=.25)
 
+                    landSectorAngle = design.landWidth/Q_(rl[j], unitReg.inch)
+                    channelSectorAngle = (2*np.pi/design.NumberofChannels) - landSectorAngle
+                    h = Q_(np.sqrt((xl[j] - xu[j])**2 + (rl[j] - ru[j])**2), unitReg.inch)
+                    totalArea = np.pi*h*Q_(ru[j] + rl[j], unitReg.inch)
+                    channelArea = totalArea*channelSectorAngle/(2*np.pi)
+                    perim = (Q_(rl[j], unitReg.inch)*channelSectorAngle + Q_(ru[j], unitReg.inch)*channelSectorAngle)/(2*np.pi) + 2*h
+                    hydroD = 4*channelArea/perim
+
                     for row, col in cells:
                         if (i==0 and j==0) or self.array[row, col].material == DomainMaterial.COOLANT_INLET:
-                            print(row, col)
-                            # print(xl[j], rl[j])
-                            # print(xu[j], ru[j])
-                            # print( Q_(np.sqrt((xl[j] - xu[j])**2 + (rl[j] - ru[j])**2), unitReg.inch))
                             self.array[row,col].material = DomainMaterial.COOLANT_INLET
                             self.array[row, col].pressure = initialPressure
-                            self.array[row, col].flowHeight = Q_(np.sqrt((xl[j] - xu[j])**2 + (rl[j] - ru[j])**2), unitReg.inch)
+                            self.array[row, col].flowHeight = h
+                            self.array[row, col].hydraulicDiameter = hydroD
+                            self.array[row, col].area = channelArea
 
                         if row == wallPoint[0] and col == wallPoint[1]:
                             if row != previousWall[0] or col != previousWall[1]:
@@ -235,12 +256,11 @@ class DomainMC:
                                 continue
                             self.array[row, col].material = DomainMaterial.COOLANT_BULK
                             self.array[row, col].previousFlow = wallPoint
-                        
-                        self.array[row, col].pressure = initialPressure
-                        self.array[row, col].flowHeight = Q_(np.sqrt((xl[j] - xu[j])**2 + (rl[j] - ru[j])**2), unitReg.inch)
 
-                        if self.array[row, col].material == DomainMaterial.COOLANT_INLET:
-                            print(self.array[row, col].flowHeight)
+                        self.array[row, col].pressure = initialPressure
+                        self.array[row, col].flowHeight = h
+                        self.array[row, col].hydraulicDiameter = hydroD
+                        self.array[row, col].area = channelArea
                 bar()
                 
         print("done")

@@ -28,10 +28,10 @@ chamberC, aimpoint = plug.GenerateDimChamber(Rt, Tt, Re, Q_(6.3, unitReg.inch), 
 plots.PlotPlug(fig, plugC)
 plots.PlotPlug(fig, cowlC)
 plots.PlotPlug(fig, chamberC)
-fig.axes[0].plot([p.x for p in cowlCoolL], [p.r for p in cowlCoolL], '-k', linewidth=1)
-fig.axes[0].plot([p.x for p in cowlCoolU], [p.r for p in cowlCoolU], '-k', linewidth=1)
-fig.axes[0].plot([p.x for p in plugCoolL], [p.r for p in plugCoolL], '-k', linewidth=1)
-fig.axes[0].plot([p.x for p in plugCoolU], [p.r for p in plugCoolU], '-k', linewidth=1)
+# fig.axes[0].plot([p.x for p in cowlCoolL], [p.r for p in cowlCoolL], '-k', linewidth=1)
+# fig.axes[0].plot([p.x for p in cowlCoolU], [p.r for p in cowlCoolU], '-k', linewidth=1)
+# fig.axes[0].plot([p.x for p in plugCoolL], [p.r for p in plugCoolL], '-k', linewidth=1)
+# fig.axes[0].plot([p.x for p in plugCoolU], [p.r for p in plugCoolU], '-k', linewidth=1)
 
 # plt.show()
 
@@ -56,7 +56,8 @@ startingpoint = (-5.75, 2.6) # TODO use real point
 
 # coolmesh.DumpFile("coolmesh.msh")
 
-# coolmesh.ShowStatePlot(fig)
+# coolmesh.ShowStatePlot(fig, "temperature")
+# coolmesh.ShowMaterialPlot(fig)
 
 # coolmesh.ShowBorderPlot(fig)
 

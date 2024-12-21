@@ -49,16 +49,16 @@ def main():
     plt.plot([startingpoint[0], aimpoint[0]], [startingpoint[1], aimpoint[1]], 'rx-')
     cooling2.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius, DESIGN.plugBaseRadius, DESIGN.chokeArea, fig)
 
-    cooling2.AssignCoolantFlow(domain.CoolingChannel(cowlCoolU, cowlCoolL), False, Q_(500, unitReg.psi))
-    cooling2.AssignCoolantFlow(domain.CoolingChannel(plugCoolU, plugCoolL), True, Q_(500, unitReg.psi))
+    cooling2.AssignCoolantFlow(domain.CoolingChannel(cowlCoolU, cowlCoolL), False, Q_(400, unitReg.psi))
+    cooling2.AssignCoolantFlow(domain.CoolingChannel(plugCoolU, plugCoolL), True, Q_(400, unitReg.psi))
 
     cooling2.DumpFile("coolmesh.msh")
 
     # fig2 = plots.CreateNonDimPlot()
-    cooling2.ShowMaterialPlot(fig)
+    # cooling2.ShowMaterialPlot(fig)
 
     # cooling2.ShowMaterialPlot(fig)
-    # cooling2.ShowStatePlot(fig)
+    cooling2.ShowStatePlot(fig, "area")
 
 
 

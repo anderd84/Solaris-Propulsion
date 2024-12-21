@@ -81,9 +81,10 @@ def ConvectionHalfResistor(domain: domain.DomainMMAP, sink: tuple[int, int], sou
     convectionCell = sink if sinkSide else source
     isHoriz = source[0] == sink[0] # same row, horizontal convection
     sinkTop = sink[0] > source[0] # is the sink on top of the source
+    mat = domain.material[convectionCell]
 
     if domain.material[convectionCell] in MaterialType.COOLANT:
-        convectionCoeff = cooling_func.internal_flow_convection((domain.temperature[convectionCell]).to(unitReg.degR),(domain.pressure[convectionCell]).to(unitReg.psi), (domain.flowHeight[convectionCell]).to(unitReg.inch))
+        convectionCoeff = cooling_func.internal_flow_convection((domain.temperature[convectionCell]).to(unitReg.degR),(domain.pressure[convectionCell]).to(unitReg.psi), domain.area[convectionCell], domain.hydraulicDiameter[convectionCell])
         area = CoolantConvectionArea(domain, convectionCell[0], convectionCell[1], isHoriz, sinkTop, sinkSide)
         # print(convectionCoeff, area)
         # print(domain.flowHeight[convectionCell])
@@ -206,7 +207,7 @@ def CalculateCoolant(domain: domain.DomainMMAP, row: int, col: int):
     deltaL = Q_(np.sqrt((domain.x[row, col] - domain.x[previousFlow])**2 + (domain.r[row, col] - domain.r[previousFlow])**2), unitReg.inch).to(unitReg.foot)
     flowHeight = (domain.flowHeight[row, col] + domain.flowHeight[previousFlow]) / 2
 
-    return cooling2d.heatcoolant(domain.temperature[previousFlow], Tprev, resSet, domain.pressure[previousFlow], domain.pressure[row, col], flowHeight, deltaL)
+    return cooling2d.heatcoolant(domain.temperature[previousFlow], Tprev, resSet, domain.pressure[previousFlow], domain.pressure[row, col], domain.area[row, col], domain.hydraulicDiameter[row, col], deltaL)
 
 def CalculateCell(domain: domain.DomainMMAP, row: int, col: int):
     if domain.material[row,col] in MaterialType.STATIC_TEMP:

@@ -47,7 +47,7 @@ def main():
     
     cool_mesh = mmapmesh.toDomain()
     cool_mesh.ShowStatePlot(0)
-    cool_mesh.DumpFile("coolmesh.msh")
+    cool_mesh.DumpFile("save.msh")
     plt.show()
 
 if __name__ == "__main__":
