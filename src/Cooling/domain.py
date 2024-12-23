@@ -11,6 +11,7 @@ from General import design
 from fluids.gas import Gas
 import numpy as np
 import pint
+from scipy import sparse
 np.product = np.prod
 import matplotlib.pyplot as plt
 import matrix_viewer as mv
@@ -593,6 +594,78 @@ class DomainMMAP(DomainMC):
         # xl, rl = np.meshgrid(xcells, rcells)
         print("done!")
 
+class SparseDomain(DomainMC):
+    attributes: list = []
+    points: dict
+
+    units: dict
+
+    def __init__(self, domain: DomainMC, poi: tuple[int, int]):
+        self.x0 = domain.x0
+        self.r0 = domain.r0
+        self.width = domain.width
+        self.height = domain.height
+        self.hpoints = domain.hpoints
+        self.vpoints = domain.vpoints
+        self.xstep = domain.xstep
+        self.rstep = domain.rstep
+
+        self.attributes = list(DomainPoint(0, 0, 0).__dict__.keys())
+        self.points = {}
+        self.units = {}
+        self.poi = poi
+
+        prevPoi = domain.array[poi].previousFlow
+
+        pointList = [poi, (poi[0] - 1, poi[1]), (poi[0] + 1, poi[1]), (poi[0], poi[1] - 1), (poi[0], poi[1] + 1),
+                     prevPoi, (prevPoi[0] - 1, prevPoi[1]), (prevPoi[0] + 1, prevPoi[1]), (prevPoi[0], prevPoi[1] - 1), (prevPoi[0], prevPoi[1] + 1)]
+
+        for attr in self.attributes:
+            testAttr = domain.array[0,0].__getattribute__(attr)
+            # if isinstance(testAttr, pint.Quantity):
+            #     self.units[attr] = str(testAttr.units)
+            self.points[attr] = {}
+            for p in pointList:
+                p = (max(min(p[0], domain.vpoints - 1), 0), max(min(p[1], domain.hpoints - 1), 0))
+                if isinstance(testAttr, pint.Quantity):
+                    t = domain.array[p].__getattribute__(attr)#.to(testAttr.units).magnitude
+                elif isinstance(testAttr, Enum):
+                    t = domain.array[p].__getattribute__(attr).value
+                elif isinstance(testAttr, tuple):
+                    t = [a for a in domain.array[p].__getattribute__(attr)]
+                else:
+                    t = domain.array[p].__getattribute__(attr)
+                self.points[attr][p] = t
+
+    def __getattribute__(self, name: str) -> Any:
+        try:
+            return super().__getattribute__(name)
+        except AttributeError:
+            if name in self.attributes:
+                if name in self.units:
+                    return Q_(self.points[name], self.units[name])
+                return self.points[name]
+            else:
+                return super().__getattribute__(name)
+            
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name in ['attributes', 'points', 'units', 'poi'] or name in super().__dir__():
+            super().__setattr__(name, value)
+        else:
+            if name in self.attributes:
+                if isinstance(value, pint.Quantity):
+                    self.points[name] = value.to(Q_(self.units[name])).magnitude
+                elif isinstance(value, Enum):
+                    self.points[name] = value.value
+                else:
+                    self.points[name][:] = value
+            else:
+                super().__setattr__(name, value)
+    
+    def refreshUnits(self):
+        for key in self.units.keys():
+            if isinstance(self.points[key], pint.Quantity):
+                self.points[key] = Q_(self.points[key].magnitude, self.units[key])
 
 def EvalMaterialProcess2(i, hsteps, pn, gridData, size, cowl, chamber, plug):
     res = []

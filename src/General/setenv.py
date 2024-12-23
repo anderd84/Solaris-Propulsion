@@ -31,3 +31,17 @@ def icDebug(debugOutput):
 
 def icInfo(infoOutput):
     logging.debug(ic.format(infoOutput))
+
+def DefineUnitReg():
+    import pint
+    import pickle
+
+    unitReg = pint.UnitRegistry()
+
+    with open("unitReg.pkl", "wb") as f:
+        pickle.dump(unitReg, f)
+
+
+if __name__ == "__main__":
+    DefineUnitReg()
+

@@ -6,12 +6,8 @@ from Cooling import cooling2d as cooling_func
 from Cooling.material import DomainMaterial, MaterialType
 import numpy as np
 from icecream import ic
+from General.units import Direction
 
-class Direction(IntEnum):
-    LEFT = 0
-    UPPER = 1
-    LOWER = 2
-    RIGHT = 3
 
 class ResistorSet:
     R: list[Q_] = [Q_(0, unitReg.hour * unitReg.degR / unitReg.BTU) for _ in range(4)]
@@ -95,7 +91,7 @@ def ConvectionHalfResistor(domain: domain.DomainMMAP, sink: tuple[int, int], sou
     return 1 / (convectionCoeff * area)
 
 def CoolantConvectionArea(domain: domain.DomainMMAP, row: int, col: int, isHoriz: bool, sinkTop: bool, sinkSide: bool):
-    wallPoint = (row, col) if domain.material[row, col] in MaterialType.COOLANT_WALL else tuple(domain.previousFlow[row, col])
+    wallPoint = (row, col)# if domain.material[row, col] in MaterialType.COOLANT_WALL else tuple(domain.previousFlow[row, col])
     innerRadius = Q_(domain.r[wallPoint] - domain.rstep/2, unitReg.inch).to(unitReg.foot)
     outerRadius = Q_(domain.r[wallPoint] + domain.rstep/2, unitReg.inch).to(unitReg.foot)
     landRadius = innerRadius
@@ -228,8 +224,10 @@ def CalculateCell(domain: domain.DomainMMAP, row: int, col: int):
         return CalculateCoolant(domain, row, col)
     raise ValueError("Material not recognized")
 
-def Cell(domain: domain.DomainMMAP, row: int, col: int):
-    out = CalculateCell(domain, row, col)
+def Cell(d: domain.DomainMMAP, row: int, col: int):
+    if isinstance(d, domain.SparseDomain):
+        d.refreshUnits()
+    out = CalculateCell(d, row, col)
     if isinstance(out, tuple):
         return out
-    return (out, domain.pressure[row, col])
+    return (out, d.pressure[row, col])

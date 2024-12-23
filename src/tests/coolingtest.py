@@ -39,16 +39,8 @@ def main():
 
     mmapmesh = domain.DomainMMAP(coolmesh)
 
-
-
-    
-
-    analysis.AnalyzeMC(mmapmesh, 0, plugC, cowlC, 10, 1e-5, True)
-    
-    cool_mesh = mmapmesh.toDomain()
-    cool_mesh.ShowStatePlot(0)
-    cool_mesh.DumpFile("save.msh")
-    plt.show()
+    analysis.AnalyzeMC(mmapmesh, 15, 1e-5, False)
+    analysis.AnalyzeMCSparse(coolmesh, 15, 1e-5, False)
 
 if __name__ == "__main__":
     main()

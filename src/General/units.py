@@ -25,3 +25,10 @@ PSI = unitReg.psi
 LBF = unitReg.pound_force
 LBM = unitReg.pound
 S = unitReg.seconds
+
+# directions
+class Direction(IntEnum):
+    LEFT = 0
+    UPPER = 1
+    LOWER = 2
+    RIGHT = 3
