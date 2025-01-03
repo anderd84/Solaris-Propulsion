@@ -8,8 +8,10 @@ from Cooling import cooling2d as cooling_func
 from Cooling.material import DomainMaterial 
 import numpy as np
 from icecream import ic
+from multiprocessing import parent_process
 
 def main():
+    print(parent_process())
     Re = Q_(3.2, unitReg.inch)
     exhaust = DESIGN.exhaustGas
     print(exhaust.stagTemp)
@@ -34,13 +36,13 @@ def main():
     # fig.axes[0].plot([p.x for p in plugCoolU], [p.r for p in plugCoolU], '-k', linewidth=1)
 
     # to run the saved one use this line:
-    # coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save.msh")
-    coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("coolmesh.msh")
+    # coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save")
+    coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("coolmesh")
 
-    mmapmesh = domain.DomainMMAP(coolmesh)
+    # mmapmesh = domain.DomainMMAP(coolmesh)
 
-    analysis.AnalyzeMC(mmapmesh, 15, 1e-5, False)
-    analysis.AnalyzeMCSparse(coolmesh, 15, 1e-5, False)
+    # analysis.AnalyzeMC(mmapmesh, 10, 1e-5, False)
+    analysis.AnalyzeMCSparse(coolmesh, 10, 1e-5, False)
 
 if __name__ == "__main__":
     main()

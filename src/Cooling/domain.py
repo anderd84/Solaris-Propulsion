@@ -1,4 +1,3 @@
-from calendar import c
 from dataclasses import dataclass
 from enum import Enum
 import os
@@ -31,9 +30,6 @@ from Cooling import material
 from Nozzle import plots
 from General.units import Q_, unitReg
 from fluids import gas
-
-mcQ = Queue()
-SHAREDMEMNAME = 'CoolingDomain'
 
 @dataclass
 class CoolingChannel:
@@ -446,12 +442,12 @@ class DomainMC:
         return (i, j)
 
     def DumpFile(self, filename):
-        joblib.dump(self, filename + '.z', compress=True)
+        joblib.dump(self, filename + '.msh.z', compress=True)
 
     @staticmethod
     def LoadFile(filename):
         print("Loading file")
-        loaded: DomainMC = joblib.load(filename + '.z')
+        loaded: DomainMC = joblib.load(filename + '.msh.z')
         # DomainMC.ConvertUnits(loaded)
         return loaded
     

@@ -13,8 +13,8 @@ unitReg = pint.get_application_registry()
 Q_ = unitReg.Quantity
 
 class ResistorSet:
-    R: list[Q_] = [Q_(0, unitReg.hour * unitReg.degR / unitReg.BTU) for _ in range(4)]
-    T: list[Q_] = [Q_(0, unitReg.degR) for _ in range(4)]
+    R: list[pint.Quantity] = [Q_(0, unitReg.hour * unitReg.degR / unitReg.BTU) for _ in range(4)]
+    T: list[pint.Quantity] = [Q_(0, unitReg.degR) for _ in range(4)]
 
     def getSums(self):
         TRsum = Q_(0, str((self.T[0]/self.R[0]).units))
@@ -31,7 +31,7 @@ class ResistorSet:
         TRsum, Rsum = self.getSums()
         return TRsum / Rsum
 
-    def getQin(self, Tprev: Q_):
+    def getQin(self, Tprev: pint.Quantity):
         Qsum = Q_(0, str((self.T[0]/self.R[0]).units))
         for i in range(4):
             if self.R[i] > Q_(2e8, unitReg.hour * unitReg.degR / unitReg.BTU) or self.R[i] <= Q_(2e-31, unitReg.hour * unitReg.degR / unitReg.BTU):
