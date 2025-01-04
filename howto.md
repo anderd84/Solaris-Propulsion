@@ -7,7 +7,7 @@ a preconfigured logger.
 
 ``` python
 import logging
-from src.General.setenv import setupLogging
+from General.setenv import setupLogging
 setupLogging()
 ```
 

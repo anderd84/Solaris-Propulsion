@@ -1,23 +1,38 @@
 
-from matplotlib import pyplot as plt, patches
+from dataclasses import dataclass
 import numpy as np
 from icecream import ic
-from Nozzle.nozzle import ContourPoint
-from enum import Enum
+from enum import IntEnum
 
-class DomainMaterial(Enum):
+from nozzle.nozzle import ContourPoint
+
+class DomainMaterial(IntEnum):
     FREE = 0 
     COWL = 1
-    COOLANT = 2
-    CHAMBER = 3
+    CHAMBER = 3 #*Gas inside the chamber
     PLUG = 4
+    COOLANT = 5
+    COOLANT_WALL = 6
+    COOLANT_BULK = 7
+    COOLANT_INLET = 8
+
+@dataclass
+class MaterialType:
+    COOLANT = {DomainMaterial.COOLANT, DomainMaterial.COOLANT_WALL, DomainMaterial.COOLANT_BULK}
+    COOLANT_WALL = {DomainMaterial.COOLANT_WALL}
+    WALL = {DomainMaterial.COWL, DomainMaterial.PLUG}
+    EXHAUST = {DomainMaterial.CHAMBER}
+    STATIC_TEMP = {DomainMaterial.COOLANT_INLET, DomainMaterial.FREE, DomainMaterial.CHAMBER}
+    ADIABATIC = {DomainMaterial.FREE}
+    SOLID = {DomainMaterial.COWL, DomainMaterial.PLUG}
+    FLUID = {DomainMaterial.COOLANT, DomainMaterial.COOLANT_WALL, DomainMaterial.COOLANT_BULK, DomainMaterial.COOLANT_INLET, DomainMaterial.CHAMBER}
 
 def isIntersect(Point, contour: np.ndarray[ContourPoint], domainSize: tuple[int, int]):
     if contour.size == 0:
         return False
     OnTheLine = 0
-    A = [Point.x, Point.r]   #Point
-    B = [Point.x, Point.r + domainSize[1]]   #Making an "infinitely" long vertical line at the point
+    A = Point
+    B = [Point[0], Point[1] + domainSize[1]]   #Making an "infinitely" long vertical line at the point
     Check = 0
     for i in range(len(contour) - 1):
         C = [contour[i].x,contour[i].r]
@@ -34,7 +49,6 @@ def isIntersect(Point, contour: np.ndarray[ContourPoint], domainSize: tuple[int,
     return InsideOutside #Return true if point is inside the polygon
 
 def is_point_on_segment(Point, C, D):
-    Point = [Point.x, Point.r]
     # Check collinearity using cross product
     collinear = (D[1] - C[1]) * (Point[0] - C[0]) == (Point[1] - C[1]) * (D[0] - C[0])
     # Check if point P is within the bounding box of C and D
@@ -43,6 +57,27 @@ def is_point_on_segment(Point, C, D):
 
 def ccw(A,B,C):
     return (C[1]-A[1]) * (B[0]-A[0]) > (B[1]-A[1]) * (C[0]-A[0])
+
+def intersectPolyAt(polygon, point1, point2):
+    Sx, Sy = point1
+    Tx, Ty = point2
+    for j in range(len(polygon) - 1):
+        a, b, c, d = polygon[j].x, polygon[j].r, polygon[j+1].x, polygon[j+1].r
+        Tx = Tx if Tx != Sx else Tx - 1e-6
+        c = c if c != a else c - 1e-6
+        mL = (Ty - Sy)/(Tx - Sx)
+        mC = (d - b)/(c - a)
+        Amat = np.array([[mL, -1], [mC, -1]])
+        bmat = np.array([[mL*Sx - Sy], [mC*a - b]])
+        X = np.linalg.solve(Amat, bmat)
+        Bx = X[0,0]
+        By = X[1,0]
+        if min(Sx,Tx) <= Bx <= max(Sx,Tx) \
+            and min(Sy,Ty) <= By <= max(Sy,Ty) \
+            and (min(a,c) <= Bx <= max(a,c) or np.isclose(a, c) and np.isclose(Bx, a)) \
+            and (min(b,d) <= By <= max(b,d) or np.isclose(b, d) and np.isclose(By, b)):
+            return (Bx, By), (j, j+1)
+    return None, None
 
 def main():
     Points = 1000

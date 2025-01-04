@@ -10,7 +10,7 @@ def setupLogging():
         os.makedirs("./logs", exist_ok=True)
 
         logger = logging.getLogger()
-        logger.setLevel(logging.DEBUG)
+        logger.setLevel(logging.INFO)
         formatter = logging.Formatter("[%(levelname)s] : %(message)s")
 
         fileH = logging.FileHandler(filename=f"./logs/{time.strftime('[%d-%m-%Y] %H-%M-%S')}.log")
@@ -31,3 +31,17 @@ def icDebug(debugOutput):
 
 def icInfo(infoOutput):
     logging.debug(ic.format(infoOutput))
+
+def DefineUnitReg():
+    import pint
+    import pickle
+
+    unitReg = pint.UnitRegistry()
+
+    with open("unitReg.pkl", "wb") as f:
+        pickle.dump(unitReg, f)
+
+
+if __name__ == "__main__":
+    DefineUnitReg()
+
