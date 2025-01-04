@@ -3,11 +3,10 @@ from ambiance import Atmosphere
 from enum import IntEnum
 
 # -------------- Unit Shit -------------- #
-unitReg = pint.UnitRegistry()
+unitReg = pint.application_registry.get()
 unitReg.default_system = 'US'
 unitReg.formatter.default_format = "~P"  # Compact unit formatting
 unitReg.define("lbmol = 453.59237 * mol")  # 1 lbmol = 453.59237 mol (since 1 lb = 453.59237 g)
-pint.set_application_registry(unitReg)
 
 Q_ = unitReg.Quantity
 

@@ -33,7 +33,7 @@ mdotperchannel = Fuel_Total / NumberofChannels
 
 
 
-
+# @unitReg.wraps((unitReg.degR, unitReg.psi), (unitReg.degR, unitReg.degR, None, unitReg.psi, unitReg.psi, unitReg.inch**2, unitReg.inch, unitReg.inch))
 def heatcoolant(Tprev, Tcell, resSet, Pprev, Pcell, channelArea, channelHydroD, DeltaL):
     TRsum, Rsum = resSet.getSums()
     (mu, cp, _, _, rho, _, _, _, _) = get_fluid_properties(fuelname, Tcell, Pcell)

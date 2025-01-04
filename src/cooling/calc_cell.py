@@ -4,10 +4,7 @@ import pint
 from cooling import cooling2d, domain
 from cooling.material import DomainMaterial, MaterialType
 import general.design as DESIGN
-from general.units import Direction
-
-unitReg = pint.get_application_registry()
-Q_ = unitReg.Quantity
+from general.units import Direction, unitReg, Q_
 
 class ResistorSet:
     R: list[pint.Quantity] = [Q_(0, unitReg.hour * unitReg.degR / unitReg.BTU) for _ in range(4)]
@@ -114,7 +111,7 @@ def CombustionConvectionArea(domain: domain.DomainMMAP, row: int, col: int, isHo
         xstep = Q_(domain.xstep, unitReg.inch).to(unitReg.foot)
         return 2 * np.pi * outerRadius * xstep if outer else 2 * np.pi * innerRadius * xstep
     
-def getCoolingArcAngle(innerRadius: Q_):
+def getCoolingArcAngle(innerRadius: pint.Quantity):
     return 2*np.pi/DESIGN.NumberofChannels - (DESIGN.landWidth / innerRadius)
 
 def CalculateCoreResistors(domain: domain.DomainMMAP, row: int, col: int):
