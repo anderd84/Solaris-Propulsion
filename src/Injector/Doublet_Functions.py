@@ -33,5 +33,5 @@ def spike_contour(Points):
     arc3_y = endY3 + r1 * (1 + np.sin(3 * np.pi / 2 - thetaRange3))
     # Combining all segments (for both plotting use and finding peaks)
     x_profile = np.concatenate([BaseX, arc1_x, arc2_x, arc3_x])
-    y_profile = np.concatenate([BaseY, arc1_y, arc2_y, arc3_y]) - 0.25
+    y_profile = np.concatenate([BaseY, arc1_y, arc2_y, arc3_y]) + 0.5
     return x_profile,y_profile

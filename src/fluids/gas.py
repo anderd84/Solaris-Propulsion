@@ -1,6 +1,8 @@
 import numpy as np
 from dataclasses import dataclass
 from scipy.optimize import fsolve
+from General.units import Q_, unitReg
+from icecream import ic
 
 @dataclass
 class SpHeatRatio:
@@ -43,9 +45,9 @@ class SpHeatRatio:
 
 class Gas:
     gammaTyp: SpHeatRatio
-    Rgas: float
-    stagTemp: float = 0
-    stagPress: float = 0
+    Rgas: Q_
+    stagTemp: Q_ = Q_(0, unitReg.degR)
+    stagPress: Q_ = Q_(0, unitReg.psi)
 
     def __init__(self, gamma: float, Rgas: float, **kwargs):
         self.gammaTyp = SpHeatRatio(gamma)
@@ -65,25 +67,24 @@ class Gas:
 
     def getVariableGamma(self, mach) -> SpHeatRatio:
         T = self.stagTemp * (1 + self.gammaTyp[2] * mach**2)
-        gammaNext = self.SimpleHarmonicGamma(self.gammaTyp, T)
+        gammaNext = self.SimpleHarmonicGamma(T)
         gammaPrev = self.gammaTyp.g
         while (abs(gammaNext - gammaPrev) > 1e-6):
             gammaPrev = gammaNext.g
             T = self.stagTemp * (1 + gammaNext[2] * mach**2)
-            gammaNext = self.SimpleHarmonicGamma(self.gammaTyp, T)
+            gammaNext = self.SimpleHarmonicGamma(T)
         return gammaNext
     
     def getChokedArea(self, mdot):
-        gamma1 = self.gammaTyp #self.getVariableGamma(1)
+        gamma1 = self.getVariableGamma(1)
         a = mdot*np.sqrt(self.stagTemp)/self.stagPress
         b = np.sqrt(gamma1/self.Rgas)*gamma1[1]**(-gamma1[1]*gamma1[3])
         return a/b
 
-    @staticmethod
-    def SimpleHarmonicGamma(gammaTyp: SpHeatRatio, temp: float):
-        THETA = 5500 # R
+    def SimpleHarmonicGamma(self, temp: float):
+        THETA = Q_(5500, unitReg.degR)
         tr = THETA/temp
-        return SpHeatRatio(1 + (gammaTyp - 1)/(1 + (gammaTyp - 1)*((tr)**2)*(np.exp(tr))/(np.exp(tr) - 1)**2))
+        return SpHeatRatio(1 + (self.gammaTyp - 1)/(1 + (self.gammaTyp - 1)*((tr)**2)*(np.exp(tr))/(np.exp(tr) - 1)**2))
 
 def PrandtlMeyerFunction(M, gamma):
     a = np.sqrt((gamma+1)/(gamma-1))
@@ -113,3 +114,13 @@ def obliqueShock(mach, delta, gamma: SpHeatRatio) -> tuple[float, float, float]:
 def StagPressRatio(mach, gas: Gas):
     gamma = gas.getVariableGamma(mach)
     return (1 + (gamma[2]*mach**2))**(-gamma[5])
+
+def StagTempRatio(mach, gas: Gas):
+    gamma = gas.getVariableGamma(mach)
+    return (1 + (gamma[2]*mach**2))**(-1)
+
+def MachToVelocity(mach, gas: Gas):
+    gamma = gas.getVariableGamma(mach)
+    temp = gas.stagTemp * StagTempRatio(mach, gas)
+    ic(temp)
+    return mach * np.sqrt(gamma * temp * gas.Rgas)

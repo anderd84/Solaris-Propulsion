@@ -2,14 +2,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 from Nozzle.nozzle import ContourPoint
 from Nozzle.rao import CharacteristicPoint
+from General.units import unitReg, Q_
 from scipy.optimize import fsolve
 import copy
 
 def CreateNonDimPlot() -> plt.Figure:
     fig, ax = plt.subplots()
     ax.set_aspect('equal')
-    ax.set_xlabel('X/Re')
-    ax.set_ylabel('R/Re')
+    ax.set_xlabel('X')
+    ax.set_ylabel('R')
     return fig
 
 def PlotField(fig: plt.Figure, field: np.ndarray, scale = 1, csarrows: int = 15, fanarrows: int = 10) -> plt.Figure:
@@ -41,6 +42,8 @@ def PlotField(fig: plt.Figure, field: np.ndarray, scale = 1, csarrows: int = 15,
 
 def PlotContour(fig: plt.Figure, contour: np.ndarray[ContourPoint | CharacteristicPoint], Rt, Tt, lipRadius = 1) -> plt.Figure:
     ax = fig.axes[0]
+    Rt = Rt.to(unitReg.inch).magnitude
+    lipRadius = lipRadius.to(unitReg.inch).magnitude
 
     cx = [p.x for p in contour]
     cy = [p.r for p in contour]
@@ -61,13 +64,13 @@ def PlotContour(fig: plt.Figure, contour: np.ndarray[ContourPoint | Characterist
     
     return fig
 
-def PlotPlug(fig: plt.Figure, plug: np.ndarray[ContourPoint]) -> plt.Figure:
+def PlotPlug(fig: plt.Figure, plug: np.ndarray[ContourPoint], style = '-k') -> plt.Figure:
     ax = fig.axes[0]
 
     x = [p.x for p in plug]
     r = [p.r for p in plug]
 
-    ax.plot(x, r, '-k', linewidth=2)
+    ax.plot(x, r, style, linewidth=2)
 
     return fig
 
