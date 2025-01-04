@@ -1,10 +1,12 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from Nozzle.nozzle import ContourPoint
-from Nozzle.rao import CharacteristicPoint
-from General.units import unitReg, Q_
 from scipy.optimize import fsolve
 import copy
+
+from general.units import unitReg, Q_
+from nozzle.nozzle import ContourPoint
+from nozzle.rao import CharacteristicPoint
+
 
 def CreateNonDimPlot() -> plt.Figure:
     fig, ax = plt.subplots()

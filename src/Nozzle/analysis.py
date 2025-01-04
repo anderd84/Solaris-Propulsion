@@ -1,19 +1,15 @@
 import numpy as np
-np.product = np.prod
 from dataclasses import dataclass
-import matplotlib.pyplot as plt
-import fluids.gas as gas
-from fluids.gas import MachAngle, mach2machStar, machStar2mach, Gas
-import General.design as DESIGN
-import Nozzle.nozzle as nozzle
 from icecream import ic
-import Nozzle.config as config
-from General.units import Q_, unitReg
-import matrix_viewer as mv
+import matplotlib.pyplot as plt
 import logging
-from scipy.optimize import fsolve
-from General.setenv import setupLogging
-setupLogging()
+
+from fluids import gas
+from fluids.gas import MachAngle, mach2machStar, machStar2mach, Gas
+import general.design as DESIGN
+from general.units import Q_, unitReg
+from nozzle import nozzle
+from nozzle import config
 
 @dataclass
 class CharacteristicPoint:

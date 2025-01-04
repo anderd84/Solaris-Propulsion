@@ -1,16 +1,13 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.optimize import fsolve
 from icecream import ic
 
 from fluids.gas import Gas
-import fluids.gas as gas
-import Nozzle.rao as rao
-from Nozzle import nozzle
-from Nozzle import plots
-from General.units import Q_, unitReg
-import General.design as DESIGN
-
+from fluids import gas
+from general.units import Q_, unitReg
+import general.design as DESIGN
+from nozzle import rao
+from nozzle import nozzle
 
 def CalcPlugLength(machLip: float, theta:float, exhaustGas: Gas, PbPc: float):
     _, _, length = rao.CalculatePlugMetrics(machLip, theta, rao.CalculateMachD(machLip, theta, exhaustGas.gammaTyp, PbPc), exhaustGas.gammaTyp)
