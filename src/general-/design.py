@@ -1,11 +1,9 @@
 from rocketcea.cea_obj import CEA_Obj
 from ambiance import Atmosphere
-import numpy as np
 
-from General.units import Q_, unitReg
-from General.units import R_UNIVERSAL
+from general.units import Q_, unitReg
+from general.units import R_UNIVERSAL
 from fluids.gas import Gas
-from icecream import ic
 
 # eninge inputs
 

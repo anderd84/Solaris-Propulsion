@@ -1,12 +1,11 @@
 from enum import IntEnum
-from Cooling import cooling2d, domain
-import General.design as DESIGN
-# from General.units import Q_, unitReg
-from Cooling import cooling2d as cooling_func
-from Cooling.material import DomainMaterial, MaterialType
+from cooling import cooling2d, domain
+import general.design as DESIGN
+from cooling import cooling2d as cooling_func
+from cooling.material import DomainMaterial, MaterialType
 import numpy as np
 from icecream import ic
-from General.units import Q_, Direction
+from general.units import Q_, Direction
 import pint
 
 unitReg = pint.get_application_registry()

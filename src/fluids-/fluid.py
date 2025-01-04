@@ -1,14 +1,11 @@
-from matplotlib import pyplot as plt, patches
 from scipy.optimize import fsolve
-import matplotlib.pyplot as plt
-from pint import UnitRegistry
 import numpy as np
 import pyromat as pm
 import CoolProp.CoolProp as CP
-from icecream import ic
 from rocketprops.rocket_prop import get_prop
-from General.units import Q_, unitReg
-import General.design as DESIGN
+
+from general.units import Q_, unitReg
+import general.design as DESIGN
 
 # -------------- Pyromat Shit -------------- #
 pm.config['unit_pressure'] = 'psi'

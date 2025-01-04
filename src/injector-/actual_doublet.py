@@ -1,14 +1,13 @@
 from matplotlib import pyplot as plt, patches
-from Injector.Doublet_Functions import spike_contour
-from Injector.InjectorCad import injector_cad_write
-from Injector.Drill import drill_approximation
 from scipy.optimize import fsolve
 from fluids.fluid import  PROPFLOWS
 import numpy as np
 from icecream import ic
-from General.units import Q_, unitReg
 from texttable import Texttable
-import General.design as DESIGN
+
+from injector.Drill import drill_approximation
+from general.units import Q_, unitReg
+import general.design as DESIGN
 
 OF = DESIGN.OFratio
 TotalMdot = DESIGN.totalmdot

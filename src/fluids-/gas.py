@@ -1,9 +1,9 @@
 import numpy as np
 from dataclasses import dataclass
 from scipy.optimize import fsolve
-from General.units import Q_, unitReg
 from icecream import ic
 
+from general.units import Q_, unitReg
 @dataclass
 class SpHeatRatio:
     def __init__(self, gamma):
