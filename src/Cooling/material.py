@@ -72,7 +72,10 @@ def intersectPolyAt(polygon, point1, point2):
         X = np.linalg.solve(Amat, bmat)
         Bx = X[0,0]
         By = X[1,0]
-        if min(Sx,Tx) <= Bx <= max(Sx,Tx) and min(Sy,Ty) <= By <= max(Sy,Ty) and min(a,c) <= Bx <= max(a,c) and min(b,d) <= By <= max(b,d):
+        if min(Sx,Tx) <= Bx <= max(Sx,Tx) \
+            and min(Sy,Ty) <= By <= max(Sy,Ty) \
+            and (min(a,c) <= Bx <= max(a,c) or np.isclose(a, c) and np.isclose(Bx, a)) \
+            and (min(b,d) <= By <= max(b,d) or np.isclose(b, d) and np.isclose(By, b)):
             return (Bx, By), (j, j+1)
     return None, None
 

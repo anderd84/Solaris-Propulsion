@@ -47,8 +47,7 @@ def main():
 
     startingpoint = (-6.75, 2.6) # TODO use real point
     plt.plot([startingpoint[0], aimpoint[0]], [startingpoint[1], aimpoint[1]], 'rx-')
-    cooling2.ShowMaterialPlot(fig)
-    plt.show()
+
     cooling2.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius, DESIGN.plugBaseRadius, DESIGN.chokeArea, fig)
 
     cooling2.AssignCoolantFlow(domain.CoolingChannel(cowlCoolU, cowlCoolL), False, Q_(400, unitReg.psi))
@@ -60,7 +59,7 @@ def main():
     # cooling2.ShowMaterialPlot(fig)
 
     # cooling2.ShowMaterialPlot(fig)
-    cooling2.ShowStatePlot(fig, "area")
+    cooling2.ShowStatePlot(fig, "velocity")
 
 
 
