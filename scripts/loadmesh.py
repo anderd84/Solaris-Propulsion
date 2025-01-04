@@ -1,12 +1,10 @@
 import matplotlib.pyplot as plt
 
-from Cooling import domain
-from Nozzle import plots
-import General.design as DESIGN
-from Nozzle import plug
-from General.units import Q_, unitReg
-import matrix_viewer as mv
-import numpy as np
+from cooling import domain
+from nozzle import plots
+import general.design as DESIGN
+from nozzle import plug
+from general.units import Q_, unitReg
 
 Re = Q_(3.2, unitReg.inch)
 exhaust = DESIGN.exhaustGas

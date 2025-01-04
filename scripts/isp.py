@@ -1,22 +1,18 @@
-from General import units
-from General.units import Q_, unitReg
-from General.units import PSI, FT, IN, S, LBF, LBM
-from Nozzle import plug
-from fluids import gas
-from Nozzle import plots
-from Nozzle import analysis
+from ambiance import Atmosphere
 import matplotlib.pyplot as plt
 from icecream import ic
 import numpy as np
-np.product = np.prod
-import General.design as DESIGN
-import matrix_viewer as mv
 import joblib
-from ambiance import Atmosphere
+
+from general.units import Q_, unitReg
+from general.units import PSI, FT, IN, S, LBF, LBM
+import general.design as DESIGN
+from nozzle import plug
+from nozzle import analysis
 
 def getIsp(i, pamb, cont, exhaust, Tt, Rt, Re, mdot):
-    from General.units import Q_, unitReg
-    from General.units import PSI, FT, IN, S, LBF, LBM
+    from general.units import Q_, unitReg
+    from general.units import PSI, FT, IN, S, LBF, LBM
     g0 = Q_(32.2, FT/S/S)
     janusVacIsp = Q_(304, S)
     janusmdot = Q_(7.5, LBM/S)

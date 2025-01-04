@@ -1,15 +1,14 @@
-from General import units
-from Nozzle import plug
-from fluids import gas
-from Nozzle import plots
-from Nozzle import analysis
 import matplotlib.pyplot as plt
 from icecream import ic
 import numpy as np
-np.product = np.prod
-import General.design as DESIGN
-from General.units import Q_, unitReg
-import matrix_viewer as mv
+
+from fluids import gas
+import general.design as DESIGN
+from general.units import Q_, unitReg
+from nozzle import plug
+from nozzle import plots
+from nozzle import analysis
+
 
 # import pint
 

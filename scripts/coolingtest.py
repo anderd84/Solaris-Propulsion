@@ -1,13 +1,7 @@
-import matplotlib.pyplot as plt
-from Cooling import analysis, analysisCoolingRef, domain
-from Nozzle import plots
-import General.design as DESIGN
-from Nozzle import plug
-from General.units import Q_, unitReg
-from Cooling import cooling2d as cooling_func
-from Cooling.material import DomainMaterial 
-import numpy as np
-from icecream import ic
+from cooling import analysis, domain
+import general.design as DESIGN
+from general.units import Q_, unitReg
+from nozzle import plug
 
 def main():
     Re = Q_(3.2, unitReg.inch)

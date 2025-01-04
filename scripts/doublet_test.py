@@ -1,16 +1,11 @@
-from matplotlib import pyplot as plt, patches
-from Injector.Doublet_Functions import spike_contour
-from Injector.InjectorCad import injector_cad_write
-from Injector.Drill import drill_approximation
-from Injector import actual_doublet as doublet
-from scipy.optimize import fsolve
-from fluids.fluid import CD_drill, Pressure_Drop_Fuel, Pressure_Drop_Lox
 import numpy as np
 from icecream import ic
-import General.design as DESIGN
-from General.units import Q_, unitReg
-from Nozzle import plug
-from Nozzle import plots
+
+from fluids.fluid import CD_drill, Pressure_Drop_Fuel, Pressure_Drop_Lox
+import general.design as DESIGN
+from general.units import Q_, unitReg
+from injector import doublet
+from nozzle import plug
 
 # davids stuff
 Re = Q_(3.2, unitReg.inch)

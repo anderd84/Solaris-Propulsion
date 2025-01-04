@@ -1,17 +1,12 @@
-from Cooling import domain
-from Cooling import material
-from fluids import gas
-from Nozzle import plug
-from Nozzle import plots
-import General.design as DESIGN
-from General.units import Q_, unitReg
-import time
-
 import numpy as np
 import matplotlib.pyplot as plt
-from icecream import ic
 
-import pickle
+from cooling import domain
+import general.design as DESIGN
+from general.units import Q_, unitReg
+from nozzle import plug
+from nozzle import plots
+
 def main():
     Re = Q_(3.2, unitReg.inch)
     exhaust = DESIGN.exhaustGas
