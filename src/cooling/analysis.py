@@ -1,17 +1,11 @@
-# ok this is gonna be complicated
-
-from Nozzle import plots
-import numpy as np
 import matplotlib.pyplot as plt
-from icecream import ic
 import joblib
 import multiprocessing as mp
-from alive_progress import alive_bar, alive_it
-from General.units import Q_, unitReg
+from alive_progress import alive_bar
 
-from Cooling.domain import DomainMC, DomainMMAP, SparseDomain
-from Cooling import material
-from Cooling import analysisCoolingRef
+from cooling.domain import DomainMC, DomainMMAP, SparseDomain
+from cooling import material, calc_cell
+from general import units
 
 def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: float = 1e-2, convPlot: bool = True):
     calcPoints = []
@@ -132,4 +126,4 @@ def AnalyzeMCSparse(domain: DomainMC, MAX_CORES: int = mp.cpu_count() - 1, tol: 
                 break
 
 def CalcCell(domain: DomainMMAP | SparseDomain, row: int, col: int):
-    return [(row, col, analysisCoolingRef.Cell(domain, row, col))]
+    return [(row, col, calc_cell.Cell(domain, row, col))]

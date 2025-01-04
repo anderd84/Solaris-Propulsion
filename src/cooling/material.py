@@ -1,10 +1,10 @@
 
 from dataclasses import dataclass
-from matplotlib import pyplot as plt
 import numpy as np
 from icecream import ic
-from Nozzle.nozzle import ContourPoint
 from enum import IntEnum
+
+from nozzle.nozzle import ContourPoint
 
 class DomainMaterial(IntEnum):
     FREE = 0 

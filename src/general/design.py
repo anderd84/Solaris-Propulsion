@@ -1,9 +1,9 @@
 from rocketcea.cea_obj import CEA_Obj
 from ambiance import Atmosphere
 
+from fluids.gas import Gas
 from general.units import Q_, unitReg
 from general.units import R_UNIVERSAL
-from fluids.gas import Gas
 
 # eninge inputs
 

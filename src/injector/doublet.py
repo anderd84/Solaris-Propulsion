@@ -5,7 +5,7 @@ import numpy as np
 from icecream import ic
 from texttable import Texttable
 
-from injector.Drill import drill_approximation
+from injector.drill import drill_approximation
 from general.units import Q_, unitReg
 import general.design as DESIGN
 

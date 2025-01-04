@@ -1,7 +1,5 @@
-from scipy.optimize import fsolve
 import numpy as np
 import pyromat as pm
-import CoolProp.CoolProp as CP
 from rocketprops.rocket_prop import get_prop
 
 from general.units import Q_, unitReg

@@ -1,12 +1,10 @@
-from enum import IntEnum
-from cooling import cooling2d, domain
-import general.design as DESIGN
-from cooling import cooling2d as cooling_func
-from cooling.material import DomainMaterial, MaterialType
 import numpy as np
-from icecream import ic
-from general.units import Q_, Direction
 import pint
+
+from cooling import cooling2d, domain
+from cooling.material import DomainMaterial, MaterialType
+import general.design as DESIGN
+from general.units import Direction
 
 unitReg = pint.get_application_registry()
 Q_ = unitReg.Quantity
@@ -41,9 +39,9 @@ class ResistorSet:
 
 def getConductivity(domain: domain.DomainMMAP, row: int, col: int):
     if domain.material[row,col] in MaterialType.WALL:
-        return cooling_func.conduction_grcop(domain.temperature[row,col].to(unitReg.degR))
+        return cooling2d.conduction_grcop(domain.temperature[row,col].to(unitReg.degR))
     else:
-        return cooling_func.conduction_rp1(domain.temperature[row,col].to(unitReg.degR))
+        return cooling2d.conduction_rp1(domain.temperature[row,col].to(unitReg.degR))
 
 def ConductionResistor(domain: domain.DomainMMAP, sink: tuple[int, int], source: tuple[int, int]): # sink is to, source is from
     L = Q_(domain.xstep, unitReg.inch).to(unitReg.foot)
@@ -82,12 +80,12 @@ def ConvectionHalfResistor(domain: domain.DomainMMAP, sink: tuple[int, int], sou
     mat = domain.material[convectionCell]
 
     if domain.material[convectionCell] in MaterialType.COOLANT:
-        convectionCoeff = cooling_func.internal_flow_convection((domain.temperature[convectionCell]).to(unitReg.degR),(domain.pressure[convectionCell]).to(unitReg.psi), domain.area[convectionCell], domain.hydraulicDiameter[convectionCell])
+        convectionCoeff = cooling2d.internal_flow_convection((domain.temperature[convectionCell]).to(unitReg.degR),(domain.pressure[convectionCell]).to(unitReg.psi), domain.area[convectionCell], domain.hydraulicDiameter[convectionCell])
         area = CoolantConvectionArea(domain, convectionCell[0], convectionCell[1], isHoriz, sinkTop, sinkSide)
         # print(convectionCoeff, area)
         # print(domain.flowHeight[convectionCell])
     else:
-        convectionCoeff = cooling_func.combustion_convection(domain.temperature[convectionCell].to(unitReg.degR), domain.velocity[convectionCell].to(unitReg.foot/unitReg.second))
+        convectionCoeff = cooling2d.combustion_convection(domain.temperature[convectionCell].to(unitReg.degR), domain.velocity[convectionCell].to(unitReg.foot/unitReg.second))
         area = CombustionConvectionArea(domain, convectionCell[0], convectionCell[1], isHoriz, sinkTop, sinkSide)
     
     return 1 / (convectionCoeff * area)

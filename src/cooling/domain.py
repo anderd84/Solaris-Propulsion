@@ -1,35 +1,26 @@
 from dataclasses import dataclass
 from enum import Enum
-import os
 import random
 import shutil
 import string
 import tempfile
 import time
-from General import design
-from fluids.gas import Gas
 import numpy as np
 import pint
-from scipy import sparse
-np.product = np.prod
 import matplotlib.pyplot as plt
-import matrix_viewer as mv
 from scipy.optimize import fsolve
 from typing import Any
-
 import multiprocessing as mp
-from multiprocessing import Queue
+from icecream import ic
 import joblib
 from alive_progress import alive_bar, alive_it
-import gc
 
-from icecream import ic
-
-from Cooling.material import DomainMaterial, MaterialType
-from Cooling import material
-from Nozzle import plots
-from General.units import Q_, unitReg
+from cooling.material import DomainMaterial, MaterialType
+from cooling import material
 from fluids import gas
+from fluids.gas import Gas
+from general.units import Q_, unitReg
+from general import design
 
 @dataclass
 class CoolingChannel:

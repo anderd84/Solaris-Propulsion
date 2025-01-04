@@ -1,20 +1,10 @@
-from matplotlib import pyplot as plt, patches
 import numpy as np
-import os
 from scipy.optimize import fsolve
-from icecream import ic
 
-#from Doublet import OX_CORE, FUEL_CORE
-from fluids.fluid import CD_drill, Pressure_Drop_Fuel, \
-                         Pressure_Drop_Lox,  pm, get_fluid_properties, CP
-from Injector.Doublet_Functions import spike_contour
-from Injector.InjectorCad import injector_cad_write
-from Injector.Drill import drill_approximation
-from General.units import Q_, unitReg
-import General.design as DESIGN
-from General.design import exhaustGas
-
-
+from fluids.fluid import get_fluid_properties
+from general.units import Q_, unitReg
+import general.design as DESIGN
+from general.design import exhaustGas
 
 epsilon = DESIGN.epsilon
 fuelname = DESIGN.fuelName
