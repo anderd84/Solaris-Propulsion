@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from icecream import ic
 import numpy as np
+import pint
 
 from fluids import gas
 import general.design as DESIGN
@@ -44,8 +45,10 @@ ic(DESIGN.chokeArea)
 
 Cf = outputData["Cf"]
 thrust = Astar * DESIGN.chamberPressure * Cf
+isp: pint.Quantity = thrust / (DESIGN.totalmdot * Q_(9.807, unitReg.meter/unitReg.second**2))
 ic(thrust)
 ic(Cf)
+ic(isp.to(unitReg.second))
 
 
 overchoke = plug.getOverchokeDist(Re, Rt, Tt, DESIGN.chokePercent)
@@ -69,10 +72,10 @@ cowlC, cowlCoolL, cowlCoolU = plug.GenerateDimCowl(Rt, Tt, Re, straightLength, D
 # fig.axes[0].plot([p.x for p in plugCoolL], [p.r for p in plugCoolL], '-k', linewidth=1)
 # fig.axes[0].plot([p.x for p in plugCoolU], [p.r for p in plugCoolU], '-k', linewidth=1)
 # print(units.PRESCOTT_PRESSURE)
-p = Q_(5, unitReg.psi)
+p = Q_(6.75, unitReg.psi)
 # p = units.PRESCOTT_PRESSURE
 ic(p.to(unitReg.psi))
-rlines, llines, streams = analysis.CalculateComplexField(cont, p, exhaust, 1, Tt, Rt, Re.magnitude, 25, 0, 2)
+rlines, llines, streams = analysis.CalculateComplexField(cont, p, exhaust, 1, Tt, Rt, Re.magnitude, 75, 0, 2)
 istream = streams[0]
 fig.axes[0].plot([p.x for p in istream], [p.r for p in istream], '--b', linewidth=1.5)
 ostream = streams[1]

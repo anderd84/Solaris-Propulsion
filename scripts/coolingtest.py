@@ -34,7 +34,7 @@ def main():
     mmapmesh = domain.DomainMMAP(coolmesh)
 
     analysis.AnalyzeMC(mmapmesh, 10, 1e-5, False)
-    analysis.AnalyzeMCSparse(coolmesh, 10, 1e-5, False)
+    # analysis.AnalyzeMCSparse(coolmesh, 10, 1e-5, False)
 
 if __name__ == "__main__":
     main()

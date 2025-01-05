@@ -30,5 +30,7 @@ S = unitReg.seconds
 class Direction(IntEnum):
     LEFT = 0
     UPPER = 1
+    UP = 1
     LOWER = 2
+    DOWN = 2
     RIGHT = 3
