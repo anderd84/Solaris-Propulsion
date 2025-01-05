@@ -35,6 +35,7 @@ cont, field, outputData = plug.CreateRaoContour(exhaust, DESIGN.chamberPressure,
 Rt = outputData["radiusThroat"]
 Tt = outputData["thetaThroat"]
 Re = outputData["radiusLip"]
+ic(outputData)
 ic(outputData["areaRatio"])
 ic(np.rad2deg(Tt))
 ic(Re)
