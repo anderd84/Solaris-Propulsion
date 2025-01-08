@@ -31,7 +31,7 @@ def main():
     fig.axes[0].plot([p.x for p in cowlCoolU], [p.r for p in cowlCoolU], '-k', linewidth=1)
     # plt.show()
 
-    cooling2 = domain.DomainMC(-7.3, 4.1, 7.9, 3, .025)
+    cooling2 = domain.DomainMC(-7.3, 4.1, 7.9, 3, .1)
     cooling2.DefineMaterials(cowlC, np.array([]), chamberC, plugC, 15)
 
 
@@ -45,16 +45,16 @@ def main():
 
     cooling2.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius, DESIGN.plugBaseRadius, DESIGN.chokeArea, fig)
 
-    cooling2.AssignCoolantFlow(domain.CoolingChannel(cowlCoolU, cowlCoolL), False, Q_(400, unitReg.psi))
-    cooling2.AssignCoolantFlow(domain.CoolingChannel(plugCoolU, plugCoolL), True, Q_(400, unitReg.psi))
+    # cooling2.AssignCoolantFlow(domain.CoolingChannel(cowlCoolU, cowlCoolL), False, Q_(400, unitReg.psi))
+    # cooling2.AssignCoolantFlow(domain.CoolingChannel(plugCoolU, plugCoolL), True, Q_(400, unitReg.psi))
 
     cooling2.DumpFile("coolmesh")
 
     # fig2 = plots.CreateNonDimPlot()
-    # cooling2.ShowMaterialPlot(fig)
+    cooling2.ShowMaterialPlot(fig)
 
     # cooling2.ShowMaterialPlot(fig)
-    cooling2.ShowStatePlot(fig, "velocity")
+    # cooling2.ShowStatePlot(fig, "velocity")
 
 
 

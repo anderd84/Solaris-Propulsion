@@ -62,9 +62,6 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
                 print("saving progress")
                 mesh = domain.toDomain()
                 mesh.DumpFile("save")
-            
-            if i == 2:
-                break
 
 def AnalyzeMCSparse(domain: DomainMC, MAX_CORES: int = mp.cpu_count() - 1, tol: float = 1e-2, convPlot: bool = True):
     calcPoints = []
@@ -120,9 +117,6 @@ def AnalyzeMCSparse(domain: DomainMC, MAX_CORES: int = mp.cpu_count() - 1, tol: 
             if i % 10 == 0:
                 print("saving progress")
                 domain.DumpFile("save")
-
-            if i == 2:
-                break
 
 def CalcCell(domain: DomainMMAP | SparseDomain, row: int, col: int):
     return [(row, col, calc_cell.Cell(domain, row, col))]

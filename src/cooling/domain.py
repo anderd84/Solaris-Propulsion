@@ -176,13 +176,16 @@ class DomainMC:
         # contf = ax.contourf(xarr, rarr, matarr, levels=[0, 1, 4] , colors=['white', 'blue', 'red'])
         # contf = ax.contourf(xarr, rarr, matarr)
         ax.imshow(matarr, extent=extent, origin='upper', cmap='jet')
+
+    def ShowCellPlot(self, fig: plt.Figure):
+        ax = fig.axes[0]
         xcells = np.linspace(self.x0 - self.xstep/2, self.x0 + self.width + self.xstep/2, self.hpoints+1)
         rcells = np.linspace(self.r0 + self.rstep/2, self.r0 - self.height - self.rstep/2, self.vpoints+1)
         xl, rl = np.meshgrid(xcells, rcells)
-        # ax.plot(xl, rl, 'k', linewidth=0.25)
-        # ax.plot(np.transpose(xl), np.transpose(rl), 'k', linewidth=0.25)
+        ax.plot(xl, rl, 'k', linewidth=0.25)
+        ax.plot(np.transpose(xl), np.transpose(rl), 'k', linewidth=0.25)
 
-    def AssignCoolantFlow(self, coolant: CoolingChannel, upperWall: bool, initialPressure: Q_):
+    def AssignCoolantFlow(self, coolant: CoolingChannel, upperWall: bool, initialPressure: pint.Quantity):
         inputPoints = len(coolant.upperContour)
         previousWall = (0,0)
         previousFlow = (0,0)
@@ -257,7 +260,7 @@ class DomainMC:
         self.AssignBorders()
         print("done")
 
-    def AssignChamberTemps(self, chamber: np.ndarray, exhaust: Gas, startPoint: tuple, endPoint: tuple, chamberWallRadius: Q_, plugBase: Q_, Astar: Q_, fig):
+    def AssignChamberTemps(self, chamber: np.ndarray, exhaust: Gas, startPoint: tuple, endPoint: tuple, chamberWallRadius: pint.Quantity, plugBase: pint.Quantity, Astar: pint.Quantity, fig):
         tic = time.perf_counter()
         print("assigning stagnant")
         flowAngle = np.arctan((endPoint[1] - startPoint[1])/(endPoint[0] - startPoint[0]))
@@ -434,6 +437,26 @@ class DomainMC:
 
     def DumpFile(self, filename):
         joblib.dump(self, filename + '.msh.z', compress=True)
+
+    def ApplyStateMap(self, prevDomain: 'DomainMC', states: set):
+        for i in range(self.vpoints):
+            for j in range(self.hpoints):
+                if self.array[i,j].material in material.MaterialType.STATIC_TEMP:
+                    continue
+                refPoint = prevDomain.CoordsToCell(self.array[i,j].x, self.array[i,j].r)
+                if prevDomain.array[refPoint].material != self.array[i,j].material:
+                    ir = refPoint[0]
+                    jr = refPoint[1]
+                    offsets = [(-1, 0), (-1, 1), (0, 1), (1, 1), (1, 0), (1, -1), (0, -1), (-1, -1)]
+                    minDist = 1e15
+                    for o in offsets:
+                        if 0 <= ir + o[0] < prevDomain.vpoints and 0 <= jr + o[1] < prevDomain.hpoints:
+                            d = np.sqrt((self.array[i,j].x - prevDomain.array[ir + o[0], jr + o[1]].x)**2 + (self.array[i,j].r - prevDomain.array[ir + o[0], jr + o[1]].r)**2)
+                            if prevDomain.array[ir + o[0], jr + o[1]].material == self.array[i,j].material and d < minDist:
+                                refPoint = (ir + o[0], jr + o[1])
+                                minDist = d
+                for state in states:
+                    self.array[i,j].__setattr__(state, prevDomain.array[refPoint].__getattribute__(state))
 
     @staticmethod
     def LoadFile(filename):
