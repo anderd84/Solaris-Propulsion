@@ -12,6 +12,7 @@ Q_ = unitReg.Quantity
 
 # constants
 R_UNIVERSAL = Q_(10.731577089016, unitReg.psi * unitReg.foot**3 / (unitReg.lbmol * unitReg.degR))  # Universal gas constant in ft·lbf/(lbmol·°R)
+G0 = Q_(32.174, unitReg.foot/unitReg.second**2)
 PRESCOTT_ALT = Q_(5400, unitReg.feet)
 prescottAtm = Atmosphere(PRESCOTT_ALT.to(unitReg.meter).magnitude)
 PRESCOTT_PRESSURE = Q_(prescottAtm.pressure[0], unitReg.pascal)

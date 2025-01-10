@@ -1,6 +1,7 @@
 import numpy as np
 import pyromat as pm
 from rocketprops.rocket_prop import get_prop
+from scipy.optimize import fsolve
 
 from general.units import Q_, unitReg
 import general.design as DESIGN
@@ -177,3 +178,21 @@ def get_fluid_properties(name, temperature_R, pressure_psi):
     # Return all properties in English Engineering units
     return (viscosity, specific_heat_p, gamma, thermal_conductivity, density, prandtl, alpha, thermal_diffusivity, SurfaceTens)
 
+@unitReg.wraps('dimensionless', ('dimensionless', 'inch', 'inch'), False)
+def DarcyFrictionFactor(reynoldsNum: float, surfaceRoughness: float, hydroDiameter: float) -> float:
+    if reynoldsNum < 2000: # laminar
+        return 64/reynoldsNum
+    
+    if reynoldsNum < 4000:
+        print("Warning: Flow is transitional, Darcy friction factor may not be accurate.")
+    # turbulent
+    f_func = lambda f: -2*np.log10(surfaceRoughness/hydroDiameter/3.7 + 2.51/(reynoldsNum*np.sqrt(f))) - 1/np.sqrt(f)
+    f = fsolve(f_func, 0.05)    # Darcy friction factor
+    try:
+        return f[0]
+    except IndexError:
+        return f
+    
+@unitReg.wraps('psi', ('dimensionless', 'inch', 'inch', 'pound/foot**3', 'foot/second'), False)
+def FrictionPressureLoss(f: float, length: float, hydroDiameter: float, density: float, velocity: float) -> float:
+    return length * f * density * velocity**2 / 2 / hydroDiameter

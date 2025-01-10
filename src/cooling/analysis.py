@@ -32,6 +32,7 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
         while diff > tol:
             i += 1
             diff = 0
+            maxT = 0
             with alive_bar(len(calcPoints), title=f"Analyzing iteration {i}") as bar:
                 outputs = parallel(
                     joblib.delayed(CalcCell)(domain, row, col) for row, col in calcPoints
@@ -40,11 +41,13 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
                 for output in outputs:
                     for row, col, tp in output:
                         diff = max(diff, abs(domain.temperature[row, col].magnitude - tp[0].to(domain.units["temperature"]).magnitude)/domain.temperature[row, col].magnitude)
+                        maxT = max(maxT, tp[0].magnitude)
                         domain.setMEM(row, col, 'temperature', tp[0])
                         domain.setMEM(row, col, 'pressure', tp[1])
                     bar()
 
             print(f"Max diff: {diff*100}%")
+            print(f"Max temp: {maxT}R")
             diffArr.append(diff*100)
             if convPlot:
                 # del convergeP
@@ -62,6 +65,12 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
                 print("saving progress")
                 mesh = domain.toDomain()
                 mesh.DumpFile("save")
+        
+            if maxT > 2159:
+                print("max temp too high, stopping")
+                mesh = domain.toDomain()
+                mesh.DumpFile("save")
+                break
 
 def AnalyzeMCSparse(domain: DomainMC, MAX_CORES: int = mp.cpu_count() - 1, tol: float = 1e-2, convPlot: bool = True):
     calcPoints = []
@@ -88,6 +97,7 @@ def AnalyzeMCSparse(domain: DomainMC, MAX_CORES: int = mp.cpu_count() - 1, tol: 
         while diff > tol:
             i += 1
             diff = 0
+            maxT = 0
             with alive_bar(len(calcPoints), title=f"Analyzing iteration {i}") as bar:
                 outputs = parallel(
                     joblib.delayed(CalcCell)(SparseDomain(domain, (row, col)), row, col) for row, col in calcPoints
@@ -96,11 +106,13 @@ def AnalyzeMCSparse(domain: DomainMC, MAX_CORES: int = mp.cpu_count() - 1, tol: 
                 for output in outputs:
                     for row, col, tp in output:
                         diff = max(diff, abs(domain.array[row, col].temperature.magnitude - tp[0].magnitude)/domain.array[row, col].temperature.magnitude)
+                        maxT = max(maxT, tp[0].magnitude)
                         domain.array[row,col].temperature = tp[0]
                         domain.array[row,col].pressure = tp[1]
                     bar()
 
             print(f"Max diff: {diff*100}%")
+            print(f"Max temp: {maxT}R")
             diffArr.append(diff*100)
             if convPlot:
                 # del convergeP
@@ -117,6 +129,11 @@ def AnalyzeMCSparse(domain: DomainMC, MAX_CORES: int = mp.cpu_count() - 1, tol: 
             if i % 10 == 0:
                 print("saving progress")
                 domain.DumpFile("save")
+
+            if maxT > 2159:
+                print("max temp too high, stopping")
+                domain.DumpFile("save")
+                break
 
 def CalcCell(domain: DomainMMAP | SparseDomain, row: int, col: int):
     return [(row, col, calc_cell.Cell(domain, row, col))]

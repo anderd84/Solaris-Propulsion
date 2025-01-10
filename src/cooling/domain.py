@@ -28,6 +28,12 @@ class CoolingChannel:
     lowerContour: np.ndarray    
 
 @dataclass
+class CoolingLoop:
+    landWidth: pint.Quantity
+    numChannels: int
+    fluid: str
+
+@dataclass
 class DomainPoint:
     x: float
     r: float
@@ -39,7 +45,9 @@ class DomainPoint:
     velocity: pint.Quantity = Q_(0, unitReg.ft/unitReg.s)
     hydraulicDiameter: pint.Quantity = Q_(0, unitReg.inch)
     previousFlow: tuple[int, int] = (0,0)
+    futureFlow: tuple[int, int] = (0,0)
     flowHeight: pint.Quantity = Q_(0, unitReg.inch)
+    id: int = -1
 
     def getState(self, state: str):
         try:
@@ -51,7 +59,7 @@ class DomainPoint:
         return s
 
 class DomainMC:
-    array: np.ndarray
+    array: np.ndarray[DomainPoint]
     x0: float
     r0: float
     width: float
@@ -60,6 +68,7 @@ class DomainMC:
     rstep: float
     hpoints: int
     vpoints: int
+    coolingLoops: dict[int, CoolingLoop] = {}
 
     def __init__(self, x0, r0, width, height, ds = .1):        
         hpoints = int(width/ds) + 1
@@ -120,29 +129,18 @@ class DomainMC:
         rarr = np.array([[point.r for point in row] for row in self.array])
         matarr = np.array([[(point.material.value) for point in row] for row in self.array])
 
-        # extent = [xarr[0,0]-self.xstep, xarr[-1,-1]+self.xstep, rarr[-1,-1]-self.rstep, rarr[0,0]+self.rstep]
         extent = [xarr[0,0]-self.xstep/2, xarr[-1,-1]+self.xstep/2, rarr[-1,-1]-self.rstep/2, rarr[0,0]+self.rstep/2]
         ax = fig.axes[0]
-        # contf = ax.contourf(xarr, rarr, matarr, levels=[0, 1, 4] , colors=['white', 'blue', 'red'])
-        # contf = ax.contourf(xarr, rarr, matarr)
         ax.imshow(matarr, extent=extent, origin='upper', cmap='jet')
-        xcells = np.linspace(self.x0 - self.xstep/2, self.x0 + self.width + self.xstep/2, self.hpoints+1)
-        rcells = np.linspace(self.r0 + self.rstep/2, self.r0 - self.height - self.rstep/2, self.vpoints+1)
-        xl, rl = np.meshgrid(xcells, rcells)
-        # ax.plot(xl, rl, 'k', linewidth=0.25)
-        # ax.plot(np.transpose(xl), np.transpose(rl), 'k', linewidth=0.25)  
           
         for i in range(self.vpoints):
             for j in range(self.hpoints):
                 flow = self.array[i,j].previousFlow
                 if flow[0] != 0:
                     if self.array[i,j].material == DomainMaterial.COOLANT_WALL:
-                        # ax.plot([self.array[i,j].x, self.array[flow].x], [self.array[i,j].r, self.array[flow].r], '-b', linewidth=1)
                         ax.quiver(self.array[flow].x, self.array[flow].r, self.array[i,j].x - self.array[flow].x, self.array[i,j].r - self.array[flow].r, scale=1, scale_units='xy', angles='xy', color='b', width=0.002)
                     else:
-                        # ax.plot([self.array[i,j].x, self.array[flow].x], [self.array[i,j].r, self.array[flow].r], '-k', linewidth=1)     
                         ax.quiver(self.array[flow].x, self.array[flow].r, self.array[i,j].x - self.array[flow].x, self.array[i,j].r - self.array[flow].r, scale=1, scale_units='xy', angles='xy', color='k', width=0.002)   
-
 
     def ShowStatePlot(self, fig: plt.Figure, state: str):
         print("state plot!")
@@ -157,24 +155,16 @@ class DomainMC:
         ax = fig.axes[0]
         contf = ax.contourf(xarr, rarr, matarr, 100, cmap='jet')
         fig.colorbar(contf, ax=ax)
-        xcells = np.linspace(self.x0 - self.xstep/2, self.x0 + self.width + self.xstep/2, self.hpoints+1)
-        rcells = np.linspace(self.r0 + self.rstep/2, self.r0 - self.height - self.rstep/2, self.vpoints+1)
-        xl, rl = np.meshgrid(xcells, rcells)
         print(np.min(matarr), np.max(matarr))
         print("done!")
-        # ax.plot(xl, rl, 'k', linewidth=0.25)
-        # ax.plot(np.transpose(xl), np.transpose(rl), 'k', linewidth=0.25)
 
     def ShowBorderPlot(self, fig: plt.Figure):
         xarr = np.array([[point.x for point in row] for row in self.array])
         rarr = np.array([[point.r for point in row] for row in self.array])
         matarr = np.array([[int(point.border) for point in row] for row in self.array])
 
-        # extent = [xarr[0,0]-self.xstep, xarr[-1,-1]+self.xstep, rarr[-1,-1]-self.rstep, rarr[0,0]+self.rstep]
         extent = [xarr[0,0]-self.xstep/2, xarr[-1,-1]+self.xstep/2, rarr[-1,-1]-self.rstep/2, rarr[0,0]+self.rstep/2]
         ax = fig.axes[0]
-        # contf = ax.contourf(xarr, rarr, matarr, levels=[0, 1, 4] , colors=['white', 'blue', 'red'])
-        # contf = ax.contourf(xarr, rarr, matarr)
         ax.imshow(matarr, extent=extent, origin='upper', cmap='jet')
 
     def ShowCellPlot(self, fig: plt.Figure):
@@ -185,7 +175,17 @@ class DomainMC:
         ax.plot(xl, rl, 'k', linewidth=0.25)
         ax.plot(np.transpose(xl), np.transpose(rl), 'k', linewidth=0.25)
 
-    def AssignCoolantFlow(self, coolant: CoolingChannel, upperWall: bool, initialPressure: pint.Quantity):
+    def NewCoolantLoop(self, landWidth: pint.Quantity, numChannels: int, fluid: str):
+        loopID = len(self.coolingLoops)
+        self.coolingLoops[loopID] = CoolingLoop(landWidth, numChannels, fluid)
+        return loopID
+
+    def AssignCoolantFlow(self, coolant: CoolingChannel, upperWall: bool, initialPressure: pint.Quantity, loopID: int):
+        if loopID not in self.coolingLoops:
+            raise ValueError(f"Loop ID {loopID} not defined")
+        landWidth = self.coolingLoops[loopID].landWidth
+        numChannels = self.coolingLoops[loopID].numChannels
+
         inputPoints = len(coolant.upperContour)
         previousWall = (0,0)
         previousFlow = (0,0)
@@ -220,8 +220,8 @@ class DomainMC:
 
                     # plt.plot([xl[j], xu[j]], [rl[j], ru[j]], '-b', linewidth=.25)
 
-                    landSectorAngle = design.landWidth/Q_(rl[j], unitReg.inch)
-                    channelSectorAngle = (2*np.pi/design.NumberofChannels) - landSectorAngle
+                    landSectorAngle = landWidth/Q_(rl[j], unitReg.inch)
+                    channelSectorAngle = (2*np.pi/numChannels) - landSectorAngle
                     h = Q_(np.sqrt((xl[j] - xu[j])**2 + (rl[j] - ru[j])**2), unitReg.inch)
                     totalArea = np.pi*h*Q_(ru[j] + rl[j], unitReg.inch)
                     channelArea = totalArea*channelSectorAngle/(2*np.pi)
@@ -235,12 +235,14 @@ class DomainMC:
                             self.array[row, col].flowHeight = h
                             self.array[row, col].hydraulicDiameter = hydroD
                             self.array[row, col].area = channelArea
+                            self.array[row, col].id = loopID
 
                         if row == wallPoint[0] and col == wallPoint[1]:
                             if row != previousWall[0] or col != previousWall[1]:
                                 previousFlow = previousWall
                             self.array[row, col].material = DomainMaterial.COOLANT_WALL if self.array[row, col].material != DomainMaterial.COOLANT_INLET else DomainMaterial.COOLANT_INLET
                             self.array[row, col].previousFlow = previousFlow
+                            self.array[previousFlow].futureFlow = (row, col)
                             previousWall = (row, col)
                         else:
                             if self.array[row, col].material in [DomainMaterial.COOLANT_WALL, DomainMaterial.COOLANT_INLET, DomainMaterial.COOLANT_BULK]:
@@ -252,6 +254,7 @@ class DomainMC:
                         self.array[row, col].flowHeight = h
                         self.array[row, col].hydraulicDiameter = hydroD
                         self.array[row, col].area = channelArea
+                        self.array[row, col].id = loopID
                 bar()
                 
         print("done")
@@ -259,6 +262,12 @@ class DomainMC:
         print("assigning borders")
         self.AssignBorders()
         print("done")
+
+    def GuessChannelState(self, ):
+        # start at the left side, scroll down and right until notice a channel wall material
+        # follow the previous flow chain until channel inlet material
+        pass
+
 
     def AssignChamberTemps(self, chamber: np.ndarray, exhaust: Gas, startPoint: tuple, endPoint: tuple, chamberWallRadius: pint.Quantity, plugBase: pint.Quantity, Astar: pint.Quantity, fig):
         tic = time.perf_counter()
