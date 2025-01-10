@@ -1,6 +1,7 @@
 import numpy as np
-from fluids.gas import MachAngle, SpHeatRatio, PrandtlMeyerFunction, Isentropic1DExpansion
 from dataclasses import dataclass
+
+from fluids.gas import MachAngle, SpHeatRatio, PrandtlMeyerFunction, Isentropic1DExpansion
 
 @dataclass
 class ContourPoint:
