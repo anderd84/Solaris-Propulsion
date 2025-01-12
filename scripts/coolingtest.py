@@ -1,4 +1,4 @@
-from cooling import analysis, domain
+from cooling import analysis, domain, domain_mmap
 import general.design as DESIGN
 from general.units import Q_, unitReg
 from nozzle import plug
@@ -31,7 +31,7 @@ def main():
     # coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save")
     coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("coolmesh")
 
-    mmapmesh = domain.DomainMMAP(coolmesh)
+    mmapmesh = domain_mmap.DomainMMAP(coolmesh)
 
     analysis.AnalyzeMC(mmapmesh, 10, 1e-5, False)
     # analysis.AnalyzeMCSparse(coolmesh, 10, 1e-5, False)

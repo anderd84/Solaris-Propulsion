@@ -3,7 +3,8 @@ import joblib
 import multiprocessing as mp
 from alive_progress import alive_bar
 
-from cooling.domain import DomainMC, DomainMMAP, SparseDomain
+from cooling.domain import DomainMC
+from cooling.domain_mmap import DomainMMAP, SparseDomain
 from cooling import material, calc_cell
 
 def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: float = 1e-2, convPlot: bool = True):
