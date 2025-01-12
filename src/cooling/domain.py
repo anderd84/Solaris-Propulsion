@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 import random
+from re import L
 import shutil
 import string
 import tempfile
@@ -31,6 +32,7 @@ class CoolingChannel:
 class CoolingLoop:
     landWidth: pint.Quantity
     numChannels: int
+    mdot: float
     fluid: str
 
 @dataclass
@@ -92,7 +94,7 @@ class DomainMC:
                     bar()
         print("Domain created")
 
-    def DefineMaterials(self, cowl: np.ndarray, coolant: np.ndarray, chamber: np.ndarray, plug: np.ndarray, max_cores = mp.cpu_count() - 1):
+    def DefineMaterials(self, cowl: np.ndarray, chamber: np.ndarray, plug: np.ndarray, max_cores = mp.cpu_count() - 1):
         MAX_CORES = max_cores
         print(f"using {MAX_CORES} cores")
         tic = time.perf_counter()
@@ -135,21 +137,24 @@ class DomainMC:
           
         for i in range(self.vpoints):
             for j in range(self.hpoints):
-                flow = self.array[i,j].previousFlow
-                if flow[0] != 0:
-                    if self.array[i,j].material == DomainMaterial.COOLANT_WALL:
-                        ax.quiver(self.array[flow].x, self.array[flow].r, self.array[i,j].x - self.array[flow].x, self.array[i,j].r - self.array[flow].r, scale=1, scale_units='xy', angles='xy', color='b', width=0.002)
-                    else:
-                        ax.quiver(self.array[flow].x, self.array[flow].r, self.array[i,j].x - self.array[flow].x, self.array[i,j].r - self.array[flow].r, scale=1, scale_units='xy', angles='xy', color='k', width=0.002)   
+                flow = self.array[i,j].futureFlow
+                if (flow[0] != 0 and flow[1] != 0) or (self.array[i,j].material == DomainMaterial.COOLANT_WALL):
+                    ax.quiver(self.array[flow].x, self.array[flow].r, self.array[i,j].x - self.array[flow].x, self.array[i,j].r - self.array[flow].r, scale=1, scale_units='xy', angles='xy', color='r', width=0.002)
+                # flow = self.array[i,j].previousFlow
+                # if flow[0] != 0:
+                #     if self.array[i,j].material == DomainMaterial.COOLANT_WALL:
+                #         ax.quiver(self.array[flow].x, self.array[flow].r, self.array[i,j].x - self.array[flow].x, self.array[i,j].r - self.array[flow].r, scale=1, scale_units='xy', angles='xy', color='b', width=0.002)
+                #     else:
+                #         ax.quiver(self.array[flow].x, self.array[flow].r, self.array[i,j].x - self.array[flow].x, self.array[i,j].r - self.array[flow].r, scale=1, scale_units='xy', angles='xy', color='k', width=0.002)   
 
-    def ShowStatePlot(self, fig: plt.Figure, state: str):
+    def ShowStatePlot(self, fig: plt.Figure, state: str, omitMaterials = []):
         print("state plot!")
         xarr = np.array([[point.x for point in row] for row in self.array])
         print("xarr done!")
         rarr = np.array([[point.r for point in row] for row in self.array])
         print("rarr done!")
         
-        matarr = np.array([[point.getState(state) for point in row] for row in self.array])
+        matarr = np.array([[point.getState(state) if point.material not in omitMaterials else np.nan for point in row] for row in self.array])
         print("matarr done!")
 
         ax = fig.axes[0]
@@ -157,15 +162,6 @@ class DomainMC:
         fig.colorbar(contf, ax=ax)
         print(np.min(matarr), np.max(matarr))
         print("done!")
-
-    def ShowBorderPlot(self, fig: plt.Figure):
-        xarr = np.array([[point.x for point in row] for row in self.array])
-        rarr = np.array([[point.r for point in row] for row in self.array])
-        matarr = np.array([[int(point.border) for point in row] for row in self.array])
-
-        extent = [xarr[0,0]-self.xstep/2, xarr[-1,-1]+self.xstep/2, rarr[-1,-1]-self.rstep/2, rarr[0,0]+self.rstep/2]
-        ax = fig.axes[0]
-        ax.imshow(matarr, extent=extent, origin='upper', cmap='jet')
 
     def ShowCellPlot(self, fig: plt.Figure):
         ax = fig.axes[0]
@@ -175,9 +171,9 @@ class DomainMC:
         ax.plot(xl, rl, 'k', linewidth=0.25)
         ax.plot(np.transpose(xl), np.transpose(rl), 'k', linewidth=0.25)
 
-    def NewCoolantLoop(self, landWidth: pint.Quantity, numChannels: int, fluid: str):
+    def NewCoolantLoop(self, landWidth: pint.Quantity, numChannels: int, mdot: float, fluid: str):
         loopID = len(self.coolingLoops)
-        self.coolingLoops[loopID] = CoolingLoop(landWidth, numChannels, fluid)
+        self.coolingLoops[loopID] = CoolingLoop(landWidth, numChannels, mdot, fluid)
         return loopID
 
     def AssignCoolantFlow(self, coolant: CoolingChannel, upperWall: bool, initialPressure: pint.Quantity, loopID: int):
@@ -189,73 +185,70 @@ class DomainMC:
         inputPoints = len(coolant.upperContour)
         previousWall = (0,0)
         previousFlow = (0,0)
-        with alive_bar(inputPoints - 1) as bar:
-            for i in range(inputPoints - 1):
-                dist1 = np.sqrt((coolant.lowerContour[i].x - coolant.lowerContour[i+1].x)**2 + (coolant.lowerContour[i].r - coolant.lowerContour[i+1].r)**2)
-                dist2 = np.sqrt((coolant.upperContour[i].x - coolant.upperContour[i+1].x)**2 + (coolant.upperContour[i].r - coolant.upperContour[i+1].r)**2)
-                dist = max(dist1, dist2)
+        for i in alive_it(range(inputPoints - 1)):
+            dist1 = np.sqrt((coolant.lowerContour[i].x - coolant.lowerContour[i+1].x)**2 + (coolant.lowerContour[i].r - coolant.lowerContour[i+1].r)**2)
+            dist2 = np.sqrt((coolant.upperContour[i].x - coolant.upperContour[i+1].x)**2 + (coolant.upperContour[i].r - coolant.upperContour[i+1].r)**2)
+            dist = max(dist1, dist2)
 
-                step = min(self.xstep, self.rstep)
-                steps = max(int(dist/step * 1.5), 5)
+            steps = max(int(dist/min(self.xstep, self.rstep) * 1.5), 5)
 
-                xl = np.linspace(coolant.lowerContour[i].x, coolant.lowerContour[i+1].x, steps)[:-1]
-                rl = np.linspace(coolant.lowerContour[i].r, coolant.lowerContour[i+1].r, steps)[:-1]
+            xl = np.linspace(coolant.lowerContour[i].x, coolant.lowerContour[i+1].x, steps)[:-1]
+            rl = np.linspace(coolant.lowerContour[i].r, coolant.lowerContour[i+1].r, steps)[:-1]
 
-                xu = np.linspace(coolant.upperContour[i].x, coolant.upperContour[i+1].x, steps)[:-1]
-                ru = np.linspace(coolant.upperContour[i].r, coolant.upperContour[i+1].r, steps)[:-1]
+            xu = np.linspace(coolant.upperContour[i].x, coolant.upperContour[i+1].x, steps)[:-1]
+            ru = np.linspace(coolant.upperContour[i].r, coolant.upperContour[i+1].r, steps)[:-1]
 
-                for j in range(steps - 1):
-                    wallPoint = self.CoordsToCell(xu[j], ru[j]) if upperWall else self.CoordsToCell(xl[j], rl[j])
-                    cells = self.cellsOnLine((xl[j], rl[j]), (xu[j], ru[j]))
+            for j in range(steps - 1):
+                wallPoint = self.CoordsToCell(xu[j], ru[j]) if upperWall else self.CoordsToCell(xl[j], rl[j])
+                cells = self.cellsOnLine((xl[j], rl[j]), (xu[j], ru[j]))
 
-                    if xl[j] > self.x0 + self.width or xu[j] > self.x0 + self.width:
-                        break
-                    if xl[j] < self.x0 or xu[j] < self.x0:
-                        break
+                if xl[j] > self.x0 + self.width or xu[j] > self.x0 + self.width:
+                    break
+                if xl[j] < self.x0 or xu[j] < self.x0:
+                    break
 
-                    if rl[j] < self.r0 - self.height or ru[j] < self.r0 - self.height:
-                        break
-                    if rl[j] > self.r0 or ru[j] > self.r0:
-                        break
+                if rl[j] < self.r0 - self.height or ru[j] < self.r0 - self.height:
+                    break
+                if rl[j] > self.r0 or ru[j] > self.r0:
+                    break
 
-                    # plt.plot([xl[j], xu[j]], [rl[j], ru[j]], '-b', linewidth=.25)
+                # plt.plot([xl[j], xu[j]], [rl[j], ru[j]], '-b', linewidth=.25)
 
-                    landSectorAngle = landWidth/Q_(rl[j], unitReg.inch)
-                    channelSectorAngle = (2*np.pi/numChannels) - landSectorAngle
-                    h = Q_(np.sqrt((xl[j] - xu[j])**2 + (rl[j] - ru[j])**2), unitReg.inch)
-                    totalArea = np.pi*h*Q_(ru[j] + rl[j], unitReg.inch)
-                    channelArea = totalArea*channelSectorAngle/(2*np.pi)
-                    perim = (Q_(rl[j], unitReg.inch)*channelSectorAngle + Q_(ru[j], unitReg.inch)*channelSectorAngle)/(2*np.pi) + 2*h
-                    hydroD = 4*channelArea/perim
+                landSectorAngle = landWidth/Q_(rl[j], unitReg.inch)
+                channelSectorAngle = (2*np.pi/numChannels) - landSectorAngle
+                h = Q_(np.sqrt((xl[j] - xu[j])**2 + (rl[j] - ru[j])**2), unitReg.inch)
+                totalArea = np.pi*h*Q_(ru[j] + rl[j], unitReg.inch)
+                channelArea = totalArea*channelSectorAngle/(2*np.pi)
+                perim = (Q_(rl[j], unitReg.inch)*channelSectorAngle + Q_(ru[j], unitReg.inch)*channelSectorAngle)/(2*np.pi) + 2*h
+                hydroD = 4*channelArea/perim
 
-                    for row, col in cells:
-                        if (i==0 and j==0) or self.array[row, col].material == DomainMaterial.COOLANT_INLET:
-                            self.array[row,col].material = DomainMaterial.COOLANT_INLET
-                            self.array[row, col].pressure = initialPressure
-                            self.array[row, col].flowHeight = h
-                            self.array[row, col].hydraulicDiameter = hydroD
-                            self.array[row, col].area = channelArea
-                            self.array[row, col].id = loopID
-
-                        if row == wallPoint[0] and col == wallPoint[1]:
-                            if row != previousWall[0] or col != previousWall[1]:
-                                previousFlow = previousWall
-                            self.array[row, col].material = DomainMaterial.COOLANT_WALL if self.array[row, col].material != DomainMaterial.COOLANT_INLET else DomainMaterial.COOLANT_INLET
-                            self.array[row, col].previousFlow = previousFlow
-                            self.array[previousFlow].futureFlow = (row, col)
-                            previousWall = (row, col)
-                        else:
-                            if self.array[row, col].material in [DomainMaterial.COOLANT_WALL, DomainMaterial.COOLANT_INLET, DomainMaterial.COOLANT_BULK]:
-                                continue
-                            self.array[row, col].material = DomainMaterial.COOLANT_BULK
-                            self.array[row, col].previousFlow = wallPoint
-
+                for row, col in cells:
+                    if (i==0 and j==0) or self.array[row, col].material == DomainMaterial.COOLANT_INLET:
+                        self.array[row,col].material = DomainMaterial.COOLANT_INLET
                         self.array[row, col].pressure = initialPressure
                         self.array[row, col].flowHeight = h
                         self.array[row, col].hydraulicDiameter = hydroD
                         self.array[row, col].area = channelArea
                         self.array[row, col].id = loopID
-                bar()
+
+                    if row == wallPoint[0] and col == wallPoint[1]:
+                        if row != previousWall[0] or col != previousWall[1]:
+                            previousFlow = previousWall
+                        self.array[row, col].material = DomainMaterial.COOLANT_WALL if self.array[row, col].material != DomainMaterial.COOLANT_INLET else DomainMaterial.COOLANT_INLET
+                        self.array[row, col].previousFlow = previousFlow
+                        self.array[previousFlow].futureFlow = (row, col) if self.array[row, col].material != DomainMaterial.COOLANT_INLET else (0,0)
+                        previousWall = (row, col)
+                    else:
+                        if self.array[row, col].material in [DomainMaterial.COOLANT_WALL, DomainMaterial.COOLANT_INLET, DomainMaterial.COOLANT_BULK]:
+                            continue
+                        self.array[row, col].material = DomainMaterial.COOLANT_BULK
+                        self.array[row, col].previousFlow = wallPoint
+
+                    self.array[row, col].pressure = initialPressure
+                    self.array[row, col].flowHeight = h
+                    self.array[row, col].hydraulicDiameter = hydroD
+                    self.array[row, col].area = channelArea
+                    self.array[row, col].id = loopID
                 
         print("done")
 
@@ -263,13 +256,76 @@ class DomainMC:
         self.AssignBorders()
         print("done")
 
-    def GuessChannelState(self, ):
+    def GuessChannelState(self, loopID: int, endTemp: pint.Quantity):
         # start at the left side, scroll down and right until notice a channel wall material
         # follow the previous flow chain until channel inlet material
-        pass
+        startPoint = (0,0)
+        for j in range(self.hpoints):
+            for i in range(self.vpoints):
+                if self.array[i,j].id == loopID and self.array[i,j].material == DomainMaterial.COOLANT_WALL:
+                    startPoint = (i,j)
+                    break
+            if startPoint != (0,0):
+                break
+        
+        if self.array[startPoint].material != DomainMaterial.COOLANT_WALL:
+            raise ValueError(f"No coolant found for id {loopID}")
+        
+        while self.array[startPoint].material != DomainMaterial.COOLANT_INLET:
+            startPoint = self.array[startPoint].previousFlow
+            if startPoint == (0,0):
+                raise ValueError(f"No coolant inlet found for id {loopID}")
+        
+        # now we have the inlet point, future flow can be used to traverse the entire coolant loop
+
+        currentPoint = startPoint
+        deltaT = endTemp - self.array[startPoint].temperature
+        pointData = []
+        totalScore = 0
+        channelPoints = []
+        while self.array[currentPoint].futureFlow != currentPoint: # go until terminates
+            channelPoints.append(currentPoint)
+            currentPoint = self.array[currentPoint].futureFlow
+
+        for currentPoint in alive_it(channelPoints):
+            # score will be based on the max adjacent temperature 
+            offsets = [(-1, 0), (0, 1), (1, 0), (0, -1)]
+            maxTempSolid = Q_(0, unitReg.degR)
+
+            for o in offsets:
+                if currentPoint[0] + o[0] < 0 or currentPoint[0] + o[0] >= self.vpoints:
+                    continue
+                if currentPoint[1] + o[1] < 0 or currentPoint[1] + o[1] >= self.hpoints:
+                    continue
+                t = self.array[currentPoint[0] + o[0], currentPoint[1] + o[1]].temperature
+                maxTempSolid = max(t, maxTempSolid) if self.array[currentPoint[0] + o[0], currentPoint[1] + o[1]].material in MaterialType.SOLID else maxTempSolid
+
+            r = self.array[currentPoint].r
+            area: pint.Quantity = self.array[currentPoint].area
+
+            score = (maxTempSolid.m_as("degR") / (area.m_as("in^2")**2) * r**2)**1.5
+            pointData.append((currentPoint, score))
+            totalScore += score
+
+        # should now have a total score and each point contributes to that
+        # the deltaT of each point will be directly proportional to its scores percentage
+
+        runningDt = self.array[startPoint].temperature
+        for point, score in pointData:
+            runningDt += score/totalScore * deltaT
+            self.array[point].temperature = runningDt
+
+        for i in range(self.vpoints):
+            for j in range(self.hpoints):
+                if self.array[i,j].material == DomainMaterial.COOLANT_BULK and self.array[i,j].id == loopID:
+                    self.array[i,j].temperature = self.array[self.array[i,j].previousFlow].temperature
+
+        print("done????")
 
 
-    def AssignChamberTemps(self, chamber: np.ndarray, exhaust: Gas, startPoint: tuple, endPoint: tuple, chamberWallRadius: pint.Quantity, plugBase: pint.Quantity, Astar: pint.Quantity, fig):
+
+
+    def AssignChamberTemps(self, chamber: np.ndarray, exhaust: Gas, startPoint: tuple, endPoint: tuple, chamberWallRadius: pint.Quantity, plugBase: pint.Quantity, Astar: pint.Quantity):
         tic = time.perf_counter()
         print("assigning stagnant")
         flowAngle = np.arctan((endPoint[1] - startPoint[1])/(endPoint[0] - startPoint[0]))
@@ -298,31 +354,29 @@ class DomainMC:
             if self.lineInCell(startPointU, startPointL, i, j):
                 break
 
-        with alive_bar(originX.size) as bar:
-            print(f"Assinging straight flow")
-            for oX, oR in zip(originX, originR):
-                farAway1 = (oX - chamberWallRadius.magnitude*np.sin(flowAngle), oR + chamberWallRadius.magnitude*np.cos(flowAngle))
-                farAway2 = (oX + chamberWallRadius.magnitude*np.sin(flowAngle), oR - chamberWallRadius.magnitude*np.cos(flowAngle))
-                startPointU, _ = material.intersectPolyAt(chamber, (oX, oR), farAway1)
-                startPointL, _ = material.intersectPolyAt(chamber, (oX, oR), farAway2)
+        print(f"Assinging straight flow")
+        for oX, oR in alive_it(zip(originX, originR)):
+            farAway1 = (oX - chamberWallRadius.magnitude*np.sin(flowAngle), oR + chamberWallRadius.magnitude*np.cos(flowAngle))
+            farAway2 = (oX + chamberWallRadius.magnitude*np.sin(flowAngle), oR - chamberWallRadius.magnitude*np.cos(flowAngle))
+            startPointU, _ = material.intersectPolyAt(chamber, (oX, oR), farAway1)
+            startPointL, _ = material.intersectPolyAt(chamber, (oX, oR), farAway2)
 
-                # plt.plot([startPointU[0], startPointL[0]], [startPointU[1], startPointL[1]], '-gx')
+            # plt.plot([startPointU[0], startPointL[0]], [startPointU[1], startPointL[1]], '-gx')
 
-                area = np.pi/np.sin(phi) * (startPointU[1]**2 - startPointL[1]**2)
+            area = np.pi/np.sin(phi) * (startPointU[1]**2 - startPointL[1]**2)
 
-                AAstar = Q_(area, unitReg.inch**2)/Astar
-                mach = fsolve(lambda M: gas.Isentropic1DExpansion(M, exhaust.gammaTyp) - AAstar, .25)[0]
-                temperature = (gas.StagTempRatio(mach, exhaust) * exhaust.stagTemp)
-                velocity = mach * np.sqrt(exhaust.getVariableGamma(mach) * exhaust.Rgas * temperature)
-                hydroD = Q_(2*np.sqrt((startPointU[0] - startPointL[0])**2 + (startPointU[1] - startPointL[1])**2), unitReg.inch)
+            AAstar = Q_(area, unitReg.inch**2)/Astar
+            mach = fsolve(lambda M: gas.Isentropic1DExpansion(M, exhaust.gammaTyp) - AAstar, .25)[0]
+            temperature = (gas.StagTempRatio(mach, exhaust) * exhaust.stagTemp)
+            velocity = mach * np.sqrt(exhaust.getVariableGamma(mach) * exhaust.Rgas * temperature)
+            hydroD = Q_(2*np.sqrt((startPointU[0] - startPointL[0])**2 + (startPointU[1] - startPointL[1])**2), unitReg.inch)
 
-                cells = self.cellsOnLine(startPointL, startPointU)
-                for i,j in cells:
-                    if self.array[i,j].material == DomainMaterial.CHAMBER:
-                        self.array[i,j].temperature = temperature
-                        self.array[i,j].velocity = velocity
-                        self.array[i,j].hydraulicDiameter = hydroD
-                bar()
+            cells = self.cellsOnLine(startPointL, startPointU)
+            for i,j in cells:
+                if self.array[i,j].material == DomainMaterial.CHAMBER:
+                    self.array[i,j].temperature = temperature
+                    self.array[i,j].velocity = velocity
+                    self.array[i,j].hydraulicDiameter = hydroD
 
 
         # curve section
@@ -384,6 +438,9 @@ class DomainMC:
         
         toc = time.perf_counter()
         print(f"Time to assign chamber temps: {toc - tic}")
+
+    def AssignExternalTemps(self):
+        pass
         
     def AssignBorders(self):
         finalI = self.vpoints - 1

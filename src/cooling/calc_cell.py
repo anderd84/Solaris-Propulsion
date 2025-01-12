@@ -142,7 +142,7 @@ def CombineResistors(resSet: ResistorSet):
             resSet.R[i] = Q_(1, unitReg.hour * unitReg.degR / unitReg.BTU)
     return resSet.getTnew()
 
-def GetResistor(domain: domain.DomainMMAP, sink: tuple[int, int], source: tuple[int, int]):
+def GetResistor(domain: domain.DomainMMAP, sink: tuple[int, int], source: tuple[int, int]): #! ERROR, convection criteria is wrong
     if domain.material[source] in MaterialType.SOLID:
         sourceR = ConductionHalfResistor(domain, sink, source, False)
         # print("half solid")
