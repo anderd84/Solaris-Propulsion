@@ -6,6 +6,7 @@ from cooling import domain
 from nozzle import plots
 import general.design as DESIGN
 from nozzle import plug
+from nozzle import analysis
 from general.units import Q_, unitReg
 
 Re = Q_(3.2, unitReg.inch)
@@ -35,7 +36,7 @@ plots.PlotPlug(fig, chamberC)
 
 # plt.show()
 
-# coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save")
+coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save")
 
 # # mmapmesh = domain.DomainMMAP(coolmesh)
 # coolmesh.ShowStatePlot(fig, "temperature")
@@ -43,15 +44,21 @@ plots.PlotPlug(fig, chamberC)
 # startingpoint = (-6.75, 2.6) # TODO use real point
 
 # highmesh = domain.DomainMC(-7.3, 4.1, 7.9, 3, .01)
-# highmesh.DefineMaterials(cowlC, np.array([]), chamberC, plugC, 15)
-
-# highmesh.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius, DESIGN.plugBaseRadius, DESIGN.chokeArea, fig)
-
+# highmesh.DefineMaterials(cowlC, chamberC, plugC, 15)
 # highmesh.ApplyStateMap(coolmesh, {"temperature", "pressure"})
+
+highmesh = domain.DomainMC.LoadFile("highmesh")
+
+p = Q_(6.75, unitReg.psi)
+rlines, llines, streams = analysis.CalculateComplexField(cont, p, exhaust, 1, Tt, Rt, Re.magnitude, 75, 0, 2)
+fieldGrid = analysis.GridifyComplexField(rlines, llines)
+analysis.PlotFieldData(fig, fieldGrid, 1, 1)
+# highmesh.AssignExternalTemps(fiseldGrid, exhaust, DESIGN.chokeArea)
+# highmesh.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius, DESIGN.plugBaseRadius, DESIGN.chokeArea)
+
 
 # highmesh.DumpFile("highmesh")
 
-highmesh = domain.DomainMC.LoadFile("highmesh")
 
 outerloop = highmesh.NewCoolantLoop(Q_(.025, 'inch'), 90, 8, "RP-1")
 highmesh.AssignCoolantFlow(domain.CoolingChannel(cowlCoolU, cowlCoolL), False, Q_(400, unitReg.psi), outerloop)
@@ -70,9 +77,9 @@ fig2.axes[0].plot([p.x for p in cowlCoolL], [p.r for p in cowlCoolL], '-k', line
 fig2.axes[0].plot([p.x for p in cowlCoolU], [p.r for p in cowlCoolU], '-k', linewidth=1)
 fig2.axes[0].plot([p.x for p in plugCoolL], [p.r for p in plugCoolL], '-k', linewidth=1)
 fig2.axes[0].plot([p.x for p in plugCoolU], [p.r for p in plugCoolU], '-k', linewidth=1)
-# highmesh.ShowStatePlot(fig2, "temperature", [DomainMaterial.CHAMBER, DomainMaterial.FREE])
+# highmesh.ShowStatePlot(fig2, "area", [DomainMaterial.CHAMBER, DomainMaterial.FREE, DomainMaterial.PLUG, DomainMaterial.COWL])
 # highmesh.ShowCellPlot(fig2)
-highmesh.ShowMaterialPlot(fig2)
+highmesh.ShowMaterialPlot(fig2, False)
 
 # cooling2.AssignCoolantFlow(domain.CoolingChannel(cowlCoolU, cowlCoolL), False, Q_(400, unitReg.psi))
 # cooling2.AssignCoolantFlow(domain.CoolingChannel(plugCoolU, plugCoolL), True, Q_(400, unitReg.psi))

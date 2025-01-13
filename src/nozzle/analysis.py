@@ -419,7 +419,7 @@ def PlotCharacteristicLines(fig: plt.Figure, field: np.ndarray) -> plt.Figure:
 def PlotFieldData(fig: plt.Figure, fieldGrid: np.ndarray[CharacteristicPoint], lines: int = 2, stations: int = 5):
     x = np.array([[p.x if p is not None else 0 for p in row] for row in fieldGrid])
     r = np.array([[p.r if p is not None else 0 for p in row] for row in fieldGrid])
-    mach = np.array([[p.mach if p is not None else np.nan for p in row] for row in fieldGrid])
+    mach = np.array([[gas.StagTempRatio(p.mach, DESIGN.exhaustGas)*DESIGN.exhaustGas.stagTemp.m if p is not None else np.nan for p in row] for row in fieldGrid])
     theta = np.array([[p.theta if p is not None else np.nan for p in row] for row in fieldGrid])
 
     ax = fig.axes[0]

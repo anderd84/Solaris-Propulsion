@@ -1,15 +1,12 @@
 from dataclasses import dataclass
-from enum import Enum
-import random
-from re import L
 import shutil
-import string
-import tempfile
 import time
+from nozzle.analysis import CharacteristicPoint
 import numpy as np
 import pint
 import matplotlib.pyplot as plt
 from scipy.optimize import fsolve
+from scipy.interpolate import griddata
 from typing import Any
 import multiprocessing as mp
 from icecream import ic
@@ -126,7 +123,7 @@ class DomainMC:
         print("material defined")
         print(f"Time to define materials: {toc - tic}")
 
-    def ShowMaterialPlot(self, fig: plt.Figure):
+    def ShowMaterialPlot(self, fig: plt.Figure, showFlow: bool):
         xarr = np.array([[point.x for point in row] for row in self.array])
         rarr = np.array([[point.r for point in row] for row in self.array])
         matarr = np.array([[(point.material.value) for point in row] for row in self.array])
@@ -134,7 +131,10 @@ class DomainMC:
         extent = [xarr[0,0]-self.xstep/2, xarr[-1,-1]+self.xstep/2, rarr[-1,-1]-self.rstep/2, rarr[0,0]+self.rstep/2]
         ax = fig.axes[0]
         ax.imshow(matarr, extent=extent, origin='upper', cmap='jet')
-          
+        
+        if not showFlow:
+            return
+
         for i in range(self.vpoints):
             for j in range(self.hpoints):
                 flow = self.array[i,j].futureFlow
@@ -226,6 +226,8 @@ class DomainMC:
             if self.array[point[0] + offset[0], point[1] + offset[1]].material == DomainMaterial.COOLANT_WALL and (self.array[point[0], point[1] - 1].material == DomainMaterial.COOLANT_WALL or self.array[point[0], point[1] + 1].material == DomainMaterial.COOLANT_WALL):
                 self.array[self.array[point].futureFlow].previousFlow = self.array[point].previousFlow
                 self.array[self.array[point].previousFlow].futureFlow = self.array[point].futureFlow
+                self.array[point].previousFlow = (0,0)
+                self.array[point].futureFlow = (0,0)
                 self.array[point].material = previousMat
             point = nextPoint
 
@@ -475,8 +477,54 @@ class DomainMC:
         toc = time.perf_counter()
         print(f"Time to assign chamber temps: {toc - tic}")
 
-    def AssignExternalTemps(self):
-        pass
+    def AssignExternalTemps(self, gridField: np.ndarray[CharacteristicPoint], exhaust: Gas, Astar: pint.Quantity):
+        points = []
+        values = []
+        minc = (2e15, 2e15)
+        maxc = (-2e15, -2e15)
+        for row in gridField:
+            for point in row:
+                if point is None:
+                    continue
+                if point.x < minc[0]:
+                    minc = (point.x, minc[1])
+                if point.x > maxc[0]:
+                    maxc = (point.x, maxc[1])
+                if point.r < minc[1]:
+                    minc = (minc[0], point.r)
+                if point.r > maxc[1]:
+                    maxc = (maxc[0], point.r)
+                points.append((point.x, point.r))
+                if isinstance(point, pint.Quantity):
+                    values.append(point.mach.magnitude)
+                else:
+                    values.append(point.mach)
+
+        minc = (max(minc[0], self.x0), max(minc[1], self.r0 - self.height))
+        maxc = (min(maxc[0], self.x0 + self.width), min(maxc[1], self.r0))
+        mincell = self.CoordsToCell(minc[0], minc[1])
+        maxcell = self.CoordsToCell(maxc[0], maxc[1])
+        rows, cols = np.mgrid[maxcell[0]:mincell[0], mincell[1]:maxcell[1]]
+        x = np.array([[p.x for p in row] for row in self.array[rows, cols]])
+        r = np.array([[p.r for p in row] for row in self.array[rows, cols]])
+
+        machs = griddata(points, values, (x,r))
+
+        for i in range(np.size(machs, 0)):
+            for j in range(np.size(machs, 1)):
+                if np.isnan(machs[i,j]):
+                    continue
+                mach = machs[i,j]
+                rowDomain = rows[i,j]
+                colDomain = cols[i,j]
+                self.array[rowDomain, colDomain].material = DomainMaterial.CHAMBER
+                self.array[rowDomain, colDomain].temperature = gas.StagTempRatio(mach, exhaust) * exhaust.stagTemp
+                self.array[rowDomain, colDomain].velocity = mach * np.sqrt(exhaust.getVariableGamma(mach) * exhaust.Rgas * self.array[rowDomain, colDomain].temperature)
+                self.array[rowDomain, colDomain].area = gas.Isentropic1DExpansion(mach, exhaust.gammaTyp) * Astar
+                
+
+        
+        print("done")
         
     def AssignBorders(self):
         finalI = self.vpoints - 1

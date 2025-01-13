@@ -6,6 +6,7 @@ import general.design as DESIGN
 from general.units import Q_, unitReg
 from nozzle import plug
 from nozzle import plots
+from nozzle import analysis
 
 def main():
     Re = Q_(3.2, unitReg.inch)
@@ -31,8 +32,12 @@ def main():
     fig.axes[0].plot([p.x for p in cowlCoolU], [p.r for p in cowlCoolU], '-k', linewidth=1)
     # plt.show()
 
-    cooling2 = domain.DomainMC(-7.3, 4.1, 7.9, 3, .1)
-    cooling2.DefineMaterials(cowlC, np.array([]), chamberC, plugC, 15)
+    p = Q_(6.75, unitReg.psi)
+    rlines, llines, streams = analysis.CalculateComplexField(cont, p, exhaust, 1, Tt, Rt, Re.magnitude, 75, 0, 2)
+    fieldGrid = analysis.GridifyComplexField(rlines, llines)
+
+    cooling2 = domain.DomainMC(-7.3, 4.1, 15, 3, .05)
+    cooling2.DefineMaterials(cowlC, chamberC, plugC, 10)
 
 
     # tic = time.perf_counter()
@@ -43,20 +48,21 @@ def main():
     startingpoint = (-6.75, 2.6) # TODO use real point
     plt.plot([startingpoint[0], aimpoint[0]], [startingpoint[1], aimpoint[1]], 'rx-')
 
-    cooling2.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius, DESIGN.plugBaseRadius, DESIGN.chokeArea, fig)
-
+    cooling2.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius, DESIGN.plugBaseRadius, DESIGN.chokeArea)
+    cooling2.AssignExternalTemps(fieldGrid, exhaust, DESIGN.chokeArea)
     # cooling2.AssignCoolantFlow(domain.CoolingChannel(cowlCoolU, cowlCoolL), False, Q_(400, unitReg.psi))
     # cooling2.AssignCoolantFlow(domain.CoolingChannel(plugCoolU, plugCoolL), True, Q_(400, unitReg.psi))
 
     cooling2.DumpFile("coolmesh")
 
     # fig2 = plots.CreateNonDimPlot()
-    cooling2.ShowMaterialPlot(fig)
+    # cooling2.ShowMaterialPlot(fig, False)
 
     # cooling2.ShowMaterialPlot(fig)
-    # cooling2.ShowStatePlot(fig, "velocity")
+    cooling2.ShowStatePlot(fig, "temperature")
 
-
+    fig2 = plots.CreateNonDimPlot()
+    analysis.PlotFieldData(fig2, fieldGrid, 1, 1)
 
     plt.show()
 
