@@ -140,12 +140,12 @@ class DomainMC:
                 flow = self.array[i,j].futureFlow
                 if (flow[0] != 0 and flow[1] != 0) or (self.array[i,j].material == DomainMaterial.COOLANT_WALL):
                     ax.quiver(self.array[flow].x, self.array[flow].r, self.array[i,j].x - self.array[flow].x, self.array[i,j].r - self.array[flow].r, scale=1, scale_units='xy', angles='xy', color='r', width=0.002)
-                # flow = self.array[i,j].previousFlow
-                # if flow[0] != 0:
-                #     if self.array[i,j].material == DomainMaterial.COOLANT_WALL:
-                #         ax.quiver(self.array[flow].x, self.array[flow].r, self.array[i,j].x - self.array[flow].x, self.array[i,j].r - self.array[flow].r, scale=1, scale_units='xy', angles='xy', color='b', width=0.002)
-                #     else:
-                #         ax.quiver(self.array[flow].x, self.array[flow].r, self.array[i,j].x - self.array[flow].x, self.array[i,j].r - self.array[flow].r, scale=1, scale_units='xy', angles='xy', color='k', width=0.002)   
+                flow = self.array[i,j].previousFlow
+                if flow[0] != 0:
+                    if self.array[i,j].material == DomainMaterial.COOLANT_WALL:
+                        ax.quiver(self.array[flow].x, self.array[flow].r, self.array[i,j].x - self.array[flow].x, self.array[i,j].r - self.array[flow].r, scale=1, scale_units='xy', angles='xy', color='b', width=0.002)
+                    else:
+                        ax.quiver(self.array[flow].x, self.array[flow].r, self.array[i,j].x - self.array[flow].x, self.array[i,j].r - self.array[flow].r, scale=1, scale_units='xy', angles='xy', color='k', width=0.002)   
 
     def ShowStatePlot(self, fig: plt.Figure, state: str, omitMaterials = []):
         print("state plot!")
@@ -177,6 +177,7 @@ class DomainMC:
         return loopID
 
     def AssignCoolantFlow(self, coolant: CoolingChannel, upperWall: bool, initialPressure: pint.Quantity, loopID: int):
+        # first assign wall
         if loopID not in self.coolingLoops:
             raise ValueError(f"Loop ID {loopID} not defined")
         landWidth = self.coolingLoops[loopID].landWidth
@@ -185,6 +186,53 @@ class DomainMC:
         inputPoints = len(coolant.upperContour)
         previousWall = (0,0)
         previousFlow = (0,0)
+        # areas type
+        # initial wall assignment
+        wallContour = coolant.upperContour if upperWall else coolant.lowerContour
+        previousMat = self.array[self.CoordsToCell(wallContour[0].x, wallContour[0].r)].material
+        inlet = (0,0)
+        for i in alive_it(range(inputPoints - 1)):
+            dist = np.sqrt((wallContour[i].x - wallContour[i+1].x)**2 + (wallContour[i].r - wallContour[i+1].r)**2)
+            steps = max(int(dist/min(self.xstep, self.rstep) * 1.5), 5)
+            xc = np.linspace(wallContour[i].x, wallContour[i+1].x, steps)[:-1]
+            rc = np.linspace(wallContour[i].r, wallContour[i+1].r, steps)[:-1]
+
+            for j in range(steps - 1):
+                if xc[j] > self.x0 + self.width or xc[j] < self.x0:
+                    break
+                if rc[j] < self.r0 - self.height or rc[j] > self.r0:
+                    break
+                wallPoint = self.CoordsToCell(xc[j], rc[j])
+                if (i==0 and j==0):
+                    self.array[wallPoint].material = DomainMaterial.COOLANT_INLET
+                    inlet = wallPoint
+                else:
+                    self.array[wallPoint].material = DomainMaterial.COOLANT_WALL if self.array[wallPoint].material != DomainMaterial.COOLANT_INLET else DomainMaterial.COOLANT_INLET
+                
+                if wallPoint[0] != previousWall[0] or wallPoint[1] != previousWall[1]:
+                    previousFlow = previousWall
+                self.array[wallPoint].previousFlow = previousFlow
+                self.array[previousFlow].futureFlow = wallPoint if self.array[wallPoint].material != DomainMaterial.COOLANT_INLET else (0,0)
+                previousWall = wallPoint
+        # delete bad points
+        point = inlet
+        while self.array[point].futureFlow != point:
+            # print(point)
+            nextPoint = self.array[point].futureFlow
+            offset = (-1, 0) if upperWall else (1, 0)
+            if point[0] + offset[0] < 0 or point[0] + offset[0] >= self.vpoints or point[1] + offset[1] < 0 or point[1] + offset[1] >= self.hpoints:
+                point = nextPoint
+                continue 
+            if self.array[point[0] + offset[0], point[1] + offset[1]].material == DomainMaterial.COOLANT_WALL and (self.array[point[0], point[1] - 1].material == DomainMaterial.COOLANT_WALL or self.array[point[0], point[1] + 1].material == DomainMaterial.COOLANT_WALL):
+                self.array[self.array[point].futureFlow].previousFlow = self.array[point].previousFlow
+                self.array[self.array[point].previousFlow].futureFlow = self.array[point].futureFlow
+                self.array[point].material = previousMat
+            point = nextPoint
+
+        previousWall = (0,0)
+        previousFlow = (0,0)
+        wallPoint = (0,0)
+
         for i in alive_it(range(inputPoints - 1)):
             dist1 = np.sqrt((coolant.lowerContour[i].x - coolant.lowerContour[i+1].x)**2 + (coolant.lowerContour[i].r - coolant.lowerContour[i+1].r)**2)
             dist2 = np.sqrt((coolant.upperContour[i].x - coolant.upperContour[i+1].x)**2 + (coolant.upperContour[i].r - coolant.upperContour[i+1].r)**2)
@@ -199,9 +247,6 @@ class DomainMC:
             ru = np.linspace(coolant.upperContour[i].r, coolant.upperContour[i+1].r, steps)[:-1]
 
             for j in range(steps - 1):
-                wallPoint = self.CoordsToCell(xu[j], ru[j]) if upperWall else self.CoordsToCell(xl[j], rl[j])
-                cells = self.cellsOnLine((xl[j], rl[j]), (xu[j], ru[j]))
-
                 if xl[j] > self.x0 + self.width or xu[j] > self.x0 + self.width:
                     break
                 if xl[j] < self.x0 or xu[j] < self.x0:
@@ -211,6 +256,11 @@ class DomainMC:
                     break
                 if rl[j] > self.r0 or ru[j] > self.r0:
                     break
+                
+                possibleWall = self.CoordsToCell(xu[j], ru[j]) if upperWall else self.CoordsToCell(xl[j], rl[j])
+                if self.array[possibleWall].material == DomainMaterial.COOLANT_WALL or self.array[possibleWall].material == DomainMaterial.COOLANT_INLET:
+                    wallPoint = possibleWall
+                cells = self.cellsOnLine((xl[j], rl[j]), (xu[j], ru[j]))
 
                 # plt.plot([xl[j], xu[j]], [rl[j], ru[j]], '-b', linewidth=.25)
 
@@ -223,24 +273,10 @@ class DomainMC:
                 hydroD = 4*channelArea/perim
 
                 for row, col in cells:
-                    if (i==0 and j==0) or self.array[row, col].material == DomainMaterial.COOLANT_INLET:
+                    if (i==0 and j==0):
                         self.array[row,col].material = DomainMaterial.COOLANT_INLET
-                        self.array[row, col].pressure = initialPressure
-                        self.array[row, col].flowHeight = h
-                        self.array[row, col].hydraulicDiameter = hydroD
-                        self.array[row, col].area = channelArea
-                        self.array[row, col].id = loopID
 
-                    if row == wallPoint[0] and col == wallPoint[1]:
-                        if row != previousWall[0] or col != previousWall[1]:
-                            previousFlow = previousWall
-                        self.array[row, col].material = DomainMaterial.COOLANT_WALL if self.array[row, col].material != DomainMaterial.COOLANT_INLET else DomainMaterial.COOLANT_INLET
-                        self.array[row, col].previousFlow = previousFlow
-                        self.array[previousFlow].futureFlow = (row, col) if self.array[row, col].material != DomainMaterial.COOLANT_INLET else (0,0)
-                        previousWall = (row, col)
-                    else:
-                        if self.array[row, col].material in [DomainMaterial.COOLANT_WALL, DomainMaterial.COOLANT_INLET, DomainMaterial.COOLANT_BULK]:
-                            continue
+                    if self.array[row, col].material not in [DomainMaterial.COOLANT_WALL, DomainMaterial.COOLANT_INLET]:
                         self.array[row, col].material = DomainMaterial.COOLANT_BULK
                         self.array[row, col].previousFlow = wallPoint
 

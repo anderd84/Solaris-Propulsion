@@ -55,7 +55,8 @@ def heatcoolant(Tprev, Tcell, resSet, Pprev, Pcell, channelArea, channelHydroD, 
 
     return Tnew, Pnew
 
-
+def PressureDropCoolant():
+    pass
 
 
 
