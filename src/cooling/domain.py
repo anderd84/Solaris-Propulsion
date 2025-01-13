@@ -256,7 +256,7 @@ class DomainMC:
                     break
                 if rl[j] > self.r0 or ru[j] > self.r0:
                     break
-                
+
                 possibleWall = self.CoordsToCell(xu[j], ru[j]) if upperWall else self.CoordsToCell(xl[j], rl[j])
                 if self.array[possibleWall].material == DomainMaterial.COOLANT_WALL or self.array[possibleWall].material == DomainMaterial.COOLANT_INLET:
                     wallPoint = possibleWall
@@ -276,7 +276,10 @@ class DomainMC:
                     if (i==0 and j==0):
                         self.array[row,col].material = DomainMaterial.COOLANT_INLET
 
-                    if self.array[row, col].material not in [DomainMaterial.COOLANT_WALL, DomainMaterial.COOLANT_INLET]:
+                    if (i==inputPoints-2 and j==steps-2):
+                        self.array[row,col].material = DomainMaterial.COOLANT_OUTLET
+
+                    if self.array[row, col].material not in [DomainMaterial.COOLANT_WALL, DomainMaterial.COOLANT_INLET, DomainMaterial.COOLANT_OUTLET]:
                         self.array[row, col].material = DomainMaterial.COOLANT_BULK
                         self.array[row, col].previousFlow = wallPoint
 

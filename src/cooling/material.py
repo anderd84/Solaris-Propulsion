@@ -15,6 +15,7 @@ class DomainMaterial(IntEnum):
     COOLANT_WALL = 6
     COOLANT_BULK = 7
     COOLANT_INLET = 8
+    COOLANT_OUTLET = 9
 
 @dataclass
 class MaterialType:
@@ -23,9 +24,10 @@ class MaterialType:
     WALL = {DomainMaterial.COWL, DomainMaterial.PLUG}
     EXHAUST = {DomainMaterial.CHAMBER}
     STATIC_TEMP = {DomainMaterial.COOLANT_INLET, DomainMaterial.FREE, DomainMaterial.CHAMBER}
+    STATIC_PRESS = {DomainMaterial.COOLANT_OUTLET, DomainMaterial.FREE, DomainMaterial.CHAMBER}
     ADIABATIC = {DomainMaterial.FREE}
     SOLID = {DomainMaterial.COWL, DomainMaterial.PLUG}
-    FLUID = {DomainMaterial.COOLANT, DomainMaterial.COOLANT_WALL, DomainMaterial.COOLANT_BULK, DomainMaterial.COOLANT_INLET, DomainMaterial.CHAMBER}
+    FLUID = {DomainMaterial.COOLANT, DomainMaterial.COOLANT_WALL, DomainMaterial.COOLANT_BULK, DomainMaterial.COOLANT_INLET, DomainMaterial.COOLANT_OUTLET, DomainMaterial.CHAMBER}
 
 def isIntersect(Point, contour: np.ndarray[ContourPoint], domainSize: tuple[int, int]):
     if contour.size == 0:
