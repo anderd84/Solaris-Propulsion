@@ -142,10 +142,10 @@ class DomainMC:
                     ax.quiver(self.array[flow].x, self.array[flow].r, self.array[i,j].x - self.array[flow].x, self.array[i,j].r - self.array[flow].r, scale=1, scale_units='xy', angles='xy', color='r', width=0.002)
                 flow = self.array[i,j].previousFlow
                 if flow[0] != 0:
-                    if self.array[i,j].material == DomainMaterial.COOLANT_WALL:
-                        ax.quiver(self.array[flow].x, self.array[flow].r, self.array[i,j].x - self.array[flow].x, self.array[i,j].r - self.array[flow].r, scale=1, scale_units='xy', angles='xy', color='b', width=0.002)
+                    if self.array[i,j].material == DomainMaterial.COOLANT_BULK:
+                        ax.quiver(self.array[flow].x, self.array[flow].r, self.array[i,j].x - self.array[flow].x, self.array[i,j].r - self.array[flow].r, scale=1, scale_units='xy', angles='xy', color='k', width=0.002)
                     else:
-                        ax.quiver(self.array[flow].x, self.array[flow].r, self.array[i,j].x - self.array[flow].x, self.array[i,j].r - self.array[flow].r, scale=1, scale_units='xy', angles='xy', color='k', width=0.002)   
+                        ax.quiver(self.array[flow].x, self.array[flow].r, self.array[i,j].x - self.array[flow].x, self.array[i,j].r - self.array[flow].r, scale=1, scale_units='xy', angles='xy', color='b', width=0.002)   
 
     def ShowStatePlot(self, fig: plt.Figure, state: str, omitMaterials = []):
         print("state plot!")
@@ -278,7 +278,11 @@ class DomainMC:
                     if (i==0 and j==0):
                         self.array[row,col].material = DomainMaterial.COOLANT_INLET
 
-                    if (i==inputPoints-2 and j==steps-2):
+                    edgeCase = (xl[j] >= self.x0 + self.width - self.xstep or xu[j] >= self.x0 + self.width - self.xstep)
+                    edgeCase = edgeCase or (xl[j] <= self.x0 + self.xstep or xu[j] <= self.x0 + self.xstep)
+                    edgeCase = edgeCase or (rl[j] <= self.r0 - self.height + self.rstep or ru[j] <= self.r0 - self.height + self.rstep)
+                    edgeCase = edgeCase or (rl[j] >= self.r0 - self.rstep or ru[j] >= self.r0 - self.rstep)
+                    if (i==inputPoints-2 and j==steps-2) or edgeCase:
                         self.array[row,col].material = DomainMaterial.COOLANT_OUTLET
 
                     if self.array[row, col].material not in [DomainMaterial.COOLANT_WALL, DomainMaterial.COOLANT_INLET, DomainMaterial.COOLANT_OUTLET]:

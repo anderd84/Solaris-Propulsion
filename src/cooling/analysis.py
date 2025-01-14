@@ -9,12 +9,18 @@ from cooling import material, calc_cell
 
 def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: float = 1e-2, convPlot: bool = True):
     calcPoints = []
+    blacklist = []
     with alive_bar(domain.vpoints*domain.hpoints, title="Finding calculation points") as bar:
         for row in range(domain.vpoints):
             for col in range(domain.hpoints):
                 if domain.material[row, col] not in material.MaterialType.STATIC_TEMP:
                     calcPoints.append((row, col))
+                if domain.material[row, col] == material.DomainMaterial.COOLANT_BULK and domain.border[row, col]:
+                    blacklist.append((row, col))
                 bar()
+    
+    for pair in blacklist:
+        calcPoints.remove(pair)
 
     if convPlot:
         plt.ion()

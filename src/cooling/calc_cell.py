@@ -1,7 +1,7 @@
 import numpy as np
 import pint
 
-from cooling import cooling2d, domain
+from cooling import cooling2d, domain, domain_mmap
 from cooling.material import DomainMaterial, MaterialType
 import general.design as DESIGN
 from general.units import Direction, unitReg, Q_
@@ -34,13 +34,13 @@ class ResistorSet:
         return Qsum
 
 
-def getConductivity(domain: domain.DomainMMAP, row: int, col: int):
+def getConductivity(domain: domain_mmap.DomainMMAP, row: int, col: int):
     if domain.material[row,col] in MaterialType.WALL:
         return cooling2d.conduction_grcop(domain.temperature[row,col].to(unitReg.degR))
     else:
         return cooling2d.conduction_rp1(domain.temperature[row,col].to(unitReg.degR))
 
-def ConductionResistor(domain: domain.DomainMMAP, sink: tuple[int, int], source: tuple[int, int]): # sink is to, source is from
+def ConductionResistor(domain: domain_mmap.DomainMMAP, sink: tuple[int, int], source: tuple[int, int]): # sink is to, source is from
     L = Q_(domain.xstep, unitReg.inch).to(unitReg.foot)
     k = getConductivity(domain, sink[0], sink[1])
     if source[0] == sink[0]: # same row, horizontal conduction
@@ -54,7 +54,7 @@ def ConductionResistor(domain: domain.DomainMMAP, sink: tuple[int, int], source:
         ro = Q_(max(domain.r[source], domain.r[sink]), unitReg.inch).to(unitReg.foot)
         return np.log(ro / ri) / (2 * np.pi * L * k)
 
-def ConductionHalfResistor(domain: domain.DomainMMAP, sink: tuple[int, int], source: tuple[int, int], sinkSide: bool = True):
+def ConductionHalfResistor(domain: domain_mmap.DomainMMAP, sink: tuple[int, int], source: tuple[int, int], sinkSide: bool = True):
     L = Q_(domain.xstep, unitReg.inch).to(unitReg.foot)
     k = getConductivity(domain, sink[0], sink[1]) if sinkSide else getConductivity(domain, source[0], source[1])
     if source[0] == sink[0]: # same row, horizontal conduction
@@ -69,7 +69,7 @@ def ConductionHalfResistor(domain: domain.DomainMMAP, sink: tuple[int, int], sou
         ro = Q_(max(domain.r[source] if not sinkSide else rwall, domain.r[sink] if sinkSide else rwall), unitReg.inch).to(unitReg.foot)
         return np.log(ro / ri) / (2 * np.pi * L * k)
 
-def ConvectionHalfResistor(domain: domain.DomainMMAP, sink: tuple[int, int], source: tuple[int, int]):
+def ConvectionHalfResistor(domain: domain_mmap.DomainMMAP, sink: tuple[int, int], source: tuple[int, int]):
     sinkSide = domain.material[sink] in MaterialType.COOLANT | MaterialType.EXHAUST
     convectionCell = sink if sinkSide else source
     isHoriz = source[0] == sink[0] # same row, horizontal convection
@@ -87,7 +87,7 @@ def ConvectionHalfResistor(domain: domain.DomainMMAP, sink: tuple[int, int], sou
     
     return 1 / (convectionCoeff * area)
 
-def CoolantConvectionArea(domain: domain.DomainMMAP, row: int, col: int, isHoriz: bool, sinkTop: bool, sinkSide: bool):
+def CoolantConvectionArea(domain: domain_mmap.DomainMMAP, row: int, col: int, isHoriz: bool, sinkTop: bool, sinkSide: bool):
     wallPoint = (row, col)# if domain.material[row, col] in MaterialType.COOLANT_WALL else tuple(domain.previousFlow[row, col])
     innerRadius = Q_(domain.r[wallPoint] - domain.rstep/2, unitReg.inch).to(unitReg.foot)
     outerRadius = Q_(domain.r[wallPoint] + domain.rstep/2, unitReg.inch).to(unitReg.foot)
@@ -101,7 +101,7 @@ def CoolantConvectionArea(domain: domain.DomainMMAP, row: int, col: int, isHoriz
         xstep = Q_(domain.xstep, unitReg.inch).to(unitReg.foot)           
         return (2 * np.pi * outerRadius * theta * DESIGN.NumberofChannels) * xstep if outer else (2 * np.pi * innerRadius * theta * DESIGN.NumberofChannels) * xstep
 
-def CombustionConvectionArea(domain: domain.DomainMMAP, row: int, col: int, isHoriz: bool, sinkTop: bool, sinkSide: bool):
+def CombustionConvectionArea(domain: domain_mmap.DomainMMAP, row: int, col: int, isHoriz: bool, sinkTop: bool, sinkSide: bool):
     innerRadius = Q_(domain.r[row, col] - domain.rstep/2, unitReg.inch).to(unitReg.foot)
     outerRadius = Q_(domain.r[row, col] + domain.rstep/2, unitReg.inch).to(unitReg.foot)
     if isHoriz:
@@ -114,7 +114,7 @@ def CombustionConvectionArea(domain: domain.DomainMMAP, row: int, col: int, isHo
 def getCoolingArcAngle(innerRadius: pint.Quantity):
     return 2*np.pi/DESIGN.NumberofChannels - (DESIGN.landWidth / innerRadius)
 
-def CalculateCoreResistors(domain: domain.DomainMMAP, row: int, col: int):
+def CalculateCoreResistors(domain: domain_mmap.DomainMMAP, row: int, col: int):
     resSet = ResistorSet()
 
     if col > 0: # left
@@ -142,7 +142,7 @@ def CombineResistors(resSet: ResistorSet):
             resSet.R[i] = Q_(1, unitReg.hour * unitReg.degR / unitReg.BTU)
     return resSet.getTnew()
 
-def GetResistor(domain: domain.DomainMMAP, sink: tuple[int, int], source: tuple[int, int]): #! ERROR, convection criteria is wrong
+def GetResistor(domain: domain_mmap.DomainMMAP, sink: tuple[int, int], source: tuple[int, int]): #! ERROR, convection criteria is wrong
     if domain.material[source] in MaterialType.SOLID:
         sourceR = ConductionHalfResistor(domain, sink, source, False)
         # print("half solid")
@@ -169,7 +169,7 @@ def GetResistor(domain: domain.DomainMMAP, sink: tuple[int, int], source: tuple[
     
     return sourceR + sinkR
 
-def CalculateBorderResistors(domain: domain.DomainMMAP, row: int, col: int):
+def CalculateBorderResistors(domain: domain_mmap.DomainMMAP, row: int, col: int):
     resSet = ResistorSet()
 
     if col > 0: # left
@@ -191,7 +191,7 @@ def CalculateBorderResistors(domain: domain.DomainMMAP, row: int, col: int):
     # print(resSet.R, resSet.T)
     return resSet
 
-def CalculateCoolant(domain: domain.DomainMMAP, row: int, col: int):
+def CalculateCoolant(domain: domain_mmap.DomainMMAP, row: int, col: int):
     previousFlow = tuple(domain.previousFlow[row, col])
 
     resSet = CalculateBorderResistors(domain, row, col)
@@ -202,7 +202,7 @@ def CalculateCoolant(domain: domain.DomainMMAP, row: int, col: int):
 
     return cooling2d.heatcoolant(domain.temperature[previousFlow], Tprev, resSet, domain.pressure[previousFlow], domain.pressure[row, col], domain.area[row, col], domain.hydraulicDiameter[row, col], deltaL)
 
-def CalculateCell(domain: domain.DomainMMAP, row: int, col: int):
+def CalculateCell(domain: domain_mmap.DomainMMAP, row: int, col: int):
     if domain.material[row,col] in MaterialType.STATIC_TEMP:
         return domain.temperature[row,col]
     
@@ -221,7 +221,7 @@ def CalculateCell(domain: domain.DomainMMAP, row: int, col: int):
         return CalculateCoolant(domain, row, col)
     raise ValueError("Material not recognized")
 
-def Cell(d: domain.DomainMMAP, row: int, col: int):
+def Cell(d: domain_mmap.DomainMMAP, row: int, col: int):
     out = CalculateCell(d, row, col)
     if isinstance(out, tuple):
         return out
