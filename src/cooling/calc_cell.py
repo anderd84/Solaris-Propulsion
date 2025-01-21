@@ -7,8 +7,8 @@ import general.design as DESIGN
 from general.units import Direction, unitReg, Q_
 
 class ResistorSet:
-    R: list[pint.Quantity] = [Q_(0, unitReg.hour * unitReg.degR / unitReg.BTU) for _ in range(4)]
-    T: list[pint.Quantity] = [Q_(0, unitReg.degR) for _ in range(4)]
+    R: list[pint.Quantity] = [Q_(0, unitReg.hour * unitReg.degR / unitReg.BTU)] * 4
+    T: list[pint.Quantity] = [Q_(0, unitReg.degR)] * 4
 
     def getSums(self):
         TRsum = Q_(0, str((self.T[0]/self.R[0]).units))
@@ -18,7 +18,6 @@ class ResistorSet:
                 continue
             TRsum += self.T[i] / self.R[i]
             Rsum += 1/self.R[i]
-            # print(TRsum, Rsum)
         return TRsum, Rsum
 
     def getTnew(self):
@@ -198,7 +197,6 @@ def CalculateCoolant(domain: domain_mmap.DomainMMAP, row: int, col: int):
     Tprev = domain.temperature[row, col]
 
     deltaL = Q_(np.sqrt((domain.x[row, col] - domain.x[previousFlow])**2 + (domain.r[row, col] - domain.r[previousFlow])**2), unitReg.inch).to(unitReg.foot)
-    flowHeight = (domain.flowHeight[row, col] + domain.flowHeight[previousFlow]) / 2
 
     return cooling2d.heatcoolant(domain.temperature[previousFlow], Tprev, resSet, domain.pressure[previousFlow], domain.pressure[row, col], domain.area[row, col], domain.hydraulicDiameter[row, col], deltaL)
 
@@ -210,9 +208,9 @@ def CalculateCell(domain: domain_mmap.DomainMMAP, row: int, col: int):
         return domain.temperature[row,col]
     
     if domain.material[row,col] in MaterialType.WALL:
-        if not domain.border[row,col]:
-            return CalculateCoreResistors(domain, row, col).getTnew()
-        return CalculateBorderResistors(domain, row, col).getTnew()
+        if domain.border[row,col]:
+            return CalculateBorderResistors(domain, row, col).getTnew()
+        return CalculateCoreResistors(domain, row, col).getTnew()
     
     if domain.material[row,col] in MaterialType.COOLANT:
         if domain.material[row,col] == DomainMaterial.COOLANT_BULK:

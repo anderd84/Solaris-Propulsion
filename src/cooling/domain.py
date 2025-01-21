@@ -235,6 +235,8 @@ class DomainMC:
         previousFlow = (0,0)
         wallPoint = (0,0)
 
+        pointMap = {}
+
         for i in alive_it(range(inputPoints - 1)):
             dist1 = np.sqrt((coolant.lowerContour[i].x - coolant.lowerContour[i+1].x)**2 + (coolant.lowerContour[i].r - coolant.lowerContour[i+1].r)**2)
             dist2 = np.sqrt((coolant.upperContour[i].x - coolant.upperContour[i+1].x)**2 + (coolant.upperContour[i].r - coolant.upperContour[i+1].r)**2)
@@ -262,6 +264,7 @@ class DomainMC:
                 possibleWall = self.CoordsToCell(xu[j], ru[j]) if upperWall else self.CoordsToCell(xl[j], rl[j])
                 if self.array[possibleWall].material == DomainMaterial.COOLANT_WALL or self.array[possibleWall].material == DomainMaterial.COOLANT_INLET:
                     wallPoint = possibleWall
+
                 cells = self.cellsOnLine((xl[j], rl[j]), (xu[j], ru[j]))
 
                 # plt.plot([xl[j], xu[j]], [rl[j], ru[j]], '-b', linewidth=.25)
@@ -274,31 +277,52 @@ class DomainMC:
                 perim = (Q_(rl[j], unitReg.inch)*channelSectorAngle + Q_(ru[j], unitReg.inch)*channelSectorAngle)/(2*np.pi) + 2*h
                 hydroD = 4*channelArea/perim
 
-                for row, col in cells:
+                for cellPos in cells:
                     if (i==0 and j==0):
-                        self.array[row,col].material = DomainMaterial.COOLANT_INLET
+                        self.array[cellPos].material = DomainMaterial.COOLANT_INLET
 
                     edgeCase = (xl[j] >= self.x0 + self.width - self.xstep or xu[j] >= self.x0 + self.width - self.xstep)
                     edgeCase = edgeCase or (xl[j] <= self.x0 + self.xstep or xu[j] <= self.x0 + self.xstep)
                     edgeCase = edgeCase or (rl[j] <= self.r0 - self.height + self.rstep or ru[j] <= self.r0 - self.height + self.rstep)
                     edgeCase = edgeCase or (rl[j] >= self.r0 - self.rstep or ru[j] >= self.r0 - self.rstep)
                     if (i==inputPoints-2 and j==steps-2) or edgeCase:
-                        self.array[row,col].material = DomainMaterial.COOLANT_OUTLET
+                        self.array[cellPos].material = DomainMaterial.COOLANT_OUTLET
 
-                    if self.array[row, col].material not in [DomainMaterial.COOLANT_WALL, DomainMaterial.COOLANT_INLET, DomainMaterial.COOLANT_OUTLET]:
-                        self.array[row, col].material = DomainMaterial.COOLANT_BULK
-                        self.array[row, col].previousFlow = wallPoint
+                    if self.array[cellPos].material not in MaterialType.COOLANT | {DomainMaterial.COOLANT_INLET, DomainMaterial.COOLANT_OUTLET}:
+                        self.array[cellPos].material = DomainMaterial.COOLANT_BULK
+                        self.array[cellPos].previousFlow = wallPoint
+                        pointMap.setdefault(wallPoint, set()).add(cellPos)
 
-                    self.array[row, col].pressure = initialPressure
-                    self.array[row, col].flowHeight = h
-                    self.array[row, col].hydraulicDiameter = hydroD
-                    self.array[row, col].area = channelArea
-                    self.array[row, col].id = loopID
+
+                    self.array[cellPos].pressure = initialPressure
+                    self.array[cellPos].flowHeight = h
+                    self.array[cellPos].hydraulicDiameter = hydroD
+                    self.array[cellPos].area = channelArea
+                    self.array[cellPos].id = loopID
                 
         print("done")
-
+        print(pointMap)
         print("assigning borders")
         self.AssignBorders()
+        # adjust non wall side
+        for wallPoint in pointMap:
+            # plt.plot(self.array[wallPoint].x, self.array[wallPoint].r, 'go')
+            topLeft = (self.vpoints,self.hpoints)
+            bottomRight = (-1,-1)
+            s = pointMap[wallPoint]
+            for cell in pointMap[wallPoint]:
+                if not self.array[cell].border:
+                    continue
+                if cell[0] < topLeft[0] or cell[1] < topLeft[1]:
+                    topLeft = cell
+                if cell[0] > bottomRight[0] or cell[1] > bottomRight[1]:
+                    bottomRight = cell
+                self.array[cell].border = False
+            if bottomRight == (-1,-1):
+                continue
+            self.array[topLeft].futureFlow = bottomRight
+            self.array[topLeft].border = True
+        
         print("done")
 
     def GuessChannelState(self, loopID: int, endTemp: pint.Quantity):
@@ -543,6 +567,8 @@ class DomainMC:
                     highJ = min(j + 1, finalJ)
                     checks = [self.array[lowI, j].material, self.array[highI, j].material, self.array[i, lowJ].material, self.array[i, highJ].material]
                     self.array[i, j].border = not(checks[0] == checks[1] and checks[1] == checks[2] and checks[2] == checks[3])
+                    if DomainMaterial.COOLANT_WALL in checks and self.array[i,j].border and self.array[i,j].material == DomainMaterial.COOLANT_BULK:
+                        self.array[i,j].border = False
                     bar()
 
     def cellsOnLine(self, point1, point2):

@@ -9,6 +9,7 @@ from nozzle.nozzle import ContourPoint
 class DomainMaterial(IntEnum):
     FREE = 0 
     COWL = 1
+    EXHAUST = 2 #*Gas outside the chamber
     CHAMBER = 3 #*Gas inside the chamber
     PLUG = 4
     COOLANT = 5
@@ -22,7 +23,7 @@ class MaterialType:
     COOLANT = {DomainMaterial.COOLANT, DomainMaterial.COOLANT_WALL, DomainMaterial.COOLANT_BULK}
     COOLANT_WALL = {DomainMaterial.COOLANT_WALL}
     WALL = {DomainMaterial.COWL, DomainMaterial.PLUG}
-    EXHAUST = {DomainMaterial.CHAMBER}
+    EXHAUST = {DomainMaterial.CHAMBER, DomainMaterial.EXHAUST}
     STATIC_TEMP = {DomainMaterial.COOLANT_INLET, DomainMaterial.FREE, DomainMaterial.CHAMBER}
     STATIC_PRESS = {DomainMaterial.COOLANT_OUTLET, DomainMaterial.FREE, DomainMaterial.CHAMBER}
     ADIABATIC = {DomainMaterial.FREE}
