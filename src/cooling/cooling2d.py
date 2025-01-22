@@ -34,9 +34,18 @@ mdotperchannel = Fuel_Total / NumberofChannels
 
 
 # @unitReg.wraps((unitReg.degR, unitReg.psi), (unitReg.degR, unitReg.degR, None, unitReg.psi, unitReg.psi, unitReg.inch**2, unitReg.inch, unitReg.inch))
-def heatcoolant(Tprev, Tcell, resSet, Pprev, Pcell, channelArea, channelHydroD, DeltaL):
+def heatcoolant(Tprev, Tcell, resSet, Pcell):
     TRsum, Rsum = resSet.getSums()
-    (mu, cp, _, _, rho, _, _, _, _) = get_fluid_properties(fuelname, Tcell, Pcell)
+    (_, cp, _, _, _, _, _, _, _) = get_fluid_properties(fuelname, Tcell, Pcell)
+
+    Tprev = Tprev.to(unitReg.degR)
+
+    Tnew = ((TRsum + Tprev*mdotperchannel*cp)/(mdotperchannel*cp + Rsum)).to(unitReg.degR)
+
+    return Tnew
+
+def depresscoolant(Tcell, Pprev, Pcell, channelArea, channelHydroD, DeltaL):
+    (mu, _, _, _, rho, _, _, _, _) = get_fluid_properties(fuelname, Tcell, Pcell)
     A_c = channelArea # Cooling channel cross-sectional area, height should be variable in the future
     D_h = channelHydroD   # Hydraulic diameter
     Re_D = mdotperchannel*D_h/mu/A_c    # Reynolds number
@@ -46,17 +55,12 @@ def heatcoolant(Tprev, Tcell, resSet, Pprev, Pcell, channelArea, channelHydroD, 
     f = fsolve(f_func, 0.05)    # Darcy friction factor
     DeltaP = (f*DeltaL/D_h*rho*(mdotperchannel/rho/A_c)**2/2).to(unitReg.psi)   # Pressure drop
 
-    Tprev = Tprev.to(unitReg.degR)
     Pcell = Pcell.to(unitReg.psi)
     Pprev = Pprev.to(unitReg.psi)
 
-    Tnew = ((TRsum + Tprev*mdotperchannel*cp)/(mdotperchannel*cp + Rsum)).to(unitReg.degR)
     Pnew = Pprev - DeltaP
 
-    return Tnew, Pnew
-
-
-
+    return Pnew
 
 
 
