@@ -59,7 +59,7 @@ def main():
     # cooling2.ShowMaterialPlot(fig, False)
 
     # cooling2.ShowMaterialPlot(fig)
-    cooling2.ShowStatePlot(fig, "temperature")
+    cooling2.NodePlot(fig, "temperature")
 
     fig2 = plots.CreateNonDimPlot()
     analysis.PlotFieldData(fig2, fieldGrid, 1, 1)

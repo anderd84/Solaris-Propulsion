@@ -43,8 +43,8 @@ class DomainPoint:
     pressure: pint.Quantity = Q_(12.1, unitReg.psi)
     velocity: pint.Quantity = Q_(0, unitReg.ft/unitReg.s)
     hydraulicDiameter: pint.Quantity = Q_(0, unitReg.inch)
-    previousFlow: tuple[int, int] = (0,0)
-    futureFlow: tuple[int, int] = (0,0)
+    previousFlow: tuple[int, int] = (-1,-1)
+    futureFlow: tuple[int, int] = (-1,-1)
     flowHeight: pint.Quantity = Q_(0, unitReg.inch)
     id: int = -1
 
@@ -123,45 +123,42 @@ class DomainMC:
         print("material defined")
         print(f"Time to define materials: {toc - tic}")
 
-    def ShowMaterialPlot(self, fig: plt.Figure, showFlow: bool):
+    def ContourPlot(self, fig: plt.Figure, attr: str, omitMaterials: list = []):
         xarr = np.array([[point.x for point in row] for row in self.array])
         rarr = np.array([[point.r for point in row] for row in self.array])
-        matarr = np.array([[(point.material.value) for point in row] for row in self.array])
-
-        extent = [xarr[0,0]-self.xstep/2, xarr[-1,-1]+self.xstep/2, rarr[-1,-1]-self.rstep/2, rarr[0,0]+self.rstep/2]
-        ax = fig.axes[0]
-        ax.imshow(matarr, extent=extent, origin='upper', cmap='jet')
         
-        if not showFlow:
-            return
-
-        for i in range(self.vpoints):
-            for j in range(self.hpoints):
-                flow = self.array[i,j].futureFlow
-                if (flow[0] != 0 and flow[1] != 0) or (self.array[i,j].material == DomainMaterial.COOLANT_WALL):
-                    ax.quiver(self.array[flow].x, self.array[flow].r, self.array[i,j].x - self.array[flow].x, self.array[i,j].r - self.array[flow].r, scale=1, scale_units='xy', angles='xy', color='r', width=0.002)
-                flow = self.array[i,j].previousFlow
-                if flow[0] != 0:
-                    if self.array[i,j].material == DomainMaterial.COOLANT_BULK:
-                        ax.quiver(self.array[flow].x, self.array[flow].r, self.array[i,j].x - self.array[flow].x, self.array[i,j].r - self.array[flow].r, scale=1, scale_units='xy', angles='xy', color='k', width=0.002)
-                    else:
-                        ax.quiver(self.array[flow].x, self.array[flow].r, self.array[i,j].x - self.array[flow].x, self.array[i,j].r - self.array[flow].r, scale=1, scale_units='xy', angles='xy', color='b', width=0.002)   
-
-    def ShowStatePlot(self, fig: plt.Figure, state: str, omitMaterials = []):
-        print("state plot!")
-        xarr = np.array([[point.x for point in row] for row in self.array])
-        print("xarr done!")
-        rarr = np.array([[point.r for point in row] for row in self.array])
-        print("rarr done!")
-        
-        matarr = np.array([[point.getState(state) if point.material not in omitMaterials else np.nan for point in row] for row in self.array])
-        print("matarr done!")
+        matarr = np.array([[point.getState(attr) if point.material not in omitMaterials else np.nan for point in row] for row in self.array])
 
         ax = fig.axes[0]
         contf = ax.contourf(xarr, rarr, matarr, 100, cmap='jet')
         fig.colorbar(contf, ax=ax)
         print(np.min(matarr), np.max(matarr))
         print("done!")
+
+    def NodePlot(self, fig: plt.Figure, attr: str, omitMaterials: list = []):
+        xarr = np.array([[point.x for point in row] for row in self.array])
+        rarr = np.array([[point.r for point in row] for row in self.array])
+        
+        matarr = np.array([[point.getState(attr) if point.material not in omitMaterials else np.nan for point in row] for row in self.array])
+
+        extent = [xarr[0,0]-self.xstep/2, xarr[-1,-1]+self.xstep/2, rarr[-1,-1]-self.rstep/2, rarr[0,0]+self.rstep/2]
+        ax = fig.axes[0]
+        ax.imshow(matarr, extent=extent, origin='upper', cmap='jet')
+
+    def RelationPlot(self, fig: plt.Figure):
+        ax = fig.axes[0]
+        for i in range(self.vpoints):
+            for j in range(self.hpoints):
+                flow = self.array[i,j].futureFlow
+                if (flow[0] != -1 and flow[1] != -1) or (self.array[i,j].material == DomainMaterial.COOLANT_WALL):
+                    ax.quiver(self.array[flow].x, self.array[flow].r, self.array[i,j].x - self.array[flow].x, self.array[i,j].r - self.array[flow].r, scale=1, scale_units='xy', angles='xy', color='r', width=0.002)
+                flow = self.array[i,j].previousFlow
+                if flow[0] != -1:
+                    if self.array[i,j].material == DomainMaterial.COOLANT_BULK:
+                        ax.quiver(self.array[flow].x, self.array[flow].r, self.array[i,j].x - self.array[flow].x, self.array[i,j].r - self.array[flow].r, scale=1, scale_units='xy', angles='xy', color='k', width=0.002)
+                    else:
+                        ax.quiver(self.array[flow].x, self.array[flow].r, self.array[i,j].x - self.array[flow].x, self.array[i,j].r - self.array[flow].r, scale=1, scale_units='xy', angles='xy', color='b', width=0.002)   
+
 
     def ShowCellPlot(self, fig: plt.Figure):
         ax = fig.axes[0]
@@ -184,13 +181,13 @@ class DomainMC:
         numChannels = self.coolingLoops[loopID].numChannels
 
         inputPoints = len(coolant.upperContour)
-        previousWall = (0,0)
-        previousFlow = (0,0)
+        previousWall = (-1,-1)
+        previousFlow = (-1,-1)
         # areas type
         # initial wall assignment
         wallContour = coolant.upperContour if upperWall else coolant.lowerContour
         previousMat = self.array[self.CoordsToCell(wallContour[0].x, wallContour[0].r)].material
-        inlet = (0,0)
+        inlet = (-1,-1)
         for i in alive_it(range(inputPoints - 1)):
             dist = np.sqrt((wallContour[i].x - wallContour[i+1].x)**2 + (wallContour[i].r - wallContour[i+1].r)**2)
             steps = max(int(dist/min(self.xstep, self.rstep) * 1.5), 5)
@@ -212,7 +209,7 @@ class DomainMC:
                 if wallPoint[0] != previousWall[0] or wallPoint[1] != previousWall[1]:
                     previousFlow = previousWall
                 self.array[wallPoint].previousFlow = previousFlow
-                self.array[previousFlow].futureFlow = wallPoint if self.array[wallPoint].material != DomainMaterial.COOLANT_INLET else (0,0)
+                self.array[previousFlow].futureFlow = wallPoint if self.array[wallPoint].material != DomainMaterial.COOLANT_INLET else (-1,-1)
                 previousWall = wallPoint
         # delete bad points
         point = inlet
@@ -226,14 +223,14 @@ class DomainMC:
             if self.array[point[0] + offset[0], point[1] + offset[1]].material == DomainMaterial.COOLANT_WALL and (self.array[point[0], point[1] - 1].material == DomainMaterial.COOLANT_WALL or self.array[point[0], point[1] + 1].material == DomainMaterial.COOLANT_WALL):
                 self.array[self.array[point].futureFlow].previousFlow = self.array[point].previousFlow
                 self.array[self.array[point].previousFlow].futureFlow = self.array[point].futureFlow
-                self.array[point].previousFlow = (0,0)
-                self.array[point].futureFlow = (0,0)
+                self.array[point].previousFlow = (-1,-1)
+                self.array[point].futureFlow = (-1,-1)
                 self.array[point].material = previousMat
             point = nextPoint
 
-        previousWall = (0,0)
-        previousFlow = (0,0)
-        wallPoint = (0,0)
+        previousWall = (-1,-1)
+        previousFlow = (-1,-1)
+        wallPoint = (-1,-1)
 
         pointMap = {}
 
@@ -301,40 +298,27 @@ class DomainMC:
                     self.array[cellPos].id = loopID
                 
         print("done")
-        print(pointMap)
         print("assigning borders")
-        self.AssignBorders()
+        self.AssignBorders(loopID)
         # adjust non wall side
         for wallPoint in pointMap:
-            # plt.plot(self.array[wallPoint].x, self.array[wallPoint].r, 'go')
-            topLeft = (self.vpoints,self.hpoints)
-            bottomRight = (-1,-1)
-            s = pointMap[wallPoint]
-            for cell in pointMap[wallPoint]:
-                if not self.array[cell].border:
-                    continue
-                if cell[0] < topLeft[0] or cell[1] < topLeft[1]:
-                    topLeft = cell
-                if cell[0] > bottomRight[0] or cell[1] > bottomRight[1]:
-                    bottomRight = cell
+            borderCells = [cell for cell in pointMap[wallPoint] if self.array[cell].border and self.array[cell].material == DomainMaterial.COOLANT_BULK]
+            for i, cell in enumerate(borderCells[1:]):
+                self.array[cell].futureFlow = borderCells[i] # i is the index behind current position cause enumerate starts at 0
                 self.array[cell].border = False
-            if bottomRight == (-1,-1):
-                continue
-            self.array[topLeft].futureFlow = bottomRight
-            self.array[topLeft].border = True
         
         print("done")
 
     def GuessChannelState(self, loopID: int, endTemp: pint.Quantity):
         # start at the left side, scroll down and right until notice a channel wall material
         # follow the previous flow chain until channel inlet material
-        startPoint = (0,0)
+        startPoint = (-1,-1)
         for j in range(self.hpoints):
             for i in range(self.vpoints):
                 if self.array[i,j].id == loopID and self.array[i,j].material == DomainMaterial.COOLANT_WALL:
                     startPoint = (i,j)
                     break
-            if startPoint != (0,0):
+            if startPoint != (-1,-1):
                 break
         
         if self.array[startPoint].material != DomainMaterial.COOLANT_WALL:
@@ -342,7 +326,7 @@ class DomainMC:
         
         while self.array[startPoint].material != DomainMaterial.COOLANT_INLET:
             startPoint = self.array[startPoint].previousFlow
-            if startPoint == (0,0):
+            if startPoint == (-1,-1):
                 raise ValueError(f"No coolant inlet found for id {loopID}")
         
         # now we have the inlet point, future flow can be used to traverse the entire coolant loop
@@ -554,21 +538,24 @@ class DomainMC:
         
         print("done")
         
-    def AssignBorders(self):
+    def AssignBorders(self, fluidID = -1):
         finalI = self.vpoints - 1
         finalJ = self.hpoints - 1
 
         with alive_bar(self.vpoints*self.hpoints) as bar:
             for i in range(self.vpoints):
                 for j in range(self.hpoints):
+                    if fluidID != -1 and self.array[i,j].id != fluidID:
+                        bar()
+                        continue
                     lowI = max(i - 1, 0)
                     lowJ = max(j - 1, 0)
                     highI = min(i + 1, finalI)
                     highJ = min(j + 1, finalJ)
-                    checks = [self.array[lowI, j].material, self.array[highI, j].material, self.array[i, lowJ].material, self.array[i, highJ].material]
-                    self.array[i, j].border = not(checks[0] == checks[1] and checks[1] == checks[2] and checks[2] == checks[3])
-                    if DomainMaterial.COOLANT_WALL in checks and self.array[i,j].border and self.array[i,j].material == DomainMaterial.COOLANT_BULK:
-                        self.array[i,j].border = False
+                    checks = np.array([self.array[lowI, j].material, self.array[highI, j].material, self.array[i, lowJ].material, self.array[i, highJ].material])
+                    equals = checks != self.array[i,j].material
+                    coolantWalls = [check in MaterialType.COOLANT_WALL for check in checks]
+                    self.array[i, j].border = np.any(equals ^ coolantWalls) if self.array[i,j].material in MaterialType.COOLANT else np.any(equals)
                     bar()
 
     def cellsOnLine(self, point1, point2):
