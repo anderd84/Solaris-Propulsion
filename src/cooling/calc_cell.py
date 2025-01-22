@@ -1,10 +1,24 @@
+from types import NoneType
 import numpy as np
 import pint
+from dataclasses import dataclass
 
 from cooling import cooling2d, domain, domain_mmap
 from cooling.material import DomainMaterial, MaterialType
 import general.design as DESIGN
 from general.units import Direction, unitReg, Q_
+
+class CellUpdates:
+    row: int
+    col: int
+    temperature: pint.Quantity | NoneType
+    pressure: pint.Quantity | NoneType
+
+    def __init__(self, row, col, **kwargs):
+        self.row = row
+        self.col = col
+        self.temperature = kwargs.get("temperature", None)
+        self.pressure = kwargs.get("pressure", None)
 
 class ResistorSet:
     R: list[pint.Quantity] = [Q_(0, unitReg.hour * unitReg.degR / unitReg.BTU)] * 4
@@ -200,8 +214,8 @@ def CalculateCoolant(domain: domain_mmap.DomainMMAP, row: int, col: int):
 
     return cooling2d.heatcoolant(domain.temperature[previousFlow], Tprev, resSet, domain.pressure[previousFlow], domain.pressure[row, col], domain.area[row, col], domain.hydraulicDiameter[row, col], deltaL)
 
-def CalculateCell(domain: domain_mmap.DomainMMAP, row: int, col: int):
-    if domain.material[row,col] in MaterialType.STATIC_TEMP:
+def CalculateCell(domain: domain_mmap.DomainMMAP, row: int, col: int, solverSettings: dict):
+    if domain.material[row,col] in MaterialType.STATIC:
         return domain.temperature[row,col]
     
     if domain.r[row,col] - domain.rstep/2 <= 0:
@@ -219,8 +233,8 @@ def CalculateCell(domain: domain_mmap.DomainMMAP, row: int, col: int):
         return CalculateCoolant(domain, row, col)
     raise ValueError("Material not recognized")
 
-def Cell(d: domain_mmap.DomainMMAP, row: int, col: int):
-    out = CalculateCell(d, row, col)
+def Cell(d: domain_mmap.DomainMMAP, row: int, col: int, solverSettings: dict):
+    out = CalculateCell(d, row, col) # out should be a tuple of temperature and pressure
     if isinstance(out, tuple):
         return out
     return (out, d.pressure[row, col])

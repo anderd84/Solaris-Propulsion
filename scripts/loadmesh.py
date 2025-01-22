@@ -1,4 +1,4 @@
-from cooling.material import DomainMaterial
+from cooling.material import DomainMaterial, MaterialType
 import matplotlib.pyplot as plt
 import numpy as np
 
