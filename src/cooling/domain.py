@@ -13,7 +13,7 @@ from icecream import ic
 import joblib
 from alive_progress import alive_bar, alive_it
 
-from cooling.material import DomainMaterial, MaterialType
+from cooling.material import DomainMaterial, MaterialType, CoolantType
 from cooling import material
 from fluids import gas
 from fluids.gas import Gas
@@ -30,7 +30,7 @@ class CoolingLoop:
     landWidth: pint.Quantity
     numChannels: int
     mdot: float
-    fluid: str
+    fluid: CoolantType
 
 @dataclass
 class DomainPoint:
@@ -168,7 +168,7 @@ class DomainMC:
         ax.plot(xl, rl, 'k', linewidth=0.25)
         ax.plot(np.transpose(xl), np.transpose(rl), 'k', linewidth=0.25)
 
-    def NewCoolantLoop(self, landWidth: pint.Quantity, numChannels: int, mdot: float, fluid: str):
+    def NewCoolantLoop(self, landWidth: pint.Quantity, numChannels: int, mdot: float, fluid: CoolantType):
         loopID = len(self.coolingLoops)
         self.coolingLoops[loopID] = CoolingLoop(landWidth, numChannels, mdot, fluid)
         return loopID
@@ -398,9 +398,12 @@ class DomainMC:
                 if self.lineInCell(startPointU, startPointL, i, j):
                     jStart = j if i == iStart else jStart
                     continue
-                self.array[i,j].temperature = exhaust.stagTemp
+                self.array[i,j].temperature = exhaust.stagTemp.to(unitReg.degR)
+                self.array[i,j].pressure = exhaust.stagPress.to(unitReg.psi)
                 self.array[i,j].velocity = Q_(1, unitReg.foot/unitReg.sec)
-                self.array[i,j].hydraulicDiameter = 2*(chamberWallRadius - plugBase)
+                self.array[i,j].hydraulicDiameter = 2*(chamberWallRadius - plugBase).to(unitReg.inch)
+                self.array[i,j].area = Q_(np.pi*(chamberWallRadius - plugBase)**2, unitReg.inch**2)
+                self.array[i,j].flowHeight = Q_(chamberWallRadius - plugBase, unitReg.inch)
             if self.lineInCell(startPointU, startPointL, i, j):
                 break
 
@@ -414,19 +417,24 @@ class DomainMC:
             # plt.plot([startPointU[0], startPointL[0]], [startPointU[1], startPointL[1]], '-gx')
 
             area = np.pi/np.sin(phi) * (startPointU[1]**2 - startPointL[1]**2)
+            height = np.sqrt((startPointU[0] - startPointL[0])**2 + (startPointU[1] - startPointL[1])**2)
 
             AAstar = Q_(area, unitReg.inch**2)/Astar
             mach = fsolve(lambda M: gas.Isentropic1DExpansion(M, exhaust.gammaTyp) - AAstar, .25)[0]
             temperature = (gas.StagTempRatio(mach, exhaust) * exhaust.stagTemp)
             velocity = mach * np.sqrt(exhaust.getVariableGamma(mach) * exhaust.Rgas * temperature)
+            pressure = gas.StagPressRatio(mach, exhaust) * exhaust.stagPress
             hydroD = Q_(2*np.sqrt((startPointU[0] - startPointL[0])**2 + (startPointU[1] - startPointL[1])**2), unitReg.inch)
 
             cells = self.cellsOnLine(startPointL, startPointU)
             for i,j in cells:
                 if self.array[i,j].material == DomainMaterial.CHAMBER:
-                    self.array[i,j].temperature = temperature
-                    self.array[i,j].velocity = velocity
-                    self.array[i,j].hydraulicDiameter = hydroD
+                    self.array[i,j].temperature = temperature.to(unitReg.degR)
+                    self.array[i,j].velocity = velocity.to(unitReg.ft/unitReg.s)
+                    self.array[i,j].pressure = pressure.to(unitReg.psi)
+                    self.array[i,j].hydraulicDiameter = hydroD.to(unitReg.inch)
+                    self.array[i,j].area = Q_(area, unitReg.inch**2)
+                    self.array[i,j].flowHeight = Q_(height, unitReg.inch)
 
 
         # curve section
@@ -461,6 +469,7 @@ class DomainMC:
                 # ci += 1
 
                 area = np.pi/np.sin(angle) * (upperPoint[1]**2 - lowerPoint[1]**2)
+                height = np.sqrt((upperPoint[0] - lowerPoint[0])**2 + (upperPoint[1] - lowerPoint[1])**2)
 
                 AAstar = Q_(area, unitReg.inch**2)/Astar
                 if AAstar < 1:
@@ -468,15 +477,19 @@ class DomainMC:
                 else:
                     mach = fsolve(lambda M: gas.Isentropic1DExpansion(M, exhaust.gammaTyp) - AAstar, .25)[0]
                 temperature = (gas.StagTempRatio(mach, exhaust) * exhaust.stagTemp)
+                pressure = gas.StagPressRatio(mach, exhaust) * exhaust.stagPress
                 velocity = mach * np.sqrt(exhaust.getVariableGamma(mach) * exhaust.Rgas * temperature)
                 hydroD = Q_(2*np.sqrt((upperPoint[0] - lowerPoint[0])**2 + (upperPoint[1] - lowerPoint[1])**2), unitReg.inch)
 
                 cells = self.cellsOnLine(lowerPoint, upperPoint)
                 for i,j in cells:
                     if self.array[i,j].material == DomainMaterial.CHAMBER:
-                        self.array[i,j].temperature = temperature
-                        self.array[i,j].velocity = velocity
-                        self.array[i,j].hydraulicDiameter = hydroD
+                        self.array[i,j].temperature = temperature.to(unitReg.degR)
+                        self.array[i,j].velocity = velocity.to(unitReg.ft/unitReg.s)
+                        self.array[i,j].pressure = pressure.to(unitReg.psi)
+                        self.array[i,j].hydraulicDiameter = hydroD.to(unitReg.inch)
+                        self.array[i,j].area = Q_(area, unitReg.inch**2)
+                        self.array[i,j].flowHeight = Q_(height, unitReg.inch)
 
             ii = ii1
 

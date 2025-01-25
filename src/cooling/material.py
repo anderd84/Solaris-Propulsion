@@ -31,6 +31,10 @@ class MaterialType:
     SOLID = {DomainMaterial.COWL, DomainMaterial.PLUG}
     FLUID = {DomainMaterial.COOLANT, DomainMaterial.COOLANT_WALL, DomainMaterial.COOLANT_BULK, DomainMaterial.COOLANT_INLET, DomainMaterial.COOLANT_OUTLET, DomainMaterial.CHAMBER, DomainMaterial.EXHAUST}
 
+class CoolantType(IntEnum):
+    RP1 = 0
+    H2O = 1
+
 def isIntersect(Point, contour: np.ndarray[ContourPoint], domainSize: tuple[int, int]):
     if contour.size == 0:
         return False

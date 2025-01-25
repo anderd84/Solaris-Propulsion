@@ -137,7 +137,7 @@ def CombinationResistor(domain: domain_mmap.DomainMMAP, sink: tuple[int, int], s
     
     return sourceR + sinkR
 
-def CalculateCoolantPrimaryWall(domain: domain_mmap.DomainMMAP, row: int, col: int) -> list[CellUpdates]:
+def CalculateCoolantPrimaryWall(domain: domain_mmap.DomainMMAP, row: int, col: int, solverSettings: dict) -> list[CellUpdates]:
     previousFlow = tuple(domain.previousFlow[row, col])
 
     resSet = CalculateBorderResistors(domain, row, col)
@@ -174,7 +174,7 @@ def ConductionCoreResistors(domain: domain_mmap.DomainMMAP, row: int, col: int, 
 
     return resSet
 
-def CombineResistors(resSet: list[ThermalResistor]) -> pint.Quantity:
+def MergeResistors(resSet: list[ThermalResistor]) -> pint.Quantity:
     if len(resSet) == 0:
         return Q_(-1, unitReg.degR)
     TRsum = Q_(0, str((resSet[0].T/resSet[0].R).units))
@@ -193,9 +193,9 @@ def CalculateCell(domain: domain_mmap.DomainMMAP, row: int, col: int, **solverSe
     
     if domain.material[row,col] in MaterialType.WALL:
         if domain.border[row,col]:
-            Tnew = CombineResistors(CalculateBorderResistors(domain, row, col, solverSettings))
+            Tnew = MergeResistors(CalculateBorderResistors(domain, row, col, solverSettings))
             return [CellUpdates(row, col, temperature=Tnew)]
-        Tnew = CombineResistors(ConductionCoreResistors(domain, row, col, solverSettings))
+        Tnew = MergeResistors(ConductionCoreResistors(domain, row, col, solverSettings))
         return [CellUpdates(row, col, temperature=Tnew)]
     
     if domain.material[row,col] in MaterialType.COOLANT:

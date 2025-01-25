@@ -17,7 +17,9 @@ dependencies = [
 "ambiance",
 "PyQt6",
 "joblib",
-"alive-progress"
+"alive-progress",
+"pandas",
+"openpyxl"
 ]
 version = "0.1.0"
 description = "A package for aerospike engine calculations"

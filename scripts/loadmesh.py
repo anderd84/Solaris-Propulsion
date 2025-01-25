@@ -1,4 +1,4 @@
-from cooling.material import DomainMaterial, MaterialType
+from cooling.material import CoolantType, DomainMaterial, MaterialType
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -61,9 +61,9 @@ highmesh = domain.DomainMC.LoadFile("highmesh")
 # highmesh.DumpFile("highmesh")
 fig2 = plots.CreateNonDimPlot()
 
-outerloop = highmesh.NewCoolantLoop(Q_(.025, 'inch'), 90, 8, "RP-1")
+outerloop = highmesh.NewCoolantLoop(Q_(.025, 'inch'), 90, 8, CoolantType.RP1)
 highmesh.AssignCoolantFlow(domain.CoolingChannel(cowlCoolU, cowlCoolL), False, Q_(400, unitReg.psi), outerloop)
-innerloop = highmesh.NewCoolantLoop(Q_(.025, 'inch'), 60, 8, "RP-1")
+innerloop = highmesh.NewCoolantLoop(Q_(.025, 'inch'), 60, 8, CoolantType.H2O)
 highmesh.AssignCoolantFlow(domain.CoolingChannel(plugCoolU, plugCoolL), True, Q_(400, unitReg.psi), innerloop)
 
 # print(highmesh.array[0,0])
