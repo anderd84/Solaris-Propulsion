@@ -142,14 +142,12 @@ def CombinationResistor(domain: domain_mmap.DomainMMAP, sink: tuple[int, int], s
 
 def CalculateCoolantPrimaryWall(domain: domain_mmap.DomainMMAP, row: int, col: int, solverSettings: dict, resistorSet: list[ThermalResistor] = []) -> list[CellUpdates]:
     wallCellUpdate = CellUpdates(row, col)
+    prevFlow = tuple(domain.previousFlow[row, col])
+    futureFlow = tuple(domain.futureFlow[row, col])
+    coolingLoopData = domain.coolingLoops[domain.id[row, col]]
     if solverSettings.get("temperature", True) and domain.material[row, col] not in MaterialType.STATIC_TEMP:
-        coolingLoopData = domain.coolingLoops[domain.id[row, col]]
         cp = fluid.get_cp(coolingLoopData.fluid, domain.temperature[row, col])
         mdotChannels = coolingLoopData.mdot
-
-
-        prevFlow = tuple(domain.previousFlow[row, col])
-        futureFlow = tuple(domain.futureFlow[row, col])
 
         offsets = [(0, -1), (-1, 0), (1, 0), (0, 1)]
         for offset in offsets:
@@ -170,12 +168,17 @@ def CalculateCoolantPrimaryWall(domain: domain_mmap.DomainMMAP, row: int, col: i
         wallCellUpdate.temperature = Tnew
 
     if solverSettings.get("pressure", True) and domain.material[row, col] not in MaterialType.STATIC_PRESS:
-        # wallCellUpdate.pressure = domain.pressure[row, col]
-        pass
+        futurePress = domain.pressure[futureFlow]
+        deltaL = Q_(np.sqrt((domain.x[row, col] - domain.x[futureFlow])**2 + (domain.r[row, col] - domain.r[futureFlow])**2), unitReg.inch).to(unitReg.foot)
 
+        (mu, cp, _, _, rho, _, _, _, _) = fluid.get_fluid_properties(coolingLoopData.fluid, domain.temperature[row, col], domain.pressure[row, col])
+        mdotperchannel = coolingLoopData.mdot / coolingLoopData.numChannels
+        Re = mdotperchannel*domain.hydraulicDiameter[row, col]/mu/domain.area[row, col]    # Reynolds number
+        f = fluid.DarcyFrictionFactor(Re, .05, domain.hydraulicDiameter[row, col])
+        vel = mdotperchannel / rho / domain.area[row, col]
+        dp = fluid.FrictionPressureLoss(f, deltaL, domain.hydraulicDiameter[row, col], rho, vel)
+        wallCellUpdate.pressure = futurePress + dp
 
-        # deltaL = Q_(np.sqrt((domain.x[row, col] - domain.x[previousFlow])**2 + (domain.r[row, col] - domain.r[previousFlow])**2), unitReg.inch).to(unitReg.foot)
-    
     return [wallCellUpdate]
 
 def CalculateCoolantBulkWall(domain: domain_mmap.DomainMMAP, row: int, col: int, solverSettings: dict) -> list[CellUpdates]:
@@ -206,7 +209,7 @@ def CalculateCoolantBulkWall(domain: domain_mmap.DomainMMAP, row: int, col: int,
     wallPoint = tuple(domain.previousFlow[row, col])
     cellUpdateArray = CalculateCoolantPrimaryWall(domain, wallPoint[0], wallPoint[1], solverSettings, resistorSet)
 
-    return cellUpdateArray.append(CellUpdates(row, col, temperature=domain.temperature[row, col]))
+    return cellUpdateArray.append(CellUpdates(row, col, temperature=domain.temperature[row, col], pressure=domain.pressure[row, col]))
 
 def CalculateBorderResistors(domain: domain_mmap.DomainMMAP, row: int, col: int, solverSettings: dict) -> list[ThermalResistor]:
     resSet = []
