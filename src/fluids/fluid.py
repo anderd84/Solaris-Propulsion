@@ -182,8 +182,7 @@ def get_fluid_properties(name, temperature_R, pressure_psi):
     # Return all properties in English Engineering units
     return (viscosity, specific_heat_p, gamma, thermal_conductivity, density, prandtl, alpha, thermal_diffusivity, SurfaceTens)
 
-@unitReg.wraps('dimensionless', ('dimensionless', 'inch', 'inch'), False)
-def DarcyFrictionFactor(reynoldsNum: float, surfaceRoughness: float, hydroDiameter: float) -> float:
+def DarcyFrictionFactor(reynoldsNum, surfaceRoughness, hydroDiameter):
     if reynoldsNum < 2000: # laminar
         return 64/reynoldsNum
     
@@ -197,6 +196,5 @@ def DarcyFrictionFactor(reynoldsNum: float, surfaceRoughness: float, hydroDiamet
     except IndexError:
         return f
     
-@unitReg.wraps('psi', ('dimensionless', 'inch', 'inch', 'pound/foot**3', 'foot/second'), False)
 def FrictionPressureLoss(f: float, length: float, hydroDiameter: float, density: float, velocity: float) -> float:
     return length * f * density * velocity**2 / 2 / hydroDiameter
