@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 import numpy as np
 from icecream import ic
-from enum import IntEnum
+from enum import IntEnum, StrEnum
 
 from nozzle.nozzle import ContourPoint
 
@@ -31,9 +31,9 @@ class MaterialType:
     SOLID = {DomainMaterial.COWL, DomainMaterial.PLUG}
     FLUID = {DomainMaterial.COOLANT, DomainMaterial.COOLANT_WALL, DomainMaterial.COOLANT_BULK, DomainMaterial.COOLANT_INLET, DomainMaterial.COOLANT_OUTLET, DomainMaterial.CHAMBER, DomainMaterial.EXHAUST}
 
-class CoolantType(IntEnum):
-    RP1 = 0
-    H2O = 1
+class CoolantType(StrEnum):
+    RP1 = "RP-1"
+    H2O = "H2O"
 
 def isIntersect(Point, contour: np.ndarray[ContourPoint], domainSize: tuple[int, int]):
     if contour.size == 0:

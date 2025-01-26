@@ -28,6 +28,7 @@ class DomainMMAP(DomainMC):
         self.vpoints = domain.vpoints
         self.xstep = domain.xstep
         self.rstep = domain.rstep
+        self.coolingLoops = domain.coolingLoops
 
         print("Loading domain")
         self.attributes = list(DomainPoint(0, 0, 0).__dict__.keys())

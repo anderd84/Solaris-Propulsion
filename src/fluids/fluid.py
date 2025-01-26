@@ -135,7 +135,11 @@ def PROPFLOWS(Film_Cooling,oxImpingeAngle, fuelInitalImpingeAngle, filmImpingeAn
 
     return OX_CORE,FUEL_CORE,OUT_FILM_C,viscosity_f, specific_heat_p_f, thermal_conductivity_f, SurfaceTens_f
 
-
+def get_cp(name, temperature_R):
+    temperature = Q_(temperature_R.magnitude, unitReg.degR)
+    fluid = get_prop(name)
+    specific_heat_p = Q_(fluid.CpAtTdegR(temperature.magnitude), unitReg.BTU / unitReg.pound / unitReg.degR)
+    return specific_heat_p
 
 # Function to retrieve fluid properties using RocketProps defaults (English Engineering units)
 def get_fluid_properties(name, temperature_R, pressure_psi):
