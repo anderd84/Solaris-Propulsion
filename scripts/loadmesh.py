@@ -77,7 +77,7 @@ fig2.axes[0].plot([p.x for p in cowlCoolL], [p.r for p in cowlCoolL], '-k', line
 fig2.axes[0].plot([p.x for p in cowlCoolU], [p.r for p in cowlCoolU], '-k', linewidth=1)
 fig2.axes[0].plot([p.x for p in plugCoolL], [p.r for p in plugCoolL], '-k', linewidth=1)
 fig2.axes[0].plot([p.x for p in plugCoolU], [p.r for p in plugCoolU], '-k', linewidth=1)
-highmesh.ContourPlot(fig2, "pressure", [DomainMaterial.CHAMBER, DomainMaterial.FREE, DomainMaterial.PLUG, DomainMaterial.COWL])
+highmesh.NodePlot(fig2, "pressure", [DomainMaterial.CHAMBER, DomainMaterial.FREE, DomainMaterial.PLUG, DomainMaterial.COWL, DomainMaterial.COOLANT_INLET, DomainMaterial.COOLANT_OUTLET])
 # highmesh.RelationPlot(fig2)
 # highmesh.ShowCellPlot(fig2)
 

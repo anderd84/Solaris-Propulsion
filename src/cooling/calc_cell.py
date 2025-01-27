@@ -10,8 +10,6 @@ from fluids import fluid
 import general.design as DESIGN
 from general.units import Direction, unitReg, Q_
 
-from scripts.pluggen import T
-
 class CellUpdates:
     row: int
     col: int
@@ -87,7 +85,7 @@ def CoolantConvectionArea(domain: domain_mmap.DomainMMAP, row: int, col: int, is
     innerRadius = Q_(domain.r[wallPoint] - domain.rstep/2, unitReg.inch).to(unitReg.foot)
     outerRadius = Q_(domain.r[wallPoint] + domain.rstep/2, unitReg.inch).to(unitReg.foot)
 
-    coolingRatio = getCoolingCoverage(innerRadius, domain.coolingLoops[domain.id[row, col]])
+    coolingRatio = getCoolingCoverage(innerRadius, domain.coolingLoops[int(domain.id[row, col])])
     if isHoriz:
         return (outerRadius**2 - innerRadius**2) * coolingRatio
     else:
@@ -144,7 +142,7 @@ def CalculateCoolantPrimaryWall(domain: domain_mmap.DomainMMAP, row: int, col: i
     wallCellUpdate = CellUpdates(row, col)
     prevFlow = tuple(domain.previousFlow[row, col])
     futureFlow = tuple(domain.futureFlow[row, col])
-    coolingLoopData = domain.coolingLoops[domain.id[row, col]]
+    coolingLoopData = domain.coolingLoops[int(domain.id[row, col])]
     if solverSettings.get("temperature", True) and domain.material[row, col] not in MaterialType.STATIC_TEMP:
         cp = fluid.get_cp(coolingLoopData.fluid, domain.temperature[row, col])
         mdotChannels = coolingLoopData.mdot
@@ -174,10 +172,11 @@ def CalculateCoolantPrimaryWall(domain: domain_mmap.DomainMMAP, row: int, col: i
         (mu, cp, _, _, rho, _, _, _, _) = fluid.get_fluid_properties(coolingLoopData.fluid, domain.temperature[row, col], domain.pressure[row, col])
         mdotperchannel = coolingLoopData.mdot / coolingLoopData.numChannels
         Re = mdotperchannel*domain.hydraulicDiameter[row, col]/mu/domain.area[row, col]    # Reynolds number
-        f = fluid.DarcyFrictionFactor(Re, .05, domain.hydraulicDiameter[row, col])
-        vel = mdotperchannel / rho / domain.area[row, col]
+        Re = Re.to(unitReg.dimensionless)
+        f = fluid.DarcyFrictionFactor(Re, Q_(.05, unitReg.inch), domain.hydraulicDiameter[row, col])
+        vel = (mdotperchannel / rho / domain.area[row, col]).to(unitReg.foot/unitReg.second)
         dp = fluid.FrictionPressureLoss(f, deltaL, domain.hydraulicDiameter[row, col], rho, vel)
-        wallCellUpdate.pressure = futurePress + dp
+        wallCellUpdate.pressure = (futurePress + dp).to(unitReg.psi)
 
     return [wallCellUpdate]
 
@@ -266,4 +265,4 @@ def CalculateCell(domain: domain_mmap.DomainMMAP, row: int, col: int, **solverSe
             prevFlow = tuple(domain.previousFlow[row, col])
             return [CellUpdates(row, col, temperature=domain.temperature[prevFlow], pressure=domain.pressure[prevFlow])]
         return CalculateCoolantPrimaryWall(domain, row, col, solverSettings) #TODO implement
-    raise ValueError("Material not recognized")
+    raise ValueError(f"Material not recognized {domain.material[row, col]}")

@@ -197,4 +197,4 @@ def DarcyFrictionFactor(reynoldsNum, surfaceRoughness, hydroDiameter):
         return f
     
 def FrictionPressureLoss(f: float, length: float, hydroDiameter: float, density: float, velocity: float) -> float:
-    return length * f * density * velocity**2 / 2 / hydroDiameter
+    return length/hydroDiameter * f * density * velocity**2 / 2

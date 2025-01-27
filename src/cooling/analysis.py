@@ -3,8 +3,7 @@ import joblib
 import multiprocessing as mp
 from alive_progress import alive_bar
 
-from cooling.domain import DomainMC
-from cooling.domain_mmap import DomainMMAP, SparseDomain
+from cooling.domain_mmap import DomainMMAP
 from cooling import material, calc_cell
 
 def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: float = 1e-2, convPlot: bool = True):
@@ -50,7 +49,7 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
                         row, col = changeOrder.row, changeOrder.col
                         if changeOrder.temperature is not None:
                             newTemp = changeOrder.temperature
-                            domain.setMEM(row, col, 'temperature', changeOrder.newTemp)
+                            domain.setMEM(row, col, 'temperature', newTemp)
                             diff = max(diff, abs(domain.temperature[row, col].magnitude - newTemp.to(domain.units["temperature"]).magnitude)/domain.temperature[row, col].magnitude)
                             maxT = max(maxT, newTemp.magnitude)
                         if changeOrder.pressure is not None:

@@ -29,11 +29,13 @@ def main():
 
     # to run the saved one use this line:
     # coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save")
-    coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("coolmesh")
+    coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("highmesh2")
+
+    print(coolmesh.coolingLoops)
 
     mmapmesh = domain_mmap.DomainMMAP(coolmesh)
 
-    analysis.AnalyzeMC(mmapmesh, 10, 1e-5, False)
+    analysis.AnalyzeMC(mmapmesh, 1, 1e-5, False)
     # analysis.AnalyzeMCSparse(coolmesh, 10, 1e-5, False)
 
 if __name__ == "__main__":

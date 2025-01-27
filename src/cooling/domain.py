@@ -131,8 +131,8 @@ class DomainMC:
 
         ax = fig.axes[0]
         contf = ax.contourf(xarr, rarr, matarr, 100, cmap='jet')
-        fig.colorbar(contf, ax=ax)
-        print(np.min(matarr), np.max(matarr))
+        units = str(self.array[0,0].__getattribute__(attr).units) if isinstance(self.array[0,0].__getattribute__(attr), pint.Quantity) else "unitless"
+        fig.colorbar(contf, ax=ax).set_label(f"{attr} ({units})")
         print("done!")
 
     def NodePlot(self, fig: plt.Figure, attr: str, omitMaterials: list = []):
@@ -143,7 +143,9 @@ class DomainMC:
 
         extent = [xarr[0,0]-self.xstep/2, xarr[-1,-1]+self.xstep/2, rarr[-1,-1]-self.rstep/2, rarr[0,0]+self.rstep/2]
         ax = fig.axes[0]
-        ax.imshow(matarr, extent=extent, origin='upper', cmap='jet')
+        im = ax.imshow(matarr, extent=extent, origin='upper', cmap='jet')
+        units = str(self.array[0,0].__getattribute__(attr).units) if isinstance(self.array[0,0].__getattribute__(attr), pint.Quantity) else "unitless"
+        fig.colorbar(im, ax=ax).set_label(f"{attr} ({units})")
 
     def RelationPlot(self, fig: plt.Figure):
         ax = fig.axes[0]
@@ -247,6 +249,8 @@ class DomainMC:
             xu = np.linspace(coolant.upperContour[i].x, coolant.upperContour[i+1].x, steps)[:-1]
             ru = np.linspace(coolant.upperContour[i].r, coolant.upperContour[i+1].r, steps)[:-1]
 
+            # plt.plot([xl, xu], [rl, ru], '-r', linewidth=.25)
+
             for j in range(steps - 1):
                 if xl[j] > self.x0 + self.width or xu[j] > self.x0 + self.width:
                     break
@@ -271,7 +275,7 @@ class DomainMC:
                 h = Q_(np.sqrt((xl[j] - xu[j])**2 + (rl[j] - ru[j])**2), unitReg.inch)
                 totalArea = np.pi*h*Q_(ru[j] + rl[j], unitReg.inch)
                 channelArea = totalArea*channelSectorAngle/(2*np.pi)
-                perim = (Q_(rl[j], unitReg.inch)*channelSectorAngle + Q_(ru[j], unitReg.inch)*channelSectorAngle)/(2*np.pi) + 2*h
+                perim = (Q_(rl[j], unitReg.inch) + Q_(ru[j], unitReg.inch))*channelSectorAngle + 2*h
                 hydroD = 4*channelArea/perim
 
                 for cellPos in cells:
@@ -368,12 +372,12 @@ class DomainMC:
             runningDt += score/totalScore * deltaT
             self.array[point].temperature = runningDt
 
+        longLength = 0
+        shortLength = 0
+
         for point in alive_it(channelPoints[::-1]): # start pressure at outlet
             if self.array[point].material == DomainMaterial.COOLANT_OUTLET:
                 continue
-
-            if point[0] != 27:
-                1
 
             futureFlow = self.array[point].futureFlow
             coolingLoopData = self.coolingLoops[self.array[point].id]
@@ -387,13 +391,22 @@ class DomainMC:
             vel = (mdotperchannel / rho / self.array[futureFlow].area).to(unitReg.ft/unitReg.sec)
             dp = fluid.FrictionPressureLoss(f, deltaL, self.array[futureFlow].hydraulicDiameter, rho, vel).to(unitReg.psi)
             self.array[point].pressure = futurePress + dp
+            self.array[point].velocity = vel.to(unitReg.ft/unitReg.sec)
+
+            if point[0] != 27:
+                shortLength += deltaL
+            else:
+                longLength += deltaL
 
         for i in range(self.vpoints):
             for j in range(self.hpoints):
                 if self.array[i,j].material == DomainMaterial.COOLANT_BULK and self.array[i,j].id == loopID:
                     self.array[i,j].temperature = self.array[self.array[i,j].previousFlow].temperature
                     self.array[i,j].pressure = self.array[self.array[i,j].previousFlow].pressure
+                    self.array[i,j].velocity = self.array[self.array[i,j].previousFlow].velocity
 
+        print(f"long length: {longLength.to(unitReg.inch)}")
+        print(f"short length: {shortLength.to(unitReg.inch)}")
 
 
         print("done????")
