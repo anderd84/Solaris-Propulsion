@@ -202,13 +202,14 @@ def CalculateCoolantBulkWall(domain: domain_mmap.DomainMMAP, row: int, col: int,
         for offset in offsets:
             if 0 <= row + offset[0] < domain.vpoints and 0 <= col + offset[1] < domain.hpoints:
                 if domain.material[row + offset[0], col + offset[1]] in MaterialType.WALL:
-                    resistorSet.append(ThermalResistor(CombinationResistor(domain, currentPoint, (currentPoint[0] + offset[0], currentPoint[1] + offset[1]))), domain.temperature[currentPoint[0] + offset[0], currentPoint[1] + offset[1]])
+                    resistorSet.append(ThermalResistor(CombinationResistor(domain, currentPoint, (currentPoint[0] + offset[0], currentPoint[1] + offset[1])), domain.temperature[currentPoint[0] + offset[0], currentPoint[1] + offset[1]]))
         currentPoint = tuple(domain.futureFlow[currentPoint])
     
     wallPoint = tuple(domain.previousFlow[row, col])
     cellUpdateArray = CalculateCoolantPrimaryWall(domain, wallPoint[0], wallPoint[1], solverSettings, resistorSet)
+    cellUpdateArray.append(CellUpdates(row, col, temperature=domain.temperature[row, col], pressure=domain.pressure[row, col]))
 
-    return cellUpdateArray.append(CellUpdates(row, col, temperature=domain.temperature[row, col], pressure=domain.pressure[row, col]))
+    return cellUpdateArray
 
 def CalculateBorderResistors(domain: domain_mmap.DomainMMAP, row: int, col: int, solverSettings: dict) -> list[ThermalResistor]:
     resSet = []

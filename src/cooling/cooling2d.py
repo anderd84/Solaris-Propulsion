@@ -173,7 +173,10 @@ def internal_flow_convection(Node_Temp, Node_Pressure, channelArea, channelHydro
         f_func = lambda f: -2*np.log10(epsilon/D_h/3.7 + 2.51/(Re_D*np.sqrt(f))) - 1/np.sqrt(f)
         f = fsolve(f_func, 0.05)  # Turbulent flow
     # Convection coefficient (Gnielinski)
-    f = f[0]
+    try:
+        f = f[0]
+    except:
+        pass
     if Pr >= 0.5 and Pr <= 2000 and Re_D >= 3000 and Re_D <= 5000000:   # Check that properties fit restrictions for Gnielinski
         Nu_D = f/8*(Re_D - 1000)*Pr / (1 + 12.7*(f/8)**0.5 * (Pr**(2/3) - 1))   # Nusselt number of fully developed flow
     elif Pr >= 0.7 and Pr <= 16700 and Re_D >= 10000:    # Use Sieder & Tate otherwise

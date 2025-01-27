@@ -406,8 +406,8 @@ class DomainMC:
                     self.array[i,j].pressure = self.array[self.array[i,j].previousFlow].pressure
                     self.array[i,j].velocity = self.array[self.array[i,j].previousFlow].velocity
 
-        print(f"long length: {longLength.to(unitReg.inch)}")
-        print(f"short length: {shortLength.to(unitReg.inch)}")
+        # print(f"long length: {longLength.to(unitReg.inch)}")
+        # print(f"short length: {shortLength.to(unitReg.inch)}")
 
 
         print("done????")

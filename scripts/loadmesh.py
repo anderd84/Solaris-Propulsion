@@ -1,3 +1,5 @@
+from alive_progress import alive_bar
+from cooling import material
 from cooling.material import CoolantType, DomainMaterial, MaterialType
 import matplotlib.pyplot as plt
 import numpy as np
@@ -43,17 +45,17 @@ chamberC, aimpoint = plug.GenerateDimChamber(Rt, Tt, Re, Q_(6.3, unitReg.inch), 
 startingpoint = (-6.75, 2.6) # TODO use real point
 
 
-highmesh = domain.DomainMC.LoadFile("save")
+# highmesh = domain.DomainMC.LoadFile("highmesh")
 
-# highmesh = domain.DomainMC(-7.3, 4.1, 7.9, 3, .01)
-# p = Q_(6.75, unitReg.psi)
-# rlines, llines, streams = analysis.CalculateComplexField(cont, p, exhaust, 1, Tt, Rt, Re.magnitude, 75, 0, 2)
-# fieldGrid = analysis.GridifyComplexField(rlines, llines)
-# # analysis.PlotFieldData(fig, fieldGrid, 1, 1)
+highmesh = domain.DomainMC(-7.3, 4.1, 7.9, 3, .01)
+p = Q_(6.75, unitReg.psi)
+rlines, llines, streams = analysis.CalculateComplexField(cont, p, exhaust, 1, Tt, Rt, Re.magnitude, 75, 0, 2)
+fieldGrid = analysis.GridifyComplexField(rlines, llines)
+# analysis.PlotFieldData(fig, fieldGrid, 1, 1)
 
-# highmesh.DefineMaterials(cowlC, chamberC, plugC, 15)
-# highmesh.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius, DESIGN.plugBaseRadius, DESIGN.chokeArea)
-# highmesh.AssignExternalTemps(fieldGrid, exhaust, DESIGN.chokeArea)
+highmesh.DefineMaterials(cowlC, chamberC, plugC, 15)
+highmesh.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius, DESIGN.plugBaseRadius, DESIGN.chokeArea)
+highmesh.AssignExternalTemps(fieldGrid, exhaust, DESIGN.chokeArea)
 
 # coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save")
 # highmesh.ApplyStateMap(coolmesh, {"temperature", "pressure"})
@@ -61,16 +63,16 @@ highmesh = domain.DomainMC.LoadFile("save")
 # highmesh.DumpFile("highmesh")
 fig2 = plots.CreateNonDimPlot()
 
-# outerloop = highmesh.NewCoolantLoop(Q_(.025, 'inch'), 90, DESIGN.Fuel_Total, CoolantType.RP1)
-# highmesh.AssignCoolantFlow(domain.CoolingChannel(cowlCoolU, cowlCoolL), False, Q_(360, unitReg.psi), outerloop)
-# innerloop = highmesh.NewCoolantLoop(Q_(.025, 'inch'), 60, Q_(8, unitReg.pound/unitReg.sec), CoolantType.H2O)
-# highmesh.AssignCoolantFlow(domain.CoolingChannel(plugCoolU, plugCoolL), True, Q_(400, unitReg.psi), innerloop)
+outerloop = highmesh.NewCoolantLoop(Q_(.025, 'inch'), 90, DESIGN.Fuel_Total, CoolantType.RP1)
+highmesh.AssignCoolantFlow(domain.CoolingChannel(cowlCoolU, cowlCoolL), False, Q_(360, unitReg.psi), outerloop)
+innerloop = highmesh.NewCoolantLoop(Q_(.025, 'inch'), 60, Q_(2, unitReg.pound/unitReg.sec), CoolantType.RP1)
+highmesh.AssignCoolantFlow(domain.CoolingChannel(plugCoolU, plugCoolL), True, Q_(100, unitReg.psi), innerloop)
 
 # print(highmesh.array[0,0])
 # highmesh.GuessChannelState(outerloop, Q_(1500, unitReg.degR))
 # highmesh.GuessChannelState(innerloop, Q_(1500, unitReg.degR))
-# print(highmesh.coolingLoops)
-# highmesh.DumpFile("highmesh2")
+print(highmesh.coolingLoops)
+highmesh.DumpFile("highmesh2")
 plots.PlotPlug(fig2, plugC)
 plots.PlotPlug(fig2, cowlC)
 plots.PlotPlug(fig2, chamberC)
@@ -78,7 +80,27 @@ fig2.axes[0].plot([p.x for p in cowlCoolL], [p.r for p in cowlCoolL], '-k', line
 fig2.axes[0].plot([p.x for p in cowlCoolU], [p.r for p in cowlCoolU], '-k', linewidth=1)
 fig2.axes[0].plot([p.x for p in plugCoolL], [p.r for p in plugCoolL], '-k', linewidth=1)
 fig2.axes[0].plot([p.x for p in plugCoolU], [p.r for p in plugCoolU], '-k', linewidth=1)
-highmesh.NodePlot(fig2, "temperature")#, [DomainMaterial.CHAMBER, DomainMaterial.FREE, DomainMaterial.PLUG, DomainMaterial.COWL, DomainMaterial.COOLANT_INLET, DomainMaterial.COOLANT_OUTLET])
+
+calcPoints = set()
+blacklist = set()
+with alive_bar(highmesh.vpoints*highmesh.hpoints, title="Finding calculation points") as bar:
+    for row in range(highmesh.vpoints):
+        for col in range(highmesh.hpoints):
+            if highmesh.array[row, col].material not in material.MaterialType.STATIC_TEMP:
+                calcPoints.add((row, col))
+            if highmesh.array[row, col].material == material.DomainMaterial.COOLANT_BULK and highmesh.array[row, col].border:
+                blacklist.add(highmesh.array[row, col].previousFlow)
+            bar()
+
+for pair in blacklist:
+    calcPoints.remove(pair)
+
+plotx = [highmesh.array[pnt].x for pnt in calcPoints]
+plotr = [highmesh.array[pnt].r for pnt in calcPoints]
+
+# plt.plot(plotx, plotr, 'go')
+
+highmesh.NodePlot(fig2, "temperature", [DomainMaterial.CHAMBER, DomainMaterial.FREE, DomainMaterial.PLUG, DomainMaterial.COWL, DomainMaterial.COOLANT_INLET, DomainMaterial.COOLANT_OUTLET])
 # highmesh.RelationPlot(fig2)
 # highmesh.ShowCellPlot(fig2)
 

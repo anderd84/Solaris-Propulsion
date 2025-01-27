@@ -7,15 +7,15 @@ from cooling.domain_mmap import DomainMMAP
 from cooling import material, calc_cell
 
 def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: float = 1e-2, convPlot: bool = True):
-    calcPoints = []
-    blacklist = []
+    calcPoints = set()
+    blacklist = set()
     with alive_bar(domain.vpoints*domain.hpoints, title="Finding calculation points") as bar:
         for row in range(domain.vpoints):
             for col in range(domain.hpoints):
                 if domain.material[row, col] not in material.MaterialType.STATIC_TEMP:
-                    calcPoints.append((row, col))
+                    calcPoints.add((row, col))
                 if domain.material[row, col] == material.DomainMaterial.COOLANT_BULK and domain.border[row, col]:
-                    blacklist.append((row, col))
+                    blacklist.add(tuple(domain.previousFlow[row, col]))
                 bar()
     
     for pair in blacklist:
@@ -52,6 +52,11 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
                             newDiff = abs(domain.temperature[row, col].magnitude - newTemp.to(domain.units["temperature"]).magnitude) / domain.temperature[row, col].magnitude
                             diff = max(diff, newDiff)
                             maxT = max(maxT, newTemp.magnitude)
+                            if newTemp.m > 1e4 or newTemp.m < 0:
+                                print(f"Temp out of bounds: {newTemp}")
+                                print(f"Row: {row}, Col: {col}")
+                                print(f"material: {domain.material[row, col]}")
+                                print(f"border: {domain.border[row, col]}")
                             domain.setMEM(row, col, 'temperature', newTemp)
                         if changeOrder.pressure is not None:
                             domain.setMEM(row, col, 'pressure', changeOrder.pressure)
