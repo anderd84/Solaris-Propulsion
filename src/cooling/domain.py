@@ -67,7 +67,7 @@ class DomainMC:
     rstep: float
     hpoints: int
     vpoints: int
-    coolingLoops: dict[int, CoolingLoop] = {}
+    coolingLoops: dict[int, CoolingLoop]
 
     def __init__(self, x0, r0, width, height, ds = .1):        
         hpoints = int(width/ds) + 1
@@ -83,6 +83,7 @@ class DomainMC:
         self.vpoints = vpoints
         self.xstep = width/(hpoints-1)
         self.rstep = height/(vpoints-1)
+        self.coolingLoops = {}
         print("Creating domain")
         with alive_bar(vpoints*hpoints) as bar:
             for i in range(vpoints):

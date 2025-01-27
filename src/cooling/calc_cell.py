@@ -151,7 +151,7 @@ def CalculateCoolantPrimaryWall(domain: domain_mmap.DomainMMAP, row: int, col: i
         for offset in offsets:
             if 0 <= row + offset[0] < domain.vpoints and 0 <= col + offset[1] < domain.hpoints:
                 if domain.material[row + offset[0], col + offset[1]] in MaterialType.WALL:
-                    resistorSet.append(ThermalResistor(CombinationResistor(domain, (row, col), (row + offset[0], col + offset[1]))), domain.temperature[row + offset[0], col + offset[1]])
+                    resistorSet.append(ThermalResistor(CombinationResistor(domain, (row, col), (row + offset[0], col + offset[1])), domain.temperature[row + offset[0], col + offset[1]]))
         
         L = Q_(domain.xstep, unitReg.inch).to(unitReg.foot)
         k = getConductivity(domain, row, col)
@@ -162,7 +162,7 @@ def CalculateCoolantPrimaryWall(domain: domain_mmap.DomainMMAP, row: int, col: i
         num = sum([res.T / res.R for res in resistorSet])
         den = sum([1/res.R for res in resistorSet])
 
-        Tnew = (num + mdotChannels * cp * (domain.temperature[prevFlow] - domain.temperature[futureFlow]) / den).to(unitReg.degR)
+        Tnew = ((num + mdotChannels * cp * (domain.temperature[prevFlow] - domain.temperature[futureFlow])) / den).to(unitReg.degR)
         wallCellUpdate.temperature = Tnew
 
     if solverSettings.get("pressure", True) and domain.material[row, col] not in MaterialType.STATIC_PRESS:

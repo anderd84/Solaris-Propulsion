@@ -49,9 +49,10 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
                         row, col = changeOrder.row, changeOrder.col
                         if changeOrder.temperature is not None:
                             newTemp = changeOrder.temperature
-                            domain.setMEM(row, col, 'temperature', newTemp)
-                            diff = max(diff, abs(domain.temperature[row, col].magnitude - newTemp.to(domain.units["temperature"]).magnitude)/domain.temperature[row, col].magnitude)
+                            newDiff = abs(domain.temperature[row, col].magnitude - newTemp.to(domain.units["temperature"]).magnitude) / domain.temperature[row, col].magnitude
+                            diff = max(diff, newDiff)
                             maxT = max(maxT, newTemp.magnitude)
+                            domain.setMEM(row, col, 'temperature', newTemp)
                         if changeOrder.pressure is not None:
                             domain.setMEM(row, col, 'pressure', changeOrder.pressure)
 
