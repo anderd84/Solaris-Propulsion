@@ -40,17 +40,17 @@ fig2.axes[0].plot([p.x for p in plugCoolU], [p.r for p in plugCoolU], '-k', line
 
 mesh = domain.DomainMC.LoadFile("save")
 
-shitOnes = set()
-for i in range(mesh.vpoints):
-    for j in range(mesh.hpoints):
-        if mesh.array[i,j].temperature.m < 0:
-            shitOnes.add((i,j))
-            plt.plot(mesh.array[i,j].x, mesh.array[i,j].r, 'go')
-        if mesh.array[i,j].temperature.m > 1e5:
-            shitOnes.add((i,j))
-            plt.plot(mesh.array[i,j].x, mesh.array[i,j].r, 'bo')
+# shitOnes = set()
+# for i in range(mesh.vpoints):
+#     for j in range(mesh.hpoints):
+#         if mesh.array[i,j].temperature.m < 0:
+#             shitOnes.add((i,j))
+#             plt.plot(mesh.array[i,j].x, mesh.array[i,j].r, 'go')
+#         if mesh.array[i,j].temperature.m > 1e5:
+#             shitOnes.add((i,j))
+#             plt.plot(mesh.array[i,j].x, mesh.array[i,j].r, 'bo')
 
-print(shitOnes)
+# print(shitOnes)
 
 mesh.NodePlot(fig2, "temperature", [DomainMaterial.CHAMBER, DomainMaterial.FREE])
 # mesh.RelationPlot(fig2)
