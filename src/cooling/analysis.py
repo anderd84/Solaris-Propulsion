@@ -96,8 +96,8 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
                 mesh = domain.toDomain()
                 mesh.DumpFile("save")
         
-            if maxT > 2500:
-                print("max temp too high, stopping")
-                mesh = domain.toDomain()
-                mesh.DumpFile("save")
-                break
+            # if maxT > 2500:
+            #     print("max temp too high, stopping")
+            #     mesh = domain.toDomain()
+            #     mesh.DumpFile("save")
+            #     break
