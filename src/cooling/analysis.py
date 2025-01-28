@@ -1,10 +1,11 @@
 import matplotlib.pyplot as plt
 import joblib
 import multiprocessing as mp
-from alive_progress import alive_bar
+from alive_progress import alive_bar, alive_it
 
 from cooling.domain_mmap import DomainMMAP
 from cooling import material, calc_cell
+from general.units import Q_
 
 def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: float = 1e-2, convPlot: bool = True):
     calcPoints = set()
@@ -39,29 +40,39 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
             i += 1
             diff = 0
             maxT = 0
+            changes = []
             with alive_bar(len(calcPoints), title=f"Analyzing iteration {i}") as bar:
                 outputs = parallel(
                     joblib.delayed(calc_cell.CalculateCell)(domain, row, col) for row, col in calcPoints
                 )
-
                 for output in outputs:
                     for changeOrder in output:
+                        changes.append(changeOrder)
                         row, col = changeOrder.row, changeOrder.col
                         if changeOrder.temperature is not None:
                             newTemp = changeOrder.temperature
                             newDiff = abs(domain.temperature[row, col].magnitude - newTemp.to(domain.units["temperature"]).magnitude) / domain.temperature[row, col].magnitude
                             diff = max(diff, newDiff)
                             maxT = max(maxT, newTemp.magnitude)
-                            if newTemp.m > 1e4 or newTemp.m < 0:
-                                print(f"Temp out of bounds: {newTemp}")
-                                print(f"Row: {row}, Col: {col}")
-                                print(f"material: {domain.material[row, col]}")
-                                print(f"border: {domain.border[row, col]}")
-                            domain.setMEM(row, col, 'temperature', newTemp)
-                        if changeOrder.pressure is not None:
-                            domain.setMEM(row, col, 'pressure', changeOrder.pressure)
+                            # if newTemp.m > 1e4 or newTemp.m < 0:
+                            #     print(f"Temp out of bounds: {newTemp}")
+                            #     print(f"Row: {row}, Col: {col}")
+                            #     print(f"material: {domain.material[row, col]}")
+                            #     print(f"border: {domain.border[row, col]}")
 
                     bar()
+
+            for changeOrder in alive_it(changes):
+                row, col = changeOrder.row, changeOrder.col
+                if changeOrder.temperature is not None:
+                    currentTemp = domain.temperature[row, col]
+                    newTemp = changeOrder.temperature
+                    diff_ = newTemp.m - currentTemp.m
+                    maxChange = currentTemp.m / 100
+
+                    domain.setMEM(row, col, 'temperature', Q_(max(min(abs(diff_), maxChange), -abs(diff_)),currentTemp.units) + currentTemp)
+                if changeOrder.pressure is not None:
+                    domain.setMEM(row, col, 'pressure', changeOrder.pressure)
 
             print(f"Max diff: {diff*100}%")
             print(f"Max temp: {maxT}R")
@@ -83,8 +94,8 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
                 mesh = domain.toDomain()
                 mesh.DumpFile("save")
         
-            if maxT > 2159:
-                print("max temp too high, stopping")
-                mesh = domain.toDomain()
-                mesh.DumpFile("save")
-                break
+            # if maxT > 2159:
+            #     print("max temp too high, stopping")
+            #     mesh = domain.toDomain()
+            #     mesh.DumpFile("save")
+            #     break

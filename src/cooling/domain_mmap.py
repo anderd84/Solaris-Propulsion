@@ -83,6 +83,7 @@ class DomainMMAP(DomainMC):
 
     def toDomain(self):
         domain = DomainMC(self.x0, self.r0, self.width, self.height, self.xstep)
+        domain.coolingLoops = self.coolingLoops
         with alive_bar(self.vpoints*self.hpoints, title="Setting point data") as bar:
             for i in range(self.vpoints):
                 for j in range(self.hpoints):
