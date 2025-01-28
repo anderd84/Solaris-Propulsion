@@ -220,7 +220,8 @@ def CalculateCoolantBulkWall(domain: domain_mmap.DomainMMAP, row: int, col: int,
     
     wallPoint = tuple(domain.previousFlow[row, col])
     cellUpdateArray = CalculateCoolantPrimaryWall(domain, wallPoint[0], wallPoint[1], solverSettings, resistorSet.copy())
-    cellUpdateArray.append(CellUpdates(row, col, temperature=domain.temperature[row, col], pressure=domain.pressure[row, col]))
+    prevFlow = tuple(domain.previousFlow[row, col])
+    cellUpdateArray.append(CellUpdates(row, col, temperature=domain.temperature[prevFlow], pressure=domain.pressure[prevFlow]))
 
     return cellUpdateArray
 
