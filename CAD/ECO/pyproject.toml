@@ -3,7 +3,8 @@ name = "ECOAutomation"
 dependencies = [
 "numpy",
 "matplotlib",
-"alive-progress"
+"alive-progress",
+"gitpython"
 ]
 version = "0.1.0"
 description = "A package for automating the ECO process"

@@ -1,7 +1,0 @@
-Metadata-Version: 2.2
-Name: ECOAutomation
-Version: 0.1.0
-Summary: A package for automating the ECO process
-Requires-Dist: numpy
-Requires-Dist: matplotlib
-Requires-Dist: alive-progress
