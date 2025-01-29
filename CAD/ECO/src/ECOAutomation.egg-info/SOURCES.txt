@@ -1,0 +1,8 @@
+pyproject.toml
+src/__init__.py
+src/eco.py
+src/ECOAutomation.egg-info/PKG-INFO
+src/ECOAutomation.egg-info/SOURCES.txt
+src/ECOAutomation.egg-info/dependency_links.txt
+src/ECOAutomation.egg-info/requires.txt
+src/ECOAutomation.egg-info/top_level.txt
