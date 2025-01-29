@@ -1,11 +1,13 @@
 import tkinter as tk
 from tkinter import ttk
 import os
-from subprocess import run
 import yaml
 import git
+from glob import glob
 
 config = yaml.load(open(os.path.join(os.path.dirname(__file__), 'config.yaml'), 'r'), Loader=yaml.FullLoader)
+topLevelDir = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+repo = git.Repo(topLevelDir)
 
 def main():
     win = tk.Tk()
@@ -25,14 +27,14 @@ def main():
     ttk.Label(frame, text="Name").pack()
     nameTextBox = ttk.Entry(frame).pack()
 
-    getChangedFiles()
+    getPrevECOnumber()
 
-    # win.mainloop()
+    win.mainloop()
 
 def getPrevECOnumber():
-    pass
-
-
+    cadDirectory = os.path.join(topLevelDir, "CAD")
+    result = [y for x in os.walk(cadDirectory) for y in glob(os.path.join(x[0], 'ECO_*.md'))]
+    return max([int(file[-6:-3]) for file in result])
 
 def getChangedFiles() -> set[str]:
     """
@@ -41,8 +43,6 @@ def getChangedFiles() -> set[str]:
     Returns:
         set: A set of file paths that have been changed
     """
-    repo = git.Repo(os.path.realpath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
-
     diffStaged = [diff.a_path for diff in repo.index.diff(repo.head.commit)]
     diffs = [diff.a_path for diff in repo.index.diff(None)]
     diffs = set(diffStaged) | set(diffs)
@@ -56,8 +56,6 @@ def getChangedFiles() -> set[str]:
             cadChanges.add(diff)
 
     return cadChanges
-
-
 
 if __name__ == '__main__':
     main()
