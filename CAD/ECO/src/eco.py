@@ -1,9 +1,11 @@
+import datetime
 import tkinter as tk
 from tkinter import ttk
 import os
 import yaml
 import git
 from glob import glob
+from datetime import datetime
 
 config = yaml.load(open(os.path.join(os.path.dirname(__file__), 'config.yaml'), 'r'), Loader=yaml.FullLoader)
 topLevelDir = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
@@ -27,7 +29,7 @@ def main():
     ttk.Label(frame, text="Name").pack()
     nameTextBox = ttk.Entry(frame).pack()
 
-    getPrevECOnumber()
+    
 
     win.mainloop()
 
@@ -56,6 +58,9 @@ def getChangedFiles() -> set[str]:
             cadChanges.add(diff)
 
     return cadChanges
+
+def getModifiedDate(file: str) -> str:
+    return datetime.fromtimestamp(os.stat(file).st_mtime).date()
 
 if __name__ == '__main__':
     main()
