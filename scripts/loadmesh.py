@@ -57,8 +57,8 @@ highmesh.DefineMaterials(cowlC, chamberC, plugC, 15)
 highmesh.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius, DESIGN.plugBaseRadius, DESIGN.chokeArea)
 # highmesh.AssignExternalTemps(fieldGrid, exhaust, DESIGN.chokeArea)
 
-coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save")
-highmesh.ApplyStateMap(coolmesh, {"temperature", "pressure"})
+# coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save")
+# highmesh.ApplyStateMap(coolmesh, {"temperature", "pressure"})
 
 highmesh.DumpFile("highmesh")
 fig2 = plots.CreateNonDimPlot()
@@ -69,8 +69,8 @@ innerloop = highmesh.NewCoolantLoop(Q_(.025, 'inch'), 60, Q_(2, unitReg.pound/un
 highmesh.AssignCoolantFlow(domain.CoolingChannel(plugCoolU, plugCoolL), True, Q_(100, unitReg.psi), innerloop)
 
 # print(highmesh.array[0,0])
-highmesh.GuessChannelState(outerloop, Q_(650, unitReg.degR))
-highmesh.GuessChannelState(innerloop, Q_(650, unitReg.degR))
+highmesh.GuessChannelState(outerloop, Q_(70, unitReg.degF))
+highmesh.GuessChannelState(innerloop, Q_(70, unitReg.degF))
 print(highmesh.coolingLoops)
 highmesh.DumpFile("highmesh2")
 plots.PlotPlug(fig2, plugC)
