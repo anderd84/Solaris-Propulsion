@@ -55,7 +55,7 @@ fieldGrid = analysis.GridifyComplexField(rlines, llines)
 
 highmesh.DefineMaterials(cowlC, chamberC, plugC, 15)
 highmesh.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius, DESIGN.plugBaseRadius, DESIGN.chokeArea)
-highmesh.AssignExternalTemps(fieldGrid, exhaust, DESIGN.chokeArea)
+# highmesh.AssignExternalTemps(fieldGrid, exhaust, DESIGN.chokeArea)
 
 coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save")
 highmesh.ApplyStateMap(coolmesh, {"temperature", "pressure"})

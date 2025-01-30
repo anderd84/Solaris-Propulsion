@@ -69,7 +69,7 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
                     newTemp = changeOrder.temperature
                     diff_ = newTemp.m - currentTemp.m
                     maxChange = currentTemp.m / 100
-                    if True and (domain.material[row, col] in material.MaterialType.COOLANT or domain.border[row,col]):
+                    if False and (domain.material[row, col] in material.MaterialType.COOLANT or domain.border[row,col]):
                         domain.setMEM(row, col, 'temperature', Q_(max(min(abs(diff_), maxChange), -abs(diff_)),currentTemp.units) + currentTemp)
                     else:
                         domain.setMEM(row, col, 'temperature', changeOrder.temperature)
@@ -96,7 +96,7 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
                 mesh = domain.toDomain()
                 mesh.DumpFile("save")
         
-            # if maxT > 2500:
+            # if maxT > 1000:
             #     print("max temp too high, stopping")
             #     mesh = domain.toDomain()
             #     mesh.DumpFile("save")

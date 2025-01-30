@@ -72,8 +72,6 @@ def ConvectionHalfResistor(domain: domain_mmap.DomainMMAP, sink: tuple[int, int]
     if domain.material[convectionCell] in MaterialType.COOLANT:
         convectionCoeff = cooling2d.internal_flow_convection((domain.temperature[convectionCell]).to(unitReg.degR),(domain.pressure[convectionCell]).to(unitReg.psi), domain.area[convectionCell], domain.hydraulicDiameter[convectionCell])
         area = CoolantConvectionArea(domain, convectionCell[0], convectionCell[1], isHoriz, sinkTop, sinkSide)
-        # print(convectionCoeff, area)
-        # print(domain.flowHeight[convectionCell])
     else:
         convectionCoeff = cooling2d.combustion_convection(domain.temperature[convectionCell].to(unitReg.degR), domain.velocity[convectionCell].to(unitReg.foot/unitReg.second))
         area = CombustionConvectionArea(domain, convectionCell[0], convectionCell[1], isHoriz, sinkTop, sinkSide)
@@ -164,7 +162,9 @@ def CalculateCoolantPrimaryWall(domain: domain_mmap.DomainMMAP, row: int, col: i
         num = sum([res.T / res.R for res in resistorSet])
         den = sum([1/res.R for res in resistorSet])
 
-        Tnew = ((num + mdotChannels*cp*(domain.temperature[futureFlow] - domain.temperature[prevFlow])) / den).to(unitReg.degR)
+        Tnew = ((num + mdotChannels*cp*domain.temperature[prevFlow])/(den + mdotChannels*cp)).to(unitReg.degR)
+
+        # Tnew = ((num + mdotChannels*cp*(domain.temperature[futureFlow] - domain.temperature[prevFlow])) / den).to(unitReg.degR)
         wallCellUpdate.temperature = Tnew.to(domain.units["temperature"])
 
         if wallCellUpdate.temperature.m > 1e4 or wallCellUpdate.temperature.m < 0:
@@ -272,6 +272,8 @@ def MergeResistors(resSet: list[ThermalResistor]) -> pint.Quantity:
     TRsum = Q_(0, str((resSet[0].T/resSet[0].R).units))
     Rsum = Q_(0, str(1/resSet[0].R.units))
     for res in resSet:
+        if res.R.m > 1e31:
+            continue
         TRsum += res.T / res.R
         Rsum += 1/res.R
     return (TRsum / Rsum).to(unitReg.degR)
@@ -285,9 +287,21 @@ def CalculateCell(domain: domain_mmap.DomainMMAP, row: int, col: int, **solverSe
     
     if domain.material[row,col] in MaterialType.WALL:
         if domain.border[row,col]:
-            Tnew = MergeResistors(CalculateBorderResistors(domain, row, col, solverSettings))
+            res = CalculateBorderResistors(domain, row, col, solverSettings)
+            Tnew = MergeResistors(res)
+            # if Tnew.m > 1e3:
+            #     print(f"Wall temp out of bounds: {Tnew}")
+            #     print(f"Row: {row}, Col: {col}")
+            #     print(f"material: {domain.material[row, col]}")
+            #     print(f"border: {domain.border[row, col]}")
             return [CellUpdates(row, col, temperature=Tnew)]
-        Tnew = MergeResistors(ConductionCoreResistors(domain, row, col, solverSettings))
+        res = ConductionCoreResistors(domain, row, col, solverSettings)
+        Tnew = MergeResistors(res)
+        # if Tnew.m > 1e3:
+        #     print(f"Wall temp out of bounds: {Tnew}")
+        #     print(f"Row: {row}, Col: {col}")
+        #     print(f"material: {domain.material[row, col]}")
+        #     print(f"border: {domain.border[row, col]}")
         return [CellUpdates(row, col, temperature=Tnew)]
     
     if domain.material[row,col] in MaterialType.COOLANT:
