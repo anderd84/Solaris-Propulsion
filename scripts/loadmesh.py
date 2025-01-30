@@ -53,12 +53,12 @@ rlines, llines, streams = analysis.CalculateComplexField(cont, p, exhaust, 1, Tt
 fieldGrid = analysis.GridifyComplexField(rlines, llines)
 # analysis.PlotFieldData(fig, fieldGrid, 1, 1)
 
-highmesh.DefineMaterials(cowlC, chamberC, plugC, 15)
+highmesh.DefineMaterials(cowlC, chamberC, plugC, 10)
 highmesh.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius, DESIGN.plugBaseRadius, DESIGN.chokeArea)
 # highmesh.AssignExternalTemps(fieldGrid, exhaust, DESIGN.chokeArea)
 
-# coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save")
-# highmesh.ApplyStateMap(coolmesh, {"temperature", "pressure"})
+coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save")
+highmesh.ApplyStateMap(coolmesh, {"temperature", "pressure"})
 
 highmesh.DumpFile("highmesh")
 fig2 = plots.CreateNonDimPlot()

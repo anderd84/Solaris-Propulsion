@@ -36,7 +36,7 @@ def main():
     rlines, llines, streams = analysis.CalculateComplexField(cont, p, exhaust, 1, Tt, Rt, Re.magnitude, 75, 0, 2)
     fieldGrid = analysis.GridifyComplexField(rlines, llines)
 
-    cooling2 = domain.DomainMC(-7.3, 4.1, 7.9, 3, .01)
+    cooling2 = domain.DomainMC(-7.3, 4.1, 7.9, 3, .05)
     cooling2.DefineMaterials(cowlC, chamberC, plugC, 10)
 
 
