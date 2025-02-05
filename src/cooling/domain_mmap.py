@@ -106,6 +106,30 @@ class DomainMMAP(DomainMC):
             self.memmaps[name][row, col] = value
         self.memmaps[name].flush()
 
+    def NodePlot(self, fig, name, materials):
+        xarr = self.x[:]
+        rarr = self.r[:]
+        marr = self.__getattribute__(name).copy()
+
+        for i in range(self.vpoints):
+            for j in range(self.hpoints):
+                if self.material[i,j] in materials:
+                    marr[i,j] = np.nan
+
+        extent = [xarr[0,0]-self.xstep/2, xarr[-1,-1]+self.xstep/2, rarr[-1,-1]-self.rstep/2, rarr[0,0]+self.rstep/2]
+        ax = fig.axes[0]
+        im = ax.imshow(marr, extent=extent, origin='upper', cmap='jet')
+        return im
+    
+    def updateNodePlot(self, im, name, materials):
+        marr = self.__getattribute__(name).copy()
+        for i in range(self.vpoints):
+            for j in range(self.hpoints):
+                if self.material[i,j] in materials:
+                    marr[i,j] = np.nan
+        im.set_data(marr)
+        return im
+
 class SparseDomain(DomainMC):
     attributes: list = []
     points: dict

@@ -6,10 +6,18 @@ from alive_progress import alive_bar, alive_it
 from cooling.domain_mmap import DomainMMAP
 from cooling import material, calc_cell
 from general.units import Q_
+from nozzle import plots
 
 def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: float = 1e-2, convPlot: bool = True):
     calcPoints = set()
     blacklist = set()
+    # plt.ion()
+
+    # fig = plots.CreateNonDimPlot()
+    # imobj = domain.NodePlot(fig, "temperature", [material.DomainMaterial.CHAMBER, material.DomainMaterial.FREE])
+    # fig.canvas.draw()
+    # plt.pause(0.01)
+
     with alive_bar(domain.vpoints*domain.hpoints, title="Finding calculation points") as bar:
         for row in range(domain.vpoints):
             for col in range(domain.hpoints):
@@ -79,6 +87,12 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
             print(f"Max diff: {diff*100}%")
             print(f"Max temp: {maxT}R")
             diffArr.append(diff*100)
+
+            # imobj = domain.updateNodePlot(imobj, "temperature", [material.DomainMaterial.CHAMBER, material.DomainMaterial.FREE])
+            # fig.canvas.draw()
+            # fig.canvas.flush_events()
+            # plt.pause(0.01)
+
             if convPlot:
                 # del convergeP
                 ax.clear()
@@ -91,7 +105,7 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
                 convergePlot.canvas.draw()
                 convergePlot.canvas.flush_events()
 
-            if i % 10 == 0:
+            if i % 5 == 0:
                 print("saving progress")
                 mesh = domain.toDomain()
                 mesh.DumpFile("save")
