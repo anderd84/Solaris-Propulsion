@@ -7,6 +7,7 @@ from cooling.domain_mmap import DomainMMAP
 from cooling import material, calc_cell
 from general.units import Q_
 from nozzle import plots
+import numpy as np
 
 def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: float = 1e-2, convPlot: bool = True):
     calcPoints = set()
@@ -76,9 +77,12 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
                     currentTemp = domain.temperature[row, col]
                     newTemp = changeOrder.temperature
                     diff_ = newTemp.m - currentTemp.m
-                    maxChange = currentTemp.m / 100
+                    # maxChange = currentTemp.m / 100
+                    maxChange = np.sign(diff_)
                     if False and (domain.material[row, col] in material.MaterialType.COOLANT or domain.border[row,col]):
                         domain.setMEM(row, col, 'temperature', Q_(max(min(abs(diff_), maxChange), -abs(diff_)),currentTemp.units) + currentTemp)
+                        if abs(diff_) > 100:
+                            domain.setMem(row, col, temperature, currentTemp - diff)
                     else:
                         domain.setMEM(row, col, 'temperature', changeOrder.temperature)
                 if changeOrder.pressure is not None:
