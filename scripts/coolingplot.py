@@ -52,7 +52,7 @@ mesh = domain.DomainMC.LoadFile("save")
 
 # print(shitOnes)
 
-mesh.NodePlot(fig2, "temperature", [DomainMaterial.CHAMBER, DomainMaterial.FREE, DomainMaterial.COOLANT_BULK, DomainMaterial.COOLANT_WALL])
+mesh.NodePlot(fig2, "temperature", [DomainMaterial.CHAMBER, DomainMaterial.FREE])
 # mesh.RelationPlot(fig2)
 
 plt.show()
