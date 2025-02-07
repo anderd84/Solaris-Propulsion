@@ -109,7 +109,7 @@ class DomainMMAP(DomainMC):
     def NodePlot(self, fig, name, materials):
         xarr = self.x[:]
         rarr = self.r[:]
-        marr = self.__getattribute__(name).copy()
+        marr = self.__getattribute__(name).copy().astype(float)
 
         for i in range(self.vpoints):
             for j in range(self.hpoints):

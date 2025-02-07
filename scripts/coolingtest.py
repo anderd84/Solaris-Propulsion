@@ -31,8 +31,8 @@ def main():
     # fig.axes[0].plot([p.x for p in plugCoolU], [p.r for p in plugCoolU], '-k', linewidth=1)
 
     # to run the saved one use this line:
-    coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("coolmesh")
-    # coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("highmesh2")
+    # coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("coolmesh")
+    coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("highmesh2")
 
     print(coolmesh.coolingLoops)
 
@@ -41,9 +41,9 @@ def main():
     fig = plots.CreateNonDimPlot()
     print("speedrun to max diff 5%")
     tstart = time.time()
-    analysis.AnalyzeMC(mmapmesh, 10, .05, False, True) # why wont you workkkkk 😭
+    analysis.AnalyzeMC(mmapmesh, 10, .05, False, 3) # why wont you workkkkk 😭
     print(f"Time: {time.time() - tstart}")
-    mmapmesh.NodePlot(fig, "temperature", [material.DomainMaterial.CHAMBER, material.DomainMaterial.FREE])
+    mmapmesh.NodePlot(fig, "material", [])
     plt.show()
     # analysis.AnalyzeMCSparse(coolmesh, 10, 1e-5, False)
 

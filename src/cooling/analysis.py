@@ -56,7 +56,7 @@ def GetResistor(domain: DomainMMAP, resistors, point: tuple[int, int]) -> int:
             resistors.h[point] = calc_cell.CombinationResistor(domain, point, (point[0], point[1] + 1)).m_as(unitReg.hour * unitReg.degR / unitReg.BTU)
     return 0
 
-def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: float = 1e-2, convPlot: bool = True, precompute: bool = False):
+def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: float = 1e-2, convPlot: bool = True, precompute: int = 0):
     calcPoints = set()
     blacklist = set()
     programSolverSettings = {}
@@ -95,10 +95,15 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
         i = 0
         if precompute:
             print("Startng precompute")
-            res = CreateDomainResistors(domain)
-            UpdateDomainResistors(domain, parallel, res)
-            programSolverSettings['resistors'] = res
+            resistorMap = CreateDomainResistors(domain)
+            # UpdateDomainResistors(domain, parallel, res)
+            programSolverSettings['resistors'] = resistorMap
 
+        print(f" Starting solve")
+        print(f" Settings: ")
+        print(f"   Max Cores: {MAX_CORES}")
+        print(f"   Precompute: {precompute}")
+        print(f"   Tolerance: {tol}")
         while diff > tol:
             tic = time.time()
             i += 1
@@ -106,11 +111,12 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
             maxT = 0
             changes = []
 
-            if precompute:# and i % 5 == 0:
-                print("Updating precompute")
-                UpdateDomainResistors(domain, parallel, res)
-                # programSolverSettings['resistors'] = res
+            # if precompute:# and i % 5 == 0:
+            #     print("Updating precompute")
+            #     UpdateDomainResistors(domain, parallel, res)
+            #     # programSolverSettings['resistors'] = res
 
+            
             with alive_bar(len(calcPoints), title=f"Analyzing iteration {i}") as bar:
                 outputs = parallel(
                     joblib.delayed(calc_cell.CalculateCell)(domain, row, col, **programSolverSettings) for row, col in calcPoints
@@ -125,16 +131,17 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
                             newDiff = abs(domain.temperature[row, col].magnitude - newTemp.to(domain.units["temperature"]).magnitude) / domain.temperature[row, col].magnitude
                             diff = max(diff, newDiff)
                             maxT = max(maxT, newTemp.magnitude)
-                            # if newTemp.m > 1e4 or newTemp.m < 0:
-                            #     print(f"Temp out of bounds: {newTemp}")
-                            #     print(f"Row: {row}, Col: {col}")
-                            #     print(f"material: {domain.material[row, col]}")
-                            #     print(f"border: {domain.border[row, col]}")
-
                     bar()
+
+            if precompute and i % precompute == 0:
+                print("reseting precomputed resistors")
 
             for changeOrder in alive_it(changes):
                 row, col = changeOrder.row, changeOrder.col
+                if precompute and i % precompute == 0:
+                    resistorMap.v[[min(row, domain.vpoints-2) ,row-1], col] = -1
+                    resistorMap.h[row, [min(col, domain.hpoints - 2), col-1]] = -1
+
                 if changeOrder.temperature is not None:
                     currentTemp = domain.temperature[row, col]
                     newTemp = changeOrder.temperature
@@ -185,6 +192,16 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
             #     mesh.DumpFile("save")
             #     break
 
+            # if i % 5 == 0:
+            #     break
+
+    # if precompute:
+    #     for row in range(domain.vpoints):
+    #         for col in range(domain.hpoints):
+    #             if row < domain.vpoints - 1 and resistorMap.v[row, col] != -1:
+    #                 plt.plot([domain.x[row, col], domain.x[row + 1, col]], [domain.r[row, col], domain.r[row + 1, col]], '-k', linewidth=1)
+    #             if col < domain.hpoints - 1 and resistorMap.h[row, col] != -1:
+    #                 plt.plot([domain.x[row, col], domain.x[row, col + 1]], [domain.r[row, col], domain.r[row, col + 1]], '-k', linewidth=1)
 
 
     print("saving progress")
