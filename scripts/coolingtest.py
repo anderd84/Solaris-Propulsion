@@ -1,7 +1,10 @@
-from cooling import analysis, domain, domain_mmap
+import time
+import matplotlib.pyplot as plt
+
+from cooling import analysis, domain, domain_mmap, material
 import general.design as DESIGN
 from general.units import Q_, unitReg
-from nozzle import plug
+from nozzle import plots, plug
 
 def main():
     Re = Q_(3.2, unitReg.inch)
@@ -28,14 +31,20 @@ def main():
     # fig.axes[0].plot([p.x for p in plugCoolU], [p.r for p in plugCoolU], '-k', linewidth=1)
 
     # to run the saved one use this line:
-    # coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save")
+    # coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("coolmesh")
     coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("highmesh2")
 
     print(coolmesh.coolingLoops)
 
     mmapmesh = domain_mmap.DomainMMAP(coolmesh)
 
-    analysis.AnalyzeMC(mmapmesh, 10, 1e-5, False) # why wont you workkkkk 😭
+    fig = plots.CreateNonDimPlot()
+    print("speedrun to max diff 5%")
+    tstart = time.time()
+    analysis.AnalyzeMC(mmapmesh, 10, .05, False, 3) # why wont you workkkkk 😭
+    print(f"Time: {time.time() - tstart}")
+    mmapmesh.NodePlot(fig, "material", [])
+    plt.show()
     # analysis.AnalyzeMCSparse(coolmesh, 10, 1e-5, False)
 
 if __name__ == "__main__":

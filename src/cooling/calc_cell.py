@@ -106,9 +106,29 @@ def getCoolingCoverage(innerRadius: pint.Quantity, coolingLoopData: domain.Cooli
     landWidth = coolingLoopData.landWidth
     return (2*np.pi*innerRadius/numChannels - landWidth)*numChannels/(2*np.pi*innerRadius)
 
-def CombinationResistor(domain: domain_mmap.DomainMMAP, sink: tuple[int, int], source: tuple[int, int]) -> pint.Quantity:
+def CombinationResistor(domain: domain_mmap.DomainMMAP, sink: tuple[int, int], source: tuple[int, int], solverSettings: dict = {}) -> pint.Quantity:
+    if domain.material[source] in MaterialType.ADIABATIC or domain.material[sink] in MaterialType.ADIABATIC:
+        return Q_(2e31, unitReg.hour * unitReg.degR / unitReg.BTU)
+    
+    if "resistors" in solverSettings.keys():
+        if source[0] == sink[0]: # horizontal
+            precomp = solverSettings["resistors"].h[sink[0], min(sink[1], source[1])]
+        else: # vertical
+            precomp = solverSettings["resistors"].v[min(sink[0], source[0]), sink[1]]
+        if precomp != -1:
+            return Q_(precomp, unitReg.hour * unitReg.degR / unitReg.BTU)
+        # else:
+            # print(f"Combination : Precomp not found: {sink}, {source}")
+            # print(f"Materials: {domain.material[sink]}, {domain.material[source]}")
+    
     if domain.material[sink] == domain.material[source]:
-        return ConductionResistor(domain, sink, source)
+        R = ConductionResistor(domain, sink, source)
+        if 'resistors' in solverSettings.keys():
+            if source[0] == sink[0]:
+                solverSettings["resistors"].h[sink[0], min(sink[1], source[1])] = (R).m_as(unitReg.hour * unitReg.degR / unitReg.BTU)
+            else:
+                solverSettings["resistors"].v[min(sink[0], source[0]), sink[1]] = (R).m_as(unitReg.hour * unitReg.degR / unitReg.BTU)
+        return R.to(unitReg.hour * unitReg.degR / unitReg.BTU)
 
     if domain.material[source] in MaterialType.SOLID:
         sourceR = ConductionHalfResistor(domain, sink, source, False)
@@ -116,9 +136,6 @@ def CombinationResistor(domain: domain_mmap.DomainMMAP, sink: tuple[int, int], s
     elif domain.material[source] in MaterialType.FLUID:
         sourceR = ConvectionHalfResistor(domain, sink, source)
         # print("half fluid")
-    elif domain.material[source] in MaterialType.ADIABATIC:
-        # print("half free")
-        sourceR = Q_(2e31, unitReg.hour * unitReg.degR / unitReg.BTU)
     else:
         raise ValueError("Material not recognized")
     
@@ -128,11 +145,14 @@ def CombinationResistor(domain: domain_mmap.DomainMMAP, sink: tuple[int, int], s
     elif domain.material[sink] in MaterialType.FLUID:
         sinkR = ConvectionHalfResistor(domain, sink, source)
         # print("half fluid")
-    elif domain.material[sink] in MaterialType.ADIABATIC:
-        # print("half free")
-        sinkR = Q_(2e31, unitReg.hour * unitReg.degR / unitReg.BTU)
     else:
         raise ValueError("Material not recognized")
+    
+    if 'resistors' in solverSettings.keys():
+        if source[0] == sink[0]:
+            solverSettings["resistors"].h[sink[0], min(sink[1], source[1])] = (sourceR + sinkR).m_as(unitReg.hour * unitReg.degR / unitReg.BTU)
+        else:
+            solverSettings["resistors"].v[min(sink[0], source[0]), sink[1]] = (sourceR + sinkR).m_as(unitReg.hour * unitReg.degR / unitReg.BTU)
     
     return (sourceR + sinkR).to(unitReg.hour * unitReg.degR / unitReg.BTU)
 
@@ -150,7 +170,7 @@ def CalculateCoolantPrimaryWall(domain: domain_mmap.DomainMMAP, row: int, col: i
         for offset in offsets:
             if 0 <= row + offset[0] < domain.vpoints and 0 <= col + offset[1] < domain.hpoints:
                 if domain.material[row + offset[0], col + offset[1]] in MaterialType.WALL:
-                    resistorSet.append(ThermalResistor(CombinationResistor(domain, (row, col), (row + offset[0], col + offset[1])), domain.temperature[row + offset[0], col + offset[1]]))
+                    resistorSet.append(ThermalResistor(CombinationResistor(domain, (row, col), (row + offset[0], col + offset[1]), solverSettings), domain.temperature[row + offset[0], col + offset[1]]))
         
         L1 = Q_(np.sqrt((domain.x[row, col] - domain.x[prevFlow])**2 + (domain.r[row, col] - domain.r[prevFlow])**2), unitReg.inch).to(unitReg.foot)
         L2 = Q_(np.sqrt((domain.x[row, col] - domain.x[futureFlow])**2 + (domain.r[row, col] - domain.r[futureFlow])**2), unitReg.inch).to(unitReg.foot)
@@ -229,7 +249,7 @@ def CalculateCoolantBulkWall(domain: domain_mmap.DomainMMAP, row: int, col: int,
         for offset in offsets:
             if 0 <= currentPoint[0] + offset[0] < domain.vpoints and 0 <= currentPoint[1] + offset[1] < domain.hpoints:
                 if domain.material[currentPoint[0] + offset[0], currentPoint[1] + offset[1]] in MaterialType.WALL:
-                    resistorSet.append(ThermalResistor(CombinationResistor(domain, currentPoint, (currentPoint[0] + offset[0], currentPoint[1] + offset[1])), domain.temperature[currentPoint[0] + offset[0], currentPoint[1] + offset[1]]))
+                    resistorSet.append(ThermalResistor(CombinationResistor(domain, currentPoint, (currentPoint[0] + offset[0], currentPoint[1] + offset[1]), solverSettings), domain.temperature[currentPoint[0] + offset[0], currentPoint[1] + offset[1]]))
         currentPoint = tuple(domain.futureFlow[currentPoint])
     
     wallPoint = tuple(domain.previousFlow[row, col])
@@ -263,7 +283,9 @@ def CalculateBorderResistors(domain: domain_mmap.DomainMMAP, row: int, col: int,
 
     for offset in offsets:
         if 0 <= row + offset[0] < domain.vpoints and 0 <= col + offset[1] < domain.hpoints:
-            R = CombinationResistor(domain, (row, col), (row + offset[0], col + offset[1]))
+            if domain.material[row+offset[0], col+offset[1]] in MaterialType.ADIABATIC:
+                continue
+            R = CombinationResistor(domain, (row, col), (row + offset[0], col + offset[1]), solverSettings)
             resSet.append(ThermalResistor(R, domain.temperature[row + offset[0], col + offset[1]]))
 
     return resSet
@@ -275,7 +297,22 @@ def ConductionCoreResistors(domain: domain_mmap.DomainMMAP, row: int, col: int, 
 
     for offset in offsets:
         if 0 <= row + offset[0] < domain.vpoints and 0 <= col + offset[1] < domain.hpoints:
-            R = ConductionResistor(domain, (row, col), (row + offset[0], col + offset[1]))
+            if "resistors" in solverSettings.keys():
+                if abs(offset[1]): # horizontal
+                    precomp = solverSettings["resistors"].h[row, min(col, col + offset[1])]
+                else: # vertical
+                    precomp = solverSettings["resistors"].v[min(row, row + offset[0]), col]
+                if precomp != -1:
+                    R = Q_(precomp, unitReg.hour * unitReg.degR / unitReg.BTU)
+                else:
+                    # print(f"Conduction Core : Precomp not found: {row, col}")
+                    R = ConductionResistor(domain, (row, col), (row + offset[0], col + offset[1]))
+                    if abs(offset[1]):
+                        solverSettings["resistors"].h[row, min(col, col + offset[1])] = R.m_as(unitReg.hour * unitReg.degR / unitReg.BTU)
+                    else:
+                        solverSettings["resistors"].v[min(row, row + offset[0]), col] = R.m_as(unitReg.hour * unitReg.degR / unitReg.BTU)
+            else:
+                R = ConductionResistor(domain, (row, col), (row + offset[0], col + offset[1]))
             resSet.append(ThermalResistor(R, domain.temperature[row + offset[0], col + offset[1]]))
 
     return resSet
@@ -303,29 +340,19 @@ def CalculateCell(domain: domain_mmap.DomainMMAP, row: int, col: int, **solverSe
         if domain.border[row,col]:
             res = CalculateBorderResistors(domain, row, col, solverSettings)
             Tnew = MergeResistors(res)
-            # if Tnew.m > 1e3:
-            #     print(f"Wall temp out of bounds: {Tnew}")
-            #     print(f"Row: {row}, Col: {col}")
-            #     print(f"material: {domain.material[row, col]}")
-            #     print(f"border: {domain.border[row, col]}")
             return [CellUpdates(row, col, temperature=Tnew)]
         res = ConductionCoreResistors(domain, row, col, solverSettings)
         Tnew = MergeResistors(res)
-        # if Tnew.m > 1e3:
-        #     print(f"Wall temp out of bounds: {Tnew}")
-        #     print(f"Row: {row}, Col: {col}")
-        #     print(f"material: {domain.material[row, col]}")
-        #     print(f"border: {domain.border[row, col]}")
         return [CellUpdates(row, col, temperature=Tnew)]
     
     if domain.material[row,col] in MaterialType.COOLANT:
         if domain.material[row,col] == DomainMaterial.COOLANT_BULK:
             if domain.border[row,col]:
-                return CalculateCoolantBulkWall(domain, row, col, solverSettings) #TODO implement
+                return CalculateCoolantBulkWall(domain, row, col, solverSettings)
             prevFlow = tuple(domain.previousFlow[row, col])
             return [CellUpdates(row, col, temperature=domain.temperature[prevFlow], pressure=domain.pressure[prevFlow])]
         if domain.material[row,col] == DomainMaterial.COOLANT_WALL:
-            return CalculateCoolantPrimaryWall(domain, row, col, solverSettings) #TODO implement
+            return CalculateCoolantPrimaryWall(domain, row, col, solverSettings)
         if domain.material[row,col] in {DomainMaterial.COOLANT_INLET, DomainMaterial.COOLANT_OUTLET}:
             return CoolantBoundaryConditions(domain, row, col, solverSettings)
     raise ValueError(f"Material not recognized {domain.material[row, col]}")
