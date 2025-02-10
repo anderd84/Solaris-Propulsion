@@ -156,7 +156,9 @@ def CombinationResistor(domain: domain_mmap.DomainMMAP, sink: tuple[int, int], s
     
     return (sourceR + sinkR).to(unitReg.hour * unitReg.degR / unitReg.BTU)
 
-def CalculateCoolantPrimaryWall(domain: domain_mmap.DomainMMAP, row: int, col: int, solverSettings: dict, resistorSet: list[ThermalResistor] = []) -> list[CellUpdates]:
+def CalculateCoolantPrimaryWall(domain: domain_mmap.DomainMMAP, row: int, col: int, solverSettings: dict, resistorSet: list[ThermalResistor] = None) -> list[CellUpdates]:
+    if resistorSet is None:
+        resistorSet = []
     wallCellUpdate = CellUpdates(row, col)
     prevFlow = tuple(domain.previousFlow[row, col])
     futureFlow = tuple(domain.futureFlow[row, col])
@@ -192,13 +194,14 @@ def CalculateCoolantPrimaryWall(domain: domain_mmap.DomainMMAP, row: int, col: i
         # Tout = domain.temperature[futureFlow]
         # Tnew2 = ((-num + mdotChannels*cp*Tout) / (mdotChannels*cp)).to(unitReg.degR)
         # Tnew = (Tnew + Tnew2) / 2
-        maxTempIn = max([res.T.m for res in resistorSet])
-        if Tnew.m_as(unitReg.degR) > maxTempIn or Tnew.m_as(unitReg.degR) < 0:
-            print(f"Temp out of bounds: {Tnew}")
-            test = mdotChannels*cp*Tin
-            n = test + num
-            d = mdotChannels*cp
-            1
+        
+        # maxTempIn = max([res.T.m for res in resistorSet])
+        # if Tnew.m_as(unitReg.degR) > maxTempIn or Tnew.m_as(unitReg.degR) < 0:
+        #     print(f"Temp out of bounds: {Tnew}")
+        #     test = mdotChannels*cp*Tin
+        #     n = test + num
+        #     d = mdotChannels*cp
+        #     1
         wallCellUpdate.temperature = Tnew.to(domain.units["temperature"])
 
         if wallCellUpdate.temperature.m > 1e4 or wallCellUpdate.temperature.m < 0:
@@ -251,9 +254,11 @@ def CalculateCoolantBulkWall(domain: domain_mmap.DomainMMAP, row: int, col: int,
                 if domain.material[currentPoint[0] + offset[0], currentPoint[1] + offset[1]] in MaterialType.WALL:
                     resistorSet.append(ThermalResistor(CombinationResistor(domain, currentPoint, (currentPoint[0] + offset[0], currentPoint[1] + offset[1]), solverSettings), domain.temperature[currentPoint[0] + offset[0], currentPoint[1] + offset[1]]))
         currentPoint = tuple(domain.futureFlow[currentPoint])
-    
+    # if len(resistorSet) > 10:
+        # print(f"Resistor set too large in bulk: {len(resistorSet)}")
     wallPoint = tuple(domain.previousFlow[row, col])
-    cellUpdateArray = CalculateCoolantPrimaryWall(domain, wallPoint[0], wallPoint[1], solverSettings, resistorSet.copy())
+    # print("bulk done")
+    cellUpdateArray = CalculateCoolantPrimaryWall(domain, wallPoint[0], wallPoint[1], solverSettings, resistorSet)
     prevFlow = tuple(domain.previousFlow[row, col])
     cellUpdateArray.append(CellUpdates(row, col, temperature=domain.temperature[prevFlow], pressure=domain.pressure[prevFlow]))
 
@@ -352,7 +357,7 @@ def CalculateCell(domain: domain_mmap.DomainMMAP, row: int, col: int, **solverSe
             prevFlow = tuple(domain.previousFlow[row, col])
             return [CellUpdates(row, col, temperature=domain.temperature[prevFlow], pressure=domain.pressure[prevFlow])]
         if domain.material[row,col] == DomainMaterial.COOLANT_WALL:
-            return CalculateCoolantPrimaryWall(domain, row, col, solverSettings)
+            return CalculateCoolantPrimaryWall(domain, row, col, solverSettings, [])
         if domain.material[row,col] in {DomainMaterial.COOLANT_INLET, DomainMaterial.COOLANT_OUTLET}:
             return CoolantBoundaryConditions(domain, row, col, solverSettings)
     raise ValueError(f"Material not recognized {domain.material[row, col]}")

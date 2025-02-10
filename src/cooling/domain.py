@@ -154,13 +154,16 @@ class DomainMC:
             for j in range(self.hpoints):
                 flow = self.array[i,j].futureFlow
                 if (flow[0] != -1 and flow[1] != -1) or (self.array[i,j].material == DomainMaterial.COOLANT_WALL):
+                    # ax.quiver(self.array[i,j].x, self.array[i,j].r, self.array[flow].x - self.array[i,j].x, self.array[flow].r - self.array[i,j].r, scale=1, scale_units='xy', angles='xy', color='r', width=0.002)
                     ax.quiver(self.array[flow].x, self.array[flow].r, self.array[i,j].x - self.array[flow].x, self.array[i,j].r - self.array[flow].r, scale=1, scale_units='xy', angles='xy', color='r', width=0.002)
                 flow = self.array[i,j].previousFlow
                 if flow[0] != -1:
                     if self.array[i,j].material == DomainMaterial.COOLANT_BULK:
                         ax.quiver(self.array[flow].x, self.array[flow].r, self.array[i,j].x - self.array[flow].x, self.array[i,j].r - self.array[flow].r, scale=1, scale_units='xy', angles='xy', color='k', width=0.002)
+                        # ax.quiver(self.array[i,j].x, self.array[i,j].r, self.array[i,j].x - self.array[flow].x, self.array[i,j].r - self.array[flow].r, scale=1, scale_units='xy', angles='xy', color='k', width=0.002)
                     else:
-                        ax.quiver(self.array[flow].x, self.array[flow].r, self.array[i,j].x - self.array[flow].x, self.array[i,j].r - self.array[flow].r, scale=1, scale_units='xy', angles='xy', color='b', width=0.002)   
+                        ax.quiver(self.array[flow].x, self.array[flow].r, self.array[i,j].x - self.array[flow].x, self.array[i,j].r - self.array[flow].r, scale=1, scale_units='xy', angles='xy', color='b', width=0.002)
+                        # ax.quiver(self.array[i,j].x, self.array[i,j].r, self.array[i,j].x - self.array[flow].x, self.array[i,j].r - self.array[flow].r, scale=1, scale_units='xy', angles='xy', color='b', width=0.002)   
 
 
     def ShowCellPlot(self, fig: plt.Figure):
