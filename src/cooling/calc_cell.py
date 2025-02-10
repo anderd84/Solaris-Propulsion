@@ -115,7 +115,7 @@ def CombinationResistor(domain: domain_mmap.DomainMMAP, sink: tuple[int, int], s
             precomp = solverSettings["resistors"].h[sink[0], min(sink[1], source[1])]
         else: # vertical
             precomp = solverSettings["resistors"].v[min(sink[0], source[0]), sink[1]]
-        if precomp != -1:
+        if precomp >= 0:
             return Q_(precomp, unitReg.hour * unitReg.degR / unitReg.BTU)
         # else:
             # print(f"Combination : Precomp not found: {sink}, {source}")
@@ -189,9 +189,9 @@ def CalculateCoolantPrimaryWall(domain: domain_mmap.DomainMMAP, row: int, col: i
         Tin = domain.temperature[prevFlow]
         Tnew = ((num + mdotChannels*cp*Tin) / (mdotChannels*cp)).to(unitReg.degR)
 
-        Tout = domain.temperature[futureFlow]
-        Tnew2 = ((-num + mdotChannels*cp*Tout) / (mdotChannels*cp)).to(unitReg.degR)
-        Tnew = (Tnew + Tnew2) / 2
+        # Tout = domain.temperature[futureFlow]
+        # Tnew2 = ((-num + mdotChannels*cp*Tout) / (mdotChannels*cp)).to(unitReg.degR)
+        # Tnew = (Tnew + Tnew2) / 2
         # maxTempIn = max([res.T.m for res in resistorSet])
         # if Tnew.m_as(unitReg.degR) > maxTempIn:
         #     print(f"Temp out of bounds: {Tnew}")
@@ -302,7 +302,7 @@ def ConductionCoreResistors(domain: domain_mmap.DomainMMAP, row: int, col: int, 
                     precomp = solverSettings["resistors"].h[row, min(col, col + offset[1])]
                 else: # vertical
                     precomp = solverSettings["resistors"].v[min(row, row + offset[0]), col]
-                if precomp != -1:
+                if precomp >= 0:
                     R = Q_(precomp, unitReg.hour * unitReg.degR / unitReg.BTU)
                 else:
                     # print(f"Conduction Core : Precomp not found: {row, col}")
