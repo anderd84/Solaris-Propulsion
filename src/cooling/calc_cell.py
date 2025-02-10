@@ -27,15 +27,15 @@ class ThermalResistor:
     R: pint.Quantity = Q_(-1, unitReg.hour * unitReg.degR / unitReg.BTU)
     T: pint.Quantity = Q_(-1, unitReg.degR)
 
-def getConductivity(domain: domain_mmap.DomainMMAP, row: int, col: int) -> pint.Quantity:
-    if domain.material[row,col] in MaterialType.WALL:
-        return cooling2d.conduction_grcop(domain.temperature[row,col].to(unitReg.degR))
+def getConductivity(material: DomainMaterial, temperature: pint.Quantity) -> pint.Quantity:
+    if material in MaterialType.WALL:
+        return cooling2d.conduction_grcop(temperature.to(unitReg.degR))
     else:
-        return cooling2d.conduction_rp1(domain.temperature[row,col].to(unitReg.degR))
+        return cooling2d.conduction_rp1(temperature.to(unitReg.degR))
 
 def ConductionResistor(domain: domain_mmap.DomainMMAP, sink: tuple[int, int], source: tuple[int, int]) -> pint.Quantity: # sink is to, source is from
     L = Q_(domain.xstep, unitReg.inch).to(unitReg.foot)
-    k = getConductivity(domain, sink[0], sink[1])
+    k = getConductivity(domain.material[sink], (domain.temperature[sink] + domain.temperature[source]) / 2)
     if source[0] == sink[0]: # same row, horizontal conduction
         # conductionArea = (2 * np.pi * Q_(domain.r[sink], unitReg.inch).to(unitReg.foot) ) * Q_(domain.rstep, unitReg.inch).to(unitReg.foot)
         ro = Q_(domain.r[sink] + domain.rstep/2, unitReg.inch).to(unitReg.foot)
@@ -49,7 +49,7 @@ def ConductionResistor(domain: domain_mmap.DomainMMAP, sink: tuple[int, int], so
 
 def ConductionHalfResistor(domain: domain_mmap.DomainMMAP, sink: tuple[int, int], source: tuple[int, int], sinkSide: bool = True) -> pint.Quantity:
     L = Q_(domain.xstep, unitReg.inch).to(unitReg.foot)
-    k = getConductivity(domain, sink[0], sink[1]) if sinkSide else getConductivity(domain, source[0], source[1])
+    k = getConductivity(domain.material[sink], domain.temperature[sink]) if sinkSide else getConductivity(domain.material[source], domain.temperature[source])
     if source[0] == sink[0]: # same row, horizontal conduction
         # conductionArea = (2 * np.pi * Q_(domain.r[sink], unitReg.inch).to(unitReg.foot)) * Q_(domain.rstep, unitReg.inch).to(unitReg.foot)
         ro = Q_(domain.r[sink] + domain.rstep/2, unitReg.inch).to(unitReg.foot)
@@ -174,7 +174,7 @@ def CalculateCoolantPrimaryWall(domain: domain_mmap.DomainMMAP, row: int, col: i
         
         L1 = Q_(np.sqrt((domain.x[row, col] - domain.x[prevFlow])**2 + (domain.r[row, col] - domain.r[prevFlow])**2), unitReg.inch).to(unitReg.foot)
         L2 = Q_(np.sqrt((domain.x[row, col] - domain.x[futureFlow])**2 + (domain.r[row, col] - domain.r[futureFlow])**2), unitReg.inch).to(unitReg.foot)
-        k = getConductivity(domain, row, col)
+        k = getConductivity(domain.material[row, col], domain.temperature[row, col])
 
         resistorSet.append(ThermalResistor(L1/(domain.area[prevFlow].to(unitReg.foot**2) * numChannels * k), domain.temperature[prevFlow]))
         resistorSet.append(ThermalResistor(L2/(domain.area[futureFlow].to(unitReg.foot**2) * numChannels * k), domain.temperature[futureFlow]))
