@@ -41,11 +41,7 @@ def main():
     fig = plots.CreateNonDimPlot()
     # print("speedrun to max diff 5%")
     tstart = time.time()
-<<<<<<< HEAD
-    analysis.AnalyzeMC(mmapmesh, 10, 1e-5, False, 5) # why wont you workkkkk 😭
-=======
-    analysis.AnalyzeMC(mmapmesh, 10, 1e-5, False, 0) # why wont you workkkkk 😭
->>>>>>> origin/17-2d-steady-state-cooling
+    analysis.AnalyzeMC(mmapmesh, 1, 1e-5, False, 5) # why wont you workkkkk 😭
     print(f"Time: {time.time() - tstart}")
     mmapmesh.NodePlot(fig, "material", [])
     plt.show()

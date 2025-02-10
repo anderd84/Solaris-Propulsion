@@ -204,7 +204,7 @@ def CalculateCoolantPrimaryWall(domain: domain_mmap.DomainMMAP, row: int, col: i
         if wallCellUpdate.temperature.m > 1e4 or wallCellUpdate.temperature.m < 0:
             print(domain.temperature[prevFlow])
             print(domain.temperature[futureFlow])
-            print(mdotChannels*cp*(domain.temperature[futureFlow] - domain.temperature[prevFlow]))
+            print(mdotChannels*cp*(Tin))
             print(f"Temp out of bounds: {wallCellUpdate.temperature}")
             print(f"Row: {row}, Col: {col}")
             print(f"material: {domain.material[row, col]}")
