@@ -110,49 +110,43 @@ def CombinationResistor(domain: domain_mmap.DomainMMAP, sink: tuple[int, int], s
     if domain.material[source] in MaterialType.ADIABATIC or domain.material[sink] in MaterialType.ADIABATIC:
         return Q_(2e31, unitReg.hour * unitReg.degR / unitReg.BTU)
     
+    precomp = 0
     if "resistors" in solverSettings.keys():
         if source[0] == sink[0]: # horizontal
             precomp = solverSettings["resistors"].h[sink[0], min(sink[1], source[1])]
         else: # vertical
             precomp = solverSettings["resistors"].v[min(sink[0], source[0]), sink[1]]
-        if precomp >= 0:
-            return Q_(precomp, unitReg.hour * unitReg.degR / unitReg.BTU)
-        # else:
-            # print(f"Combination : Precomp not found: {sink}, {source}")
-            # print(f"Materials: {domain.material[sink]}, {domain.material[source]}")
+        # if precomp >= 0:
+            # return Q_(precomp, unitReg.hour * unitReg.degR / unitReg.BTU)
     
     if domain.material[sink] == domain.material[source]:
         R = ConductionResistor(domain, sink, source)
         if 'resistors' in solverSettings.keys():
             if source[0] == sink[0]:
-                solverSettings["resistors"].h[sink[0], min(sink[1], source[1])] = (R).m_as(unitReg.hour * unitReg.degR / unitReg.BTU)
+                solverSettings["resistors"].h[sink[0], min(sink[1], source[1])] = (R).m_as(unitReg.hour * unitReg.degR / unitReg.BTU) - precomp
             else:
-                solverSettings["resistors"].v[min(sink[0], source[0]), sink[1]] = (R).m_as(unitReg.hour * unitReg.degR / unitReg.BTU)
+                solverSettings["resistors"].v[min(sink[0], source[0]), sink[1]] = (R).m_as(unitReg.hour * unitReg.degR / unitReg.BTU) - precomp
         return R.to(unitReg.hour * unitReg.degR / unitReg.BTU)
 
     if domain.material[source] in MaterialType.SOLID:
         sourceR = ConductionHalfResistor(domain, sink, source, False)
-        # print("half solid")
     elif domain.material[source] in MaterialType.FLUID:
         sourceR = ConvectionHalfResistor(domain, sink, source)
-        # print("half fluid")
     else:
         raise ValueError("Material not recognized")
     
     if domain.material[sink] in MaterialType.SOLID:
         sinkR = ConductionHalfResistor(domain, sink, source, True)
-        # print("half solid")
     elif domain.material[sink] in MaterialType.FLUID:
         sinkR = ConvectionHalfResistor(domain, sink, source)
-        # print("half fluid")
     else:
         raise ValueError("Material not recognized")
     
     if 'resistors' in solverSettings.keys():
         if source[0] == sink[0]:
-            solverSettings["resistors"].h[sink[0], min(sink[1], source[1])] = (sourceR + sinkR).m_as(unitReg.hour * unitReg.degR / unitReg.BTU)
+            solverSettings["resistors"].h[sink[0], min(sink[1], source[1])] = (sourceR + sinkR).m_as(unitReg.hour * unitReg.degR / unitReg.BTU) - precomp
         else:
-            solverSettings["resistors"].v[min(sink[0], source[0]), sink[1]] = (sourceR + sinkR).m_as(unitReg.hour * unitReg.degR / unitReg.BTU)
+            solverSettings["resistors"].v[min(sink[0], source[0]), sink[1]] = (sourceR + sinkR).m_as(unitReg.hour * unitReg.degR / unitReg.BTU) - precomp
     
     return (sourceR + sinkR).to(unitReg.hour * unitReg.degR / unitReg.BTU)
 

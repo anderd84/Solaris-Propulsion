@@ -192,21 +192,28 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
             #     mesh.DumpFile("save")
             #     break
 
-            # if i % 5 == 0:
-            #     break
+            break
+    if precompute:
+        print("plotting relations")
+        for row in range(domain.vpoints):
+            for col in range(domain.hpoints):
+                if row < domain.vpoints - 1 and resistorMap.v[row, col] != -1:
+                    c = 'g' if abs(resistorMap.v[row, col]) < 5 else 'r'
+                    c = 'k' if np.isclose(resistorMap.v[row, col], 0) else c
+                    plt.plot([domain.x[row, col], domain.x[row + 1, col]], [domain.r[row, col], domain.r[row + 1, col]], c, linewidth=1)
+                if col < domain.hpoints - 1 and resistorMap.h[row, col] != -1:
+                    c = 'g' if abs(resistorMap.h[row, col]) < 5 else 'r'
+                    c = 'k' if np.isclose(resistorMap.h[row, col], 0) else c
+                    plt.plot([domain.x[row, col], domain.x[row, col + 1]], [domain.r[row, col], domain.r[row, col + 1]], c, linewidth=1)
+        np.product = np.prod
+        import matrix_viewer as mv
+        mv.view(resistorMap.v)
+        mv.view(resistorMap.h)
+        mv.show()
 
-    # if precompute:
-    #     for row in range(domain.vpoints):
-    #         for col in range(domain.hpoints):
-    #             if row < domain.vpoints - 1 and resistorMap.v[row, col] != -1:
-    #                 plt.plot([domain.x[row, col], domain.x[row + 1, col]], [domain.r[row, col], domain.r[row + 1, col]], '-k', linewidth=1)
-    #             if col < domain.hpoints - 1 and resistorMap.h[row, col] != -1:
-    #                 plt.plot([domain.x[row, col], domain.x[row, col + 1]], [domain.r[row, col], domain.r[row, col + 1]], '-k', linewidth=1)
-
-
-    print("saving progress")
-    mesh = domain.toDomain()
-    mesh.DumpFile("save")
+    # print("saving progress")
+    # mesh = domain.toDomain()
+    # mesh.DumpFile("save")
     print("-------------------------")
     print(f" Done! in {i} iterations ")
     print("-------------------------")
