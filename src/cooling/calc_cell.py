@@ -29,7 +29,7 @@ class ThermalResistor:
 
 def getConductivity(material: DomainMaterial, temperature: pint.Quantity) -> pint.Quantity:
     if material in MaterialType.WALL:
-        return cooling2d.conduction_grcop(temperature.to(unitReg.degR))
+        return cooling2d.conduction_inco718(temperature.to(unitReg.degR))
     else:
         return cooling2d.conduction_rp1(temperature.to(unitReg.degR))
 
@@ -153,8 +153,8 @@ def CombinationResistor(domain: domain_mmap.DomainMMAP, sink: tuple[int, int], s
     return (sourceR + sinkR).to(unitReg.hour * unitReg.degR / unitReg.BTU)
 
 def CalculateCoolantPrimaryWall(domain: domain_mmap.DomainMMAP, row: int, col: int, solverSettings: dict, resistorSet: list[ThermalResistor] = None) -> list[CellUpdates]:
-    # if resistorSet is None:
-    #     resistorSet = []
+    if resistorSet is None:
+        resistorSet = []
     wallCellUpdate = CellUpdates(row, col)
     prevFlow = tuple(domain.previousFlow[row, col])
     futureFlow = tuple(domain.futureFlow[row, col])

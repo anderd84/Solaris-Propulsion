@@ -38,7 +38,7 @@ fig2.axes[0].plot([p.x for p in cowlCoolU], [p.r for p in cowlCoolU], '-k', line
 fig2.axes[0].plot([p.x for p in plugCoolL], [p.r for p in plugCoolL], '-k', linewidth=1)
 fig2.axes[0].plot([p.x for p in plugCoolU], [p.r for p in plugCoolU], '-k', linewidth=1)
 
-mesh = domain.DomainMC.LoadFile("highmesh2")
+mesh = domain.DomainMC.LoadFile("save")
 
 # shitOnes = set()
 # for i in range(mesh.vpoints):
@@ -52,7 +52,7 @@ mesh = domain.DomainMC.LoadFile("highmesh2")
 
 # print(shitOnes)
 
-mesh.NodePlot(fig2, "border", [DomainMaterial.CHAMBER, DomainMaterial.FREE])
+mesh.NodePlot(fig2, "temperature", [DomainMaterial.CHAMBER, DomainMaterial.FREE])
 # mesh.RelationPlot(fig2)
 # mesh.RelationPlot(fig2)
 

@@ -32,7 +32,7 @@ def main():
 
     # to run the saved one use this line:
     # coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("coolmesh")
-    coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("highmesh2")
+    coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save")
 
     print(coolmesh.coolingLoops)
 
@@ -46,7 +46,7 @@ def main():
     # print("speedrun to max diff 5%")
     tstart = time.time()
 
-    analysis.AnalyzeMC(mmapmesh, 15, .1, False, 1) # why wont you workkkkk 😭
+    analysis.AnalyzeMC(mmapmesh, 15, 1e-5, False, 5) # why wont you workkkkk 😭
     print(f"Time: {time.time() - tstart}")
     mmapmesh.NodePlot(fig, "temperature", [material.DomainMaterial.CHAMBER, material.DomainMaterial.FREE])
     plt.show()

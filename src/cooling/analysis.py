@@ -212,9 +212,9 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
     #     mv.view(resistorMap.h)
     #     mv.show_with_pyplot()
 
-    # print("saving progress")
-    # mesh = domain.toDomain()
-    # mesh.DumpFile("save")
+    print("saving progress")
+    mesh = domain.toDomain()
+    mesh.DumpFile("save")
     print("-------------------------")
     print(f" Done! in {i} iterations ")
     print("-------------------------")
