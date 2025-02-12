@@ -135,12 +135,14 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
 
             if precompute and i % precompute == 0:
                 print("reseting precomputed resistors")
+                resistorMap.v.fill(-1)
+                resistorMap.h.fill(-1)
 
             for changeOrder in alive_it(changes):
                 row, col = changeOrder.row, changeOrder.col
-                if precompute and i % precompute == 0:
-                    resistorMap.v[[min(row, domain.vpoints-2) ,row-1], col] = -1
-                    resistorMap.h[row, [min(col, domain.hpoints - 2), col-1]] = -1
+                # if precompute and i % precompute == 0:
+                    # resistorMap.v[[min(row, domain.vpoints-2) ,row-1], col] = -1
+                    # resistorMap.h[row, [min(col, domain.hpoints - 2), col-1]] = -1
 
                 if changeOrder.temperature is not None:
                     currentTemp = domain.temperature[row, col]
@@ -192,24 +194,23 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
             #     mesh.DumpFile("save")
             #     break
 
-            break
-    if precompute:
-        print("plotting relations")
-        for row in range(domain.vpoints):
-            for col in range(domain.hpoints):
-                if row < domain.vpoints - 1 and resistorMap.v[row, col] != -1:
-                    c = 'g' if abs(resistorMap.v[row, col]) < 5 else 'r'
-                    c = 'k' if np.isclose(resistorMap.v[row, col], 0) else c
-                    plt.plot([domain.x[row, col], domain.x[row + 1, col]], [domain.r[row, col], domain.r[row + 1, col]], c, linewidth=1)
-                if col < domain.hpoints - 1 and resistorMap.h[row, col] != -1:
-                    c = 'g' if abs(resistorMap.h[row, col]) < 5 else 'r'
-                    c = 'k' if np.isclose(resistorMap.h[row, col], 0) else c
-                    plt.plot([domain.x[row, col], domain.x[row, col + 1]], [domain.r[row, col], domain.r[row, col + 1]], c, linewidth=1)
-        np.product = np.prod
-        import matrix_viewer as mv
-        mv.view(resistorMap.v)
-        mv.view(resistorMap.h)
-        mv.show()
+    # if precompute:
+    #     print("plotting relations")
+    #     for row in range(domain.vpoints):
+    #         for col in range(domain.hpoints):
+    #             if row < domain.vpoints - 1 and resistorMap.v[row, col] != -1:
+    #                 c = 'g' if resistorMap.v[row, col] > 0 else 'r'
+    #                 c = 'k' if np.isclose(resistorMap.v[row, col], 0) else c
+    #                 plt.plot([domain.x[row, col], domain.x[row + 1, col]], [domain.r[row, col], domain.r[row + 1, col]], c, linewidth=1)
+    #             if col < domain.hpoints - 1 and resistorMap.h[row, col] != -1:
+    #                 c = 'g' if resistorMap.h[row, col] > 0 else 'r'
+    #                 c = 'k' if np.isclose(resistorMap.h[row, col], 0) else c
+    #                 plt.plot([domain.x[row, col], domain.x[row, col + 1]], [domain.r[row, col], domain.r[row, col + 1]], c, linewidth=1)
+    #     np.product = np.prod
+    #     import matrix_viewer as mv
+    #     mv.view(resistorMap.v)
+    #     mv.view(resistorMap.h)
+    #     mv.show_with_pyplot()
 
     # print("saving progress")
     # mesh = domain.toDomain()

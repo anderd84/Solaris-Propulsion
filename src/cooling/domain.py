@@ -312,7 +312,7 @@ class DomainMC:
         for wallPoint in pointMap:
             borderCells = [cell for cell in pointMap[wallPoint] if self.array[cell].border and self.array[cell].material == DomainMaterial.COOLANT_BULK]
             for i, cell in enumerate(borderCells[1:]):
-                self.array[cell].futureFlow = borderCells[i] # i is the index behind current position cause enumerate starts at 0
+                self.array[borderCells[i]].futureFlow = cell # i is the index behind current position cause enumerate starts at 0
                 self.array[cell].border = False
         
         print("done")
@@ -598,7 +598,7 @@ class DomainMC:
         with alive_bar(self.vpoints*self.hpoints) as bar:
             for i in range(self.vpoints):
                 for j in range(self.hpoints):
-                    if fluidID != -1 and self.array[i,j].id != fluidID:
+                    if fluidID != -1 and self.array[i,j].id != fluidID and self.array[i,j].id != -1:
                         bar()
                         continue
                     lowI = max(i - 1, 0)

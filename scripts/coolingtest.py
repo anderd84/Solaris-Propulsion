@@ -39,11 +39,16 @@ def main():
     mmapmesh = domain_mmap.DomainMMAP(coolmesh)
 
     fig = plots.CreateNonDimPlot()
-    mmapmesh.NodePlot(fig, "material", [])
+    # coolmesh.RelationPlot(fig)
+    # coolmesh.ShowCellPlot(fig)
+    # plt.show()
+    # coolmesh.ShowCellPlot(fig)
     # print("speedrun to max diff 5%")
     tstart = time.time()
-    analysis.AnalyzeMC(mmapmesh, 10, 1e-5, False, 5) # why wont you workkkkk 😭
+
+    analysis.AnalyzeMC(mmapmesh, 15, .1, False, 1) # why wont you workkkkk 😭
     print(f"Time: {time.time() - tstart}")
+    mmapmesh.NodePlot(fig, "temperature", [material.DomainMaterial.CHAMBER, material.DomainMaterial.FREE])
     plt.show()
     # analysis.AnalyzeMCSparse(coolmesh, 10, 1e-5, False)
 

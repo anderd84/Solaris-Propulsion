@@ -186,8 +186,8 @@ def DarcyFrictionFactor(reynoldsNum, surfaceRoughness, hydroDiameter):
     if reynoldsNum < 2000: # laminar
         return 64/reynoldsNum
     
-    if reynoldsNum < 4000:
-        print("Warning: Flow is transitional, Darcy friction factor may not be accurate.")
+    # if reynoldsNum < 4000:
+        # print("Warning: Flow is transitional, Darcy friction factor may not be accurate.")
     # turbulent
     f_func = lambda f: -2*np.log10(surfaceRoughness/hydroDiameter/3.7 + 2.51/(reynoldsNum*np.sqrt(f))) - 1/np.sqrt(f)
     f = fsolve(f_func, 0.05)    # Darcy friction factor
