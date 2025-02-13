@@ -32,11 +32,9 @@ def main():
 
     # to run the saved one use this line:
     # coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("coolmesh")
-    coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save")
+    coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("highmesh2")
 
-    print(coolmesh.coolingLoops)
-
-    mmapmesh = domain_mmap.DomainMMAP(coolmesh)
+    # print(coolmesh.coolingLoops)
 
     fig = plots.CreateNonDimPlot()
     # coolmesh.RelationPlot(fig)
@@ -45,6 +43,7 @@ def main():
     # coolmesh.ShowCellPlot(fig)
     # print("speedrun to max diff 5%")
     for i in [1,2,3,4]:
+        mmapmesh = domain_mmap.DomainMMAP(coolmesh)
         tstart = time.time()
         analysis.AnalyzeMC(mmapmesh, 10, 1e-5, False, 5, i) # why wont you workkkkk 😭
         print(f"Time: {time.time() - tstart}")
