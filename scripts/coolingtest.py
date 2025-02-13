@@ -44,12 +44,13 @@ def main():
     # plt.show()
     # coolmesh.ShowCellPlot(fig)
     # print("speedrun to max diff 5%")
-    tstart = time.time()
+    for i in [1,2,3,4]:
+        tstart = time.time()
+        analysis.AnalyzeMC(mmapmesh, 10, 1e-5, False, 5, i) # why wont you workkkkk 😭
+        print(f"Time: {time.time() - tstart}")
 
-    analysis.AnalyzeMC(mmapmesh, 15, 1e-5, False, 5) # why wont you workkkkk 😭
-    print(f"Time: {time.time() - tstart}")
-    mmapmesh.NodePlot(fig, "temperature", [material.DomainMaterial.CHAMBER, material.DomainMaterial.FREE])
-    plt.show()
+    # mmapmesh.NodePlot(fig, "temperature", [material.DomainMaterial.CHAMBER, material.DomainMaterial.FREE])
+    # plt.show()
     # analysis.AnalyzeMCSparse(coolmesh, 10, 1e-5, False)
 
 if __name__ == "__main__":

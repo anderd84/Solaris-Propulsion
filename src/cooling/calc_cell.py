@@ -180,34 +180,43 @@ def CalculateCoolantPrimaryWall(domain: domain_mmap.DomainMMAP, row: int, col: i
         num = sum([res.T / res.R for res in resistorSet])
         den = sum([1/res.R for res in resistorSet])
 
-        # Tnew = ((num + mdotChannels*cp*domain.temperature[prevFlow])/(den + mdotChannels*cp)).to(unitReg.degR)
-        # Tnew = ((num - .5*mdotChannels*cp*(domain.temperature[futureFlow] - domain.temperature[prevFlow])) / (den)).to(unitReg.degR)
-
-        num = sum([(res.T - domain.temperature[row,col]) / res.R for res in resistorSet])
-        Tin = domain.temperature[prevFlow]
-        Tnew = ((num + mdotChannels*cp*Tin) / (mdotChannels*cp)).to(unitReg.degR)
-
-        # Tout = domain.temperature[futureFlow]
-        # Tnew2 = ((-num + mdotChannels*cp*Tout) / (mdotChannels*cp)).to(unitReg.degR)
-        # Tnew = (Tnew + Tnew2) / 2
+        Tnew = 0
+        if 'mathmode' in solverSettings.keys():
+            match solverSettings["mathmode"]:
+            # 1 - last semester version
+                case 1:
+                    Tnew = ((num + mdotChannels*cp*domain.temperature[prevFlow])/(den + mdotChannels*cp)).to(unitReg.degR)
+            # 2 - gerrick version
+                case 2:
+                    Tnew = ((num - .5*mdotChannels*cp*(domain.temperature[futureFlow] - domain.temperature[prevFlow])) / (den)).to(unitReg.degR)
+            # 3 - guess for qdot in
+                case 3:
+                    num = sum([(res.T - domain.temperature[row,col]) / res.R for res in resistorSet])
+                    Tin = domain.temperature[prevFlow]
+                    Tnew = ((num + mdotChannels*cp*Tin) / (mdotChannels*cp)).to(unitReg.degR)
+            # 4 - guess for qdot in, average with future flow
+                case 4:
+                    num = sum([(res.T - domain.temperature[row,col]) / res.R for res in resistorSet])
+                    Tin = domain.temperature[prevFlow]
+                    Tnew = ((num + mdotChannels*cp*Tin) / (mdotChannels*cp)).to(unitReg.degR)
+                    Tout = domain.temperature[futureFlow]
+                    Tnew2 = ((-num + mdotChannels*cp*Tout) / (mdotChannels*cp)).to(unitReg.degR)
+                    Tnew = (Tnew + Tnew2) / 2
+        else:
+            num = sum([(res.T - domain.temperature[row,col]) / res.R for res in resistorSet])
+            Tin = domain.temperature[prevFlow]
+            Tnew = ((num + mdotChannels*cp*Tin) / (mdotChannels*cp)).to(unitReg.degR)       
         
-        # maxTempIn = max([res.T.m for res in resistorSet])
-        # if Tnew.m_as(unitReg.degR) > maxTempIn or Tnew.m_as(unitReg.degR) < 0:
-        #     print(f"Temp out of bounds: {Tnew}")
-        #     test = mdotChannels*cp*Tin
-        #     n = test + num
-        #     d = mdotChannels*cp
-        #     1
         wallCellUpdate.temperature = Tnew.to(domain.units["temperature"])
 
-        if wallCellUpdate.temperature.m > 1e4 or wallCellUpdate.temperature.m < 0:
-            print(domain.temperature[prevFlow])
-            print(domain.temperature[futureFlow])
-            print(mdotChannels*cp*(Tin))
-            print(f"Temp out of bounds: {wallCellUpdate.temperature}")
-            print(f"Row: {row}, Col: {col}")
-            print(f"material: {domain.material[row, col]}")
-            print(f"border: {domain.border[row, col]}")
+        # if wallCellUpdate.temperature.m > 1e4 or wallCellUpdate.temperature.m < 0:
+        #     print(domain.temperature[prevFlow])
+        #     print(domain.temperature[futureFlow])
+        #     print(mdotChannels*cp*(Tin))
+        #     print(f"Temp out of bounds: {wallCellUpdate.temperature}")
+        #     print(f"Row: {row}, Col: {col}")
+        #     print(f"material: {domain.material[row, col]}")
+        #     print(f"border: {domain.border[row, col]}")
 
 
     if solverSettings.get("pressure", True) and domain.material[row, col] not in MaterialType.STATIC_PRESS:
