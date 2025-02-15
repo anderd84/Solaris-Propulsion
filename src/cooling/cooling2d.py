@@ -192,7 +192,7 @@ def plug_convection_coefficient(P, v, x):
     k = k.to(unitReg.BTU / unitReg.foot / unitReg.hour / unitReg.degR)  # Thermal conductivity
     x = x.to(unitReg.feet)  # Arc length along plug
     rho = rho.to(unitReg.pound / unitReg.foot**3)   # Combustion gas density
-    L = (4*DESIGN.chokeArea/(2*np.pi*(DESIGN.R_E + DESIGN.R_T)) + x).to(unitReg.feet)
+    L = (4*DESIGN.chokeArea/(2*np.pi*(DESIGN.R_E + DESIGN.R_T)) + x).to(unitReg.feet)   # Throat hydraulic diameter + arc length
     Re_x = rho*v*L/mu   # Reynolds number
     C_f = 0.455/(np.log(0.06*Re_x))**2  # Friction coefficient
     h = k/L*C_f/2*Re_x*Pr/(1 + 12.7*(Pr**(2/3) - 1)*np.sqrt(C_f/2)) # Convection coefficient
