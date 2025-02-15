@@ -542,7 +542,7 @@ class DomainMC:
         toc = time.perf_counter()
         print(f"Time to assign chamber temps: {toc - tic}")
 
-    def AssignExternalTemps(self, gridField: np.ndarray[CharacteristicPoint], exhaust: Gas, Astar: pint.Quantity):
+    def AssignExternalTemps(self, gridField: np.ndarray[CharacteristicPoint], contour, exhaust: Gas, Astar: pint.Quantity):
         points = []
         values = []
         minc = (2e15, 2e15)
@@ -587,8 +587,35 @@ class DomainMC:
                 self.array[rowDomain, colDomain].velocity = mach * np.sqrt(exhaust.getVariableGamma(mach) * exhaust.Rgas * self.array[rowDomain, colDomain].temperature)
                 self.array[rowDomain, colDomain].area = gas.Isentropic1DExpansion(mach, exhaust.gammaTyp) * Astar
                 
+        #contour based stuff
+        distSum = 0
+        for i in alive_it(range(len(contour) - 1)):
+            dist = np.sqrt((contour[i].x - contour[i+1].x)**2 + (contour[i].r - contour[i+1].r)**2)
+            steps = max(int(dist/min(self.xstep, self.rstep) * 1.5), 5)
+            xc = np.linspace(contour[i].x, contour[i+1].x, steps)[:-1]
+            rc = np.linspace(contour[i].r, contour[i+1].r, steps)[:-1]
 
-        
+            for x, r in zip(xc, rc):                
+                if x < minc[0]:
+                    continue
+                if x > maxc[0]:
+                    continue
+                if r < minc[1]:
+                    continue
+                if r > maxc[1]:
+                    continue
+
+                distSumSegment = distSum + np.sqrt((x - contour[i].x)**2 + (r - contour[i].r)**2)
+
+                cell = self.CoordsToCell(point.x, point.r)
+                #find nearest chamber
+
+
+
+
+
+            distSum += dist
+            
         print("done")
         
     def AssignBorders(self, fluidID = -1):

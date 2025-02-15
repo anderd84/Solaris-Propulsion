@@ -33,10 +33,10 @@ def main():
     # plt.show()
 
     p = Q_(6.75, unitReg.psi)
-    rlines, llines, streams = analysis.CalculateComplexField(cont, p, exhaust, 1, Tt, Rt, Re.magnitude, 75, 0, 2)
+    rlines, llines, streams = analysis.CalculateComplexField(cont, p, exhaust, 1, Tt, Rt, Re.magnitude, 75, 5, 2)
     fieldGrid = analysis.GridifyComplexField(rlines, llines)
 
-    cooling2 = domain.DomainMC(-7.3, 4.1, 7.9, 3, .05)
+    cooling2 = domain.DomainMC(-7.3, 4.1, 13.5, 3.75, .05)
     cooling2.DefineMaterials(cowlC, chamberC, plugC, 10)
 
 
@@ -49,7 +49,9 @@ def main():
     plt.plot([startingpoint[0], aimpoint[0]], [startingpoint[1], aimpoint[1]], 'rx-')
 
     cooling2.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius, DESIGN.plugBaseRadius, DESIGN.chokeArea)
-    # cooling2.AssignExternalTemps(fieldGrid, exhaust, DESIGN.chokeArea)
+    cooling2.AssignExternalTemps(fieldGrid, cont, exhaust, DESIGN.chokeArea)
+    plt.plot([p.x for p in cont], [p.r for p in cont], '-b', linewidth=1)
+    plt.plot(cont[0].x, cont[0].r, 'ro')
     # cooling2.AssignCoolantFlow(domain.CoolingChannel(cowlCoolU, cowlCoolL), False, Q_(400, unitReg.psi))
     # cooling2.AssignCoolantFlow(domain.CoolingChannel(plugCoolU, plugCoolL), True, Q_(400, unitReg.psi))
 
@@ -59,10 +61,10 @@ def main():
     # cooling2.ShowMaterialPlot(fig, False)
 
     # cooling2.ShowMaterialPlot(fig)
-    cooling2.NodePlot(fig, "temperature")
+    cooling2.NodePlot(fig, "material")
 
-    fig2 = plots.CreateNonDimPlot()
-    analysis.PlotFieldData(fig2, fieldGrid, 1, 1)
+    # fig2 = plots.CreateNonDimPlot()
+    # analysis.PlotFieldData(fig, fieldGrid, 1, 1)
 
     plt.show()
 
