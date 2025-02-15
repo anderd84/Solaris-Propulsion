@@ -186,13 +186,16 @@ def internal_flow_convection(Node_Temp, Node_Pressure, channelArea, channelHydro
     return (Nu_D*k_c/D_h).to((unitReg.BTU / unitReg.foot**2 / unitReg.hour / unitReg.degR))      # Convective heat transfer coefficient
 
 def plug_convection_coefficient(P, v, x):
-    (_, mu, k, Pr) = Combustion.get_Exit_Transport(P, DESIGN.OFratio, pressure_stagnation/P, 0, 0)
-    (_, _, rho) = Combustion.get_Densities(P, DESIGN.OFratio, pressure_stagnation/P, 0, 0)
-    x = x.to(unitReg.feet)
+    (_, mu, k, Pr) = Combustion.get_Exit_Transport(P, DESIGN.OFratio, pressure_stagnation/P, 0, 0)  # Exit viscosity, thermal conductivity, Prandtl number
+    (_, _, rho) = Combustion.get_Densities(P, DESIGN.OFratio, pressure_stagnation/P, 0, 0)  # Exit density
+    mu = mu.to(unitReg.pound / unitReg.foot / unitReg.second)   # Viscosity
+    k = k.to(unitReg.BTU / unitReg.foot / unitReg.hour / unitReg.degR)  # Thermal conductivity
+    x = x.to(unitReg.feet)  # Arc length along plug
+    rho = rho.to(unitReg.pound / unitReg.foot**3)
     L = (4*DESIGN.chokeArea/(2*np.pi*(DESIGN.R_E + DESIGN.R_T)) + x).to(unitReg.feet)
-    Re_x = rho*v*L/mu
-    C_f = 0.455/(np.log(0.06*Re_x))**2
-    h = k/L*C_f/2*Re_x*Pr/(1 + 12.7*(Pr**(2/3) - 1)*np.sqrt(C_f/2))
+    Re_x = rho*v*L/mu   # Reynolds number
+    C_f = 0.455/(np.log(0.06*Re_x))**2  # Friction coefficient
+    h = k/L*C_f/2*Re_x*Pr/(1 + 12.7*(Pr**(2/3) - 1)*np.sqrt(C_f/2)) # Convection coefficient
     return h.to(unitReg.BTU / (unitReg.foot**2) / unitReg.hour / unitReg.degR)
 
 def free_convection(T_s, T_infinity, P_atm, D_outer):
