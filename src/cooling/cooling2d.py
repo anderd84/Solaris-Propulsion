@@ -8,6 +8,7 @@ from general.design import exhaustGas
 
 epsilon = DESIGN.epsilon
 fuelname = DESIGN.fuelName
+Combustion = DESIGN.Combustion
 pressure_stagnation = DESIGN.chamberPressure
 temperature_stagnation = DESIGN.chamberTemp
 specific_heat_stagnation = DESIGN.heat_capacity_chamber
@@ -114,9 +115,7 @@ def combustion_convection(Node_Temp, Velocity):
     A_star = DESIGN.chokeArea.to(unitReg.ft**2)  # Convert throat area to ft²
 
     #TODO make this section use the actual R_e and R_t
-    R_E = Q_(3.5, unitReg.inch).to(unitReg.ft)  # Convert to feet
-    R_T = Q_(3.0, unitReg.inch).to(unitReg.ft)  # Convert to feet
-    P_T = 2 * np.pi * (R_T + R_E)  # Perimeter in feet
+    P_T = 2 * np.pi * (design.R_T + design.R_E)  # Perimeter in feet
     D_star = (4 * A_star / P_T).to(unitReg.ft)  # Throat diameter as hydraulic diameter in feet
 
     # Calculate the nozzle area at the location of interest and convert to ft²
@@ -186,6 +185,16 @@ def internal_flow_convection(Node_Temp, Node_Pressure, channelArea, channelHydro
         Nu_D = 0.027*Re_D**0.8*Pr**(1/3)*(mu/mu_s)**0.14    # Use Sieder-Tate anyway
     return (Nu_D*k_c/D_h).to((unitReg.BTU / unitReg.foot**2 / unitReg.hour / unitReg.degR))      # Convective heat transfer coefficient
 
+def plug_convection_coefficient(P, v, x):
+    (_, mu, k, Pr) = Combustion.get_Exit_Transport(P, DESIGN.OFratio, pressure_stagnation/P, 0, 0)
+    (_, _, rho) = Combustion.get_Densities(P, DESIGN.OFratio, pressure_stagnation/P, 0, 0)
+    x = x.to(unitReg.feet)
+    L = (4*DESIGN.chokeArea/(2*np.pi*(DESIGN.R_E + DESIGN.R_T)) + x).to(unitReg.feet)
+    Re_x = rho*v*L/mu
+    C_f = 0.455/(np.log(0.06*Re_x))**2
+    h = k/L*C_f/2*Re_x*Pr/(1 + 12.7*(Pr**(2/3) - 1)*np.sqrt(C_f/2))
+    return h.to(unitReg.BTU / (unitReg.foot**2) / unitReg.hour / unitReg.degR)
+
 def free_convection(T_s, T_infinity, P_atm, D_outer):
     # Properties
     beta = 1/T_s.to(1 / unitReg.degR)
@@ -208,55 +217,34 @@ def free_convection(T_s, T_infinity, P_atm, D_outer):
         print("Raleigh number exceeds restriction")
     return Nu_D*k_f/D_outer
 
-def film_cooling(m_dot_g, m_dot_c, A_c, P, u_g, u_c, P_cc, c_p_g, mu_g, Pr_g, 
-                 rho_g, M_g, mu_c, c_c_l, h_fg, T_c_1, T_c_sat, rho_c_l, 
-                 M_c, sigma_g, h_g, D_c):
+def get_film_length(m_dot_c, A_c, P, u_g, u_c, rho_g, mu_c, c_c_l, h_fg,
+                    T_g, T_c_1, T_c_sat, rho_c_l, sigma_g, h_g, D_c):
     # Inputs
-    # m_dot_g   Combustion gas mass flow rate
-    # m_dot_c   Film coolant mass flow rate
-    # A_c       Chamber cross-sectional area
-    # P         Chamber wetted perimeter
-    # u_g       Combustion gas velocity
-    # u_c       Film coolant velocity
-    # P_cc      Chamber pressure
-    # c_p_g     Combustion gas specific heat at constant pressure
-    # mu_g      Combustion gas dynamic viscosity
-    # Pr_g      Combustion gas Prandtl number
-    # rho_g     Combustion gas density
-    # M_g       Combustion gas molecular weight
-    # mu_c      Film coolant dynamic viscosity
-    # c_c_l     Film coolant specific heat as liquid
-    # h_fg      Film coolant enthalpy of vaporization
-    # T_c_1     Film coolant initial temperature
-    # T_c_sat   Film coolant saturation temperature
-    # rho_c_l   Film coolant liquid density
-    # M_c       Film coolant molecular weight
-    # sigma_g   Combustion gas surface tension
-    # h_g       Combustion gas convection coefficient
-    # D_c       Film cooling channel diameter
+    m_dot_c = m_dot_c.to(unitReg.pound / unitReg.second)    # Combustion gas mass flow rate
+    A_c = A_c.to (unitReg.feet**2)  # Chamber cross-sectional area
+    P = P.to (unitReg.feet) # Chamber wetted perimeter
+    u_g = u_g.to(unitReg.feet / unitReg.second) # Combustion gas velocity
+    u_c = u_c.to(unitReg.feet / unitReg.second) # Film coolant velocity
+    rho_g = rho_g.to(unitReg.pound/ unitReg.foot**3)    # Combustion gas density
+    mu_c = mu_c.to(unitReg.pound / unitReg.foot / unitReg.second)   # Film coolant dynamic viscosity
+    c_c_l = c_c_l.to(unitReg.BTU / unitReg.pound / unitReg.degR)    # Film coolant specific heat as liquid
+    h_fg = h_fg.to(unitReg.BTU / unitReg.pound / unitReg.degR)  # Film coolant enthalpy of vaporization
+    T_g = T_g.to(unitReg.degR)  # Combustion gas temperature
+    T_c_1 = T_c_1.to(unitReg.degR)  # Film coolant initial temperature
+    T_c_sat = T_c_sat.to(unitReg.degR)  # Film coolant saturation temperature
+    rho_c_l = rho_c_l.to(unitReg.pound/ unitReg.foot**3)    # Film coolant liquid density
+    sigma_g = sigma_g.to(unitReg.pound / unitReg.foot)  # Combustion gas surface tension
+    h_g = h_g.to((unitReg.BTU / unitReg.foot**2 / unitReg.hour / unitReg.degR)) # Combustion gas convection coefficient
+    D_c = D_c.to(unitReg.foot)  # Film cooling channel diameter
+
     D_h = 4*A_c/P
-    G_g = rho_g*u_g # Combustion gas mass velocity
-    G_mean = G_g*(u_g - u_c)/u_g    # Mean mass velocity
-    Re_g = G_mean*D_h/mu_g # Combustion gas Reynolds number
-    lambda_func = lambda Lambda: 1.930*np.log10(Re_g*np.sqrt(Lambda)) - 0.537 - 1/np.sqrt(Lambda)
-    Lambda = fsolve(lambda_func, 0.1) # Friction factor
-    e_t = 0.1   # RMS turbulence fraction Must be found from testing data?
-    K_t = 1 + 4*e_t # Corrective turbulence factor
-    St = Lambda/2/(1.20 + 11.8*np.sqrt(Lambda/2)*(Pr_g - 1)*(Pr_g)**(-1/3))  # Stanton number
-    h_o = G_mean*c_p_g*St*K_t # Dry wall convection coefficient
     h_fg_star = h_fg + (T_c_sat - T_c_1)*c_c_l  # Heat of vaporization + enthalpy change from subcooled to saturated
     epsilon = 0 # Combustion gas emissivity Must take from Leckner's data for spectral radiative properties of combustion gases
     sigma = Q_(1.713441*10**-9, unitReg.BTU / unitReg.hour / unitReg.foot**2 / unitReg.degR**4)  # Stefan-Boltzmann constant
-    A_rad = np.pi*2*DESIGN.chamberInternalRadius   # Radiative area NEED TO FIND L SOMEHOW?
-    q_dot_rad = sigma*epsilon*(T_g**4 - T_c**4) # Radiative heat flux
-    Q_dot_rad = q_dot_rad*A_rad # Radiative heat rate 
-    q_dot_conv = h_g*(T_g-T_c)  # Convective heat flux
-    Q_dot_conv = q_dot_conv # Convective heat rate TO DO
+    q_dot_rad = sigma*epsilon*(T_g**4 - T_c_1**4) # Radiative heat flux, assuming negligible right now
+    q_dot_conv = h_g*(T_g - T_c_1)  # Convective heat flux
     q_dot_tot = q_dot_rad + q_dot_conv  # Total heat rate into coolant
-    m_dot_v = q_dot_tot/h_fg_star
-    F = m_dot_g/(rho_g*u_g) # Blowing ratio
-    St_o = St/(np.log(1 + F/St*(M_g/M_c)**0.6)/(F/St*(M_g/M_c)**0.6)) # Transpiration-corrected Stanton number
-    h = St_o*rho_c_l*u_c*c_c_l  # Convection coefficient
+    m_dot_v = q_dot_tot/h_fg_star   # Evaporated coolant per unit area
     Re_c = rho_c_l*u_c*D_c/mu_c # Film coolant Reynolds number
     a = 2.31*10**-4*Re_c**-0.35
     Re_cfilm = 250*np.log(Re_c) - 1265
@@ -265,27 +253,35 @@ def film_cooling(m_dot_g, m_dot_c, A_c, P, u_g, u_c, P_cc, c_p_g, mu_g, Pr_g,
     E = E_m*np.tanh(a*We**1.25)
     Gamma_c = m_dot_c*(1-E)/(np.pi*2*DESIGN.chamberInternalRadius)    # TO DO: Check that this is right
     L_c = Gamma_c/m_dot_v
-    # Q_dot_conv = h
-# coolMesh.mesh.z
-# Testing
-# """ temperature_R = 700 * unitReg.degR  # Temperature in Rankine (~80°F)
-# pressure_psi = 14.7 * unitReg.psi  # Pressure in psi (1 atmosphere)
-# properties = get_fluid_properties('n-Dodecane', temperature_R.magnitude, 
-#                                   pressure_psi.magnitude)
-# h_g = combustion_convection()
-# #fluids = CP.get_global_param_string('fluids_list')
+    return L_c
 
-# # Output the results
-# (viscosity, specific_heat_p, gamma, thermal_conductivity, density, prandtl, 
-#  quality, phase, alpha_SI, thermal_diffusivity) = properties
+def film_cooling(m_dot_g, A_c, P, u_g, u_c, mu_g, Pr_g, 
+                 rho_g, M_g, c_c_l, rho_c_l, M_c):
+    # Inputs
+    m_dot_g = m_dot_g.to(unitReg.pound / unitReg.second)    # Combustion gas mass flow rate
+    A_c = A_c.to (unitReg.feet**2)  # Chamber cross-sectional area
+    P = P.to (unitReg.feet) # Chamber wetted perimeter
+    u_g = u_g.to(unitReg.feet / unitReg.second) # Combustion gas velocity
+    u_c = u_c.to(unitReg.feet / unitReg.second) # Film coolant velocity
+    mu_g = mu_g.to(unitReg.pound / unitReg.foot / unitReg.second)   # Combustion gas dynamic viscosity
+    # Pr_g      Combustion gas Prandtl number
+    rho_g = rho_g.to(unitReg.pound/ unitReg.foot**3)    # Combustion gas density
+    M_g = M_g.to(unitReg.pound / unitReg.lbmol)    # Combustion gas molecular weight
+    c_c_l = c_c_l.to(unitReg.BTU / unitReg.pound / unitReg.degR)    # Film coolant specific heat as liquid
+    rho_c_l = rho_c_l.to(unitReg.pound/ unitReg.foot**3)    # Film coolant liquid density
+    M_c = M_c.to(unitReg.pound / unitReg.lbmol)    # Film coolant molecular weight
 
-# print(f"Viscosity: {viscosity:.6f}")
-# print(f"Specific Heat (Cp): {specific_heat_p:.6f}")
-# print(f"Gamma (Cp/Cv): {gamma:.6f}")
-# print(f"Thermal Conductivity: {thermal_conductivity:.6f}")
-# print(f"Density: {density:.6f}")
-# print(f"Prandtl Number: {prandtl:.6f}")
-# print(f"Quality: {quality:.6f}")
-# print(f"Phase: {phase:.6f}")
-# print(f"Coefficient of Thermal Expansion (1/K): {alpha_SI:.6f}")
-# print(f"Thermal Diffusivity: {thermal_diffusivity:.6f}") """
+    D_h = 4*A_c/P
+    G_g = rho_g*u_g # Combustion gas mass velocity
+    G_mean = G_g*(u_g - u_c)/u_g    # Mean mass velocity
+    Re_g = G_mean*D_h/mu_g # Combustion gas Reynolds number
+    lambda_func = lambda Lambda: 1.930*np.log10(Re_g*np.sqrt(Lambda)) - 0.537 - 1/np.sqrt(Lambda)
+    Lambda = fsolve(lambda_func, 0.1) # Friction factor
+    # e_t = 0.1   # RMS turbulence fraction Must be found from testing data?
+    # K_t = 1 + 4*e_t # Corrective turbulence factor
+    St = Lambda/2/(1.20 + 11.8*np.sqrt(Lambda/2)*(Pr_g - 1)*(Pr_g)**(-1/3))  # Stanton number
+    # h_o = G_mean*c_p_g*St*K_t # Dry wall convection coefficient, not used since we choose Bartz
+    F = m_dot_g/(rho_g*u_g) # Blowing ratio
+    St_o = St/(np.log(1 + F/St*(M_g/M_c)**0.6)/(F/St*(M_g/M_c)**0.6)) # Transpiration-corrected Stanton number
+    h = St_o*rho_c_l*u_c*c_c_l  # Convection coefficient
+    return h
