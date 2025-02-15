@@ -259,7 +259,8 @@ class CharacteristicPoint:
         return CharacteristicPoint(x, r, theta, machStar, s, machStar2mach(machStar, workingGas.gammaTyp), MachAngle(machStar2mach(machStar, workingGas.gammaTyp)))
 
 def CalculateComplexField(contour, Pamb: Q_, workingGas: Gas, Mt: float, Tt: float, Rt: Q_, scale = 1, Rsteps = 20, Lsteps = 0, reflections = 3, fig = None):
-    PbPc = DESIGN.basePressure/DESIGN.chamberPressure
+    # PbPc = DESIGN.basePressure/DESIGN.chamberPressure
+    PbPc = Q_(8, unitReg.psi)/DESIGN.chamberPressure
     PambPc = Pamb/DESIGN.chamberPressure
     gamma = workingGas.gammaTyp
     Rt = Rt.to(unitReg.inch).magnitude

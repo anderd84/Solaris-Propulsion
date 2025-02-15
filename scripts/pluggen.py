@@ -6,6 +6,7 @@ import pint
 from fluids import gas
 import general.design as DESIGN
 from general.units import Q_, unitReg
+from general import units
 from nozzle import plug
 from nozzle import plots
 from nozzle import analysis
@@ -32,6 +33,13 @@ ic(exhaust.Rgas.to(unitReg.joule/unitReg.kg/unitReg.kelvin))
 ic(DESIGN.totalmdot.to(unitReg.kg/unitReg.second))
 
 cont, field, outputData = plug.CreateRaoContour(exhaust, DESIGN.chamberPressure, DESIGN.designAmbientPressure, DESIGN.basePressure, Re, DESIGN.lengthMax)
+cont_ = cont[:]
+cont = []
+maxX = max([p.x for p in cont_])
+for p in cont_:
+    if p.x < maxX - 3:
+        cont.append(p)
+cont = np.array(cont)
 Rt = outputData["radiusThroat"]
 Tt = outputData["thetaThroat"]
 Re = outputData["radiusLip"]
@@ -83,8 +91,8 @@ ostream = streams[1]
 fig.axes[0].plot([p.x for p in ostream], [p.r for p in ostream], '--b', linewidth=1.5)
 fieldGrid = analysis.GridifyComplexField(rlines, llines)
 
-analysis.PlotFieldData(fig, fieldGrid, 20, 20)
-# analysis.PlotCharacteristicLines(fig, np.concatenate((rlines, llines), axis=0))
+# analysis.PlotFieldData(fig, fieldGrid, 20, 20)
+analysis.PlotCharacteristicLines(fig, np.concatenate((rlines, llines), axis=0))
 
 T = (analysis.CalculateThrust(exhaust, p, Tt, Rt, Re, istream, cont[-1].r).to(unitReg.pound_force))
 ic(T)
