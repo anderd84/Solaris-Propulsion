@@ -72,10 +72,15 @@ def ConvectionHalfResistor(domain: domain_mmap.DomainMMAP, sink: tuple[int, int]
     if domain.material[convectionCell] in MaterialType.COOLANT:
         convectionCoeff = cooling2d.internal_flow_convection((domain.temperature[convectionCell]).to(unitReg.degR),(domain.pressure[convectionCell]).to(unitReg.psi), domain.area[convectionCell], domain.hydraulicDiameter[convectionCell])
         area = CoolantConvectionArea(domain, convectionCell[0], convectionCell[1], isHoriz, sinkTop, sinkSide)
-    else:
+    elif domain.material[convectionCell] == DomainMaterial.CHAMBER:
         convectionCoeff = cooling2d.combustion_convection(domain.temperature[convectionCell].to(unitReg.degR), domain.velocity[convectionCell].to(unitReg.foot/unitReg.second))
         area = CombustionConvectionArea(domain, convectionCell[0], convectionCell[1], isHoriz, sinkTop, sinkSide)
-    
+    elif domain.material[convectionCell] == DomainMaterial.EXHAUST:
+        convectionCoeff = Q_(domain.flowHeight[convectionCell].m, unitReg.BTU / (unitReg.foot**2) / unitReg.hour / unitReg.degR)
+        area = CombustionConvectionArea(domain, convectionCell[0], convectionCell[1], isHoriz, sinkTop, sinkSide)
+    else:
+        raise ValueError("Material not recognized")
+        
     return 1 / (convectionCoeff * area)
 
 def CoolantConvectionArea(domain: domain_mmap.DomainMMAP, row: int, col: int, isHoriz: bool, sinkTop: bool, sinkSide: bool) -> pint.Quantity: #TODO update

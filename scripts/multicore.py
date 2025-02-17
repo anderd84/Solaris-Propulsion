@@ -20,6 +20,8 @@ def main():
     fig = plots.CreateNonDimPlot()
     # plots.PlotContour(fig, cont, Rt, Tt, Re)
     # plots.PlotField(fig, field, Re)
+
+    throatHyroD = 2*(Re - Rt)/np.cos(Tt)
     overchoke = plug.getOverchokeDist(Re, Rt, Tt, DESIGN.chokePercent)
 
     plugC, straightLength, plugCoolL, plugCoolU = plug.GenerateDimPlug(cont, Rt, Tt, Re, Q_(6.3, unitReg.inch), Q_(1.5, unitReg.inch))
@@ -49,7 +51,7 @@ def main():
     plt.plot([startingpoint[0], aimpoint[0]], [startingpoint[1], aimpoint[1]], 'rx-')
 
     cooling2.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius, DESIGN.plugBaseRadius, DESIGN.chokeArea)
-    cooling2.AssignExternalTemps(fieldGrid, cont, exhaust, DESIGN.chokeArea)
+    cooling2.AssignExternalTemps(fieldGrid, cont, exhaust, DESIGN.chokeArea, throatHyroD)
     plt.plot([p.x for p in cont], [p.r for p in cont], '-b', linewidth=1)
     plt.plot(cont[0].x, cont[0].r, 'ro')
     # cooling2.AssignCoolantFlow(domain.CoolingChannel(cowlCoolU, cowlCoolL), False, Q_(400, unitReg.psi))
@@ -61,7 +63,7 @@ def main():
     # cooling2.ShowMaterialPlot(fig, False)
 
     # cooling2.ShowMaterialPlot(fig)
-    cooling2.NodePlot(fig, "material")
+    cooling2.NodePlot(fig, "flowHeight")
 
     # fig2 = plots.CreateNonDimPlot()
     # analysis.PlotFieldData(fig, fieldGrid, 1, 1)

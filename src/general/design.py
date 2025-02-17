@@ -20,7 +20,7 @@ Fuel_Total = totalmdot /(1+percentFilmCooling + OFratio)
 Oxidizer_Total = totalmdot - Fuel_Total
 
 chamberInternalRadius = Q_(3.8, unitReg.inch)
-wallThickness = Q_(0.25, unitReg.inch)
+wallThickness = Q_(0.20, unitReg.inch)
 plugThickness = Q_(0.25, unitReg.inch)
 maxRadius = chamberInternalRadius + wallThickness
 plugBaseRadius = Q_(2, unitReg.inch)

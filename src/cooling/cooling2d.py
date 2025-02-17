@@ -13,6 +13,7 @@ temperature_stagnation = DESIGN.chamberTemp
 specific_heat_stagnation = DESIGN.heat_capacity_chamber
 viscosity_stagnation = DESIGN.viscosity_chamber 
 Prandtl_stagnation = DESIGN.Prandtl_chamber
+Combustion = DESIGN.Combustion
 cstar = DESIGN.c_star
 R_gas = DESIGN.R_throat #TODO gotta make this better so it's not constant R assumption
 gamma_throat = DESIGN.gamma #TODO gotta make this better so it's not constant R assumption
@@ -61,13 +62,28 @@ def PressureDropCoolant():
 def HeatCoolant():
     pass
 
+def plug_convection_coefficient(P, v, x):
+    """_summary_
 
+    Args:
+        P (_type_): pressure
+        v (_type_): free stream velocity
+        x (_type_): length
 
-
-
-
-
-
+    Returns:
+        _type_: _description_
+    """
+    (_, mu, k, Pr) = Combustion.get_Exit_Transport(P, DESIGN.OFratio, pressure_stagnation/P, 0, 0)  # Exit viscosity, thermal conductivity, Prandtl number
+    (_, _, rho) = Combustion.get_Densities(P, DESIGN.OFratio, pressure_stagnation/P, 0, 0)  # Exit density
+    mu = mu.to(unitReg.pound / unitReg.foot / unitReg.second)   # Viscosity
+    k = k.to(unitReg.BTU / unitReg.foot / unitReg.hour / unitReg.degR)  # Thermal conductivity
+    x = x.to(unitReg.feet)  # Arc length along plug
+    rho = rho.to(unitReg.pound / unitReg.foot**3)   # Combustion gas density
+    L = (4*DESIGN.chokeArea/(2*np.pi*(DESIGN.R_E + DESIGN.R_T)) + x).to(unitReg.feet)   # Throat hydraulic diameter + arc length
+    Re_x = rho*v*L/mu   # Reynolds number
+    C_f = 0.455/(np.log(0.06*Re_x))**2  # Friction coefficient
+    h = k/L*C_f/2*Re_x*Pr/(1 + 12.7*(Pr**(2/3) - 1)*np.sqrt(C_f/2)) # Convection coefficient
+    return h.to(unitReg.BTU / (unitReg.foot**2) / unitReg.hour / unitReg.degR)
 
 def conduction_inco718(temperature):
     temp = temperature.m_as(unitReg.degR)

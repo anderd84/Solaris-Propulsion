@@ -14,7 +14,7 @@ import joblib
 from alive_progress import alive_bar, alive_it
 
 from cooling.material import DomainMaterial, MaterialType, CoolantType
-from cooling import material
+from cooling import material, cooling2d
 from fluids import fluid, gas
 from fluids.gas import Gas
 from general.units import Q_, unitReg
@@ -542,7 +542,7 @@ class DomainMC:
         toc = time.perf_counter()
         print(f"Time to assign chamber temps: {toc - tic}")
 
-    def AssignExternalTemps(self, gridField: np.ndarray[CharacteristicPoint], contour, exhaust: Gas, Astar: pint.Quantity):
+    def AssignExternalTemps(self, gridField: np.ndarray[CharacteristicPoint], contour, exhaust: Gas, Astar: pint.Quantity, throatHydroD: pint.Quantity):
         points = []
         values = []
         minc = (2e15, 2e15)
@@ -582,8 +582,9 @@ class DomainMC:
                 mach = machs[i,j]
                 rowDomain = rows[i,j]
                 colDomain = cols[i,j]
-                self.array[rowDomain, colDomain].material = DomainMaterial.CHAMBER
+                self.array[rowDomain, colDomain].material = DomainMaterial.EXHAUST
                 self.array[rowDomain, colDomain].temperature = gas.StagTempRatio(mach, exhaust) * exhaust.stagTemp
+                self.array[rowDomain, colDomain].pressure = gas.StagPressRatio(mach, exhaust) * exhaust.stagPress
                 self.array[rowDomain, colDomain].velocity = mach * np.sqrt(exhaust.getVariableGamma(mach) * exhaust.Rgas * self.array[rowDomain, colDomain].temperature)
                 self.array[rowDomain, colDomain].area = gas.Isentropic1DExpansion(mach, exhaust.gammaTyp) * Astar
                 
@@ -607,12 +608,27 @@ class DomainMC:
 
                 distSumSegment = distSum + np.sqrt((x - contour[i].x)**2 + (r - contour[i].r)**2)
 
-                cell = self.CoordsToCell(point.x, point.r)
+                cell = self.CoordsToCell(x, r)
                 #find nearest chamber
+                offsets = [(-1, 0), (0, 1), (1, 0), (0, -1), (-1, -1), (-1, 1), (1, -1), (1, 1), (0,0)]
+                minDist = 1e15
+                nearestChamber = (-1,-1)
+                for o in offsets:
+                    if cell[0] + o[0] < 0 or cell[0] + o[0] >= self.vpoints:
+                        continue
+                    if cell[1] + o[1] < 0 or cell[1] + o[1] >= self.hpoints:
+                        continue
+                    if self.array[cell[0] + o[0], cell[1] + o[1]].material == DomainMaterial.EXHAUST and self.array[cell[0] + o[0], cell[1] + o[1]].flowHeight <= 0:
+                        d = np.sqrt((self.array[cell[0] + o[0], cell[1] + o[1]].x - x)**2 + (self.array[cell[0] + o[0], cell[1] + o[1]].r - r)**2)
+                        if d < minDist:
+                            minDist = d
+                            nearestChamber = (cell[0] + o[0], cell[1] + o[1])
+                
+                if nearestChamber == (-1,-1):
+                    continue
 
-
-
-
+                self.array[nearestChamber].hydraulicDiameter = distSumSegment + throatHydroD.m_as("in")
+                self.array[nearestChamber].flowHeight = cooling2d.plug_convection_coefficient(self.array[nearestChamber].pressure, self.array[nearestChamber].velocity, distSumSegment + throatHydroD.m_as("in"))
 
             distSum += dist
             
