@@ -186,6 +186,9 @@ def internal_flow_convection(Node_Temp, Node_Pressure, channelArea, channelHydro
     return (Nu_D*k_c/D_h).to((unitReg.BTU / unitReg.foot**2 / unitReg.hour / unitReg.degR))      # Convective heat transfer coefficient
 
 def plug_convection_coefficient(P, v, x):
+    P = P.to(unitReg.psi)   # Local exhaust gas pressure
+    v = v.to(unitReg.feet / unitReg.second) # Local exhaust gas velocity
+    x = x.to(unitReg.feet)  # Arc length along plug from throat
     (_, mu, k, Pr) = Combustion.get_Exit_Transport(P, DESIGN.OFratio, pressure_stagnation/P, 0, 0)  # Exit viscosity, thermal conductivity, Prandtl number
     (_, _, rho) = Combustion.get_Densities(P, DESIGN.OFratio, pressure_stagnation/P, 0, 0)  # Exit density
     mu = mu.to(unitReg.pound / unitReg.foot / unitReg.second)   # Viscosity
@@ -196,6 +199,10 @@ def plug_convection_coefficient(P, v, x):
     Re_x = rho*v*L/mu   # Reynolds number
     C_f = 0.455/(np.log(0.06*Re_x))**2  # Friction coefficient
     h = k/L*C_f/2*Re_x*Pr/(1 + 12.7*(Pr**(2/3) - 1)*np.sqrt(C_f/2)) # Convection coefficient
+    # T_ref = 
+    # rho_ref = 
+    # mu_ref = 
+    # h = 0.023*(rho_ref/rho)**0.8*(mu_ref/mu)**0.2*Re_x**(-0.2)/Pr**0.6/(Re_x*Pr)  # Stanton-Reynolds number relation for turbulent flow
     return h.to(unitReg.BTU / (unitReg.foot**2) / unitReg.hour / unitReg.degR)
 
 def free_convection(T_s, T_infinity, P_atm, D_outer):
