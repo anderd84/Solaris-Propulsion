@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.optimize import fsolve
+import icecream as ic
 
 from fluids.fluid import get_fluid_properties
 from general.units import Q_, unitReg
@@ -62,7 +63,7 @@ def PressureDropCoolant():
 def HeatCoolant():
     pass
 
-def plug_convection_coefficient(P, v, x):
+def plug_convection_coefficient(P, v, T, A, x):
     """_summary_
 
     Args:
@@ -73,17 +74,29 @@ def plug_convection_coefficient(P, v, x):
     Returns:
         _type_: _description_
     """
-    (_, mu, k, Pr) = Combustion.get_Exit_Transport(P, DESIGN.OFratio, pressure_stagnation/P, 0, 0)  # Exit viscosity, thermal conductivity, Prandtl number
-    (_, _, rho) = Combustion.get_Densities(P, DESIGN.OFratio, pressure_stagnation/P, 0, 0)  # Exit density
-    mu = mu.to(unitReg.pound / unitReg.foot / unitReg.second)   # Viscosity
-    k = k.to(unitReg.BTU / unitReg.foot / unitReg.hour / unitReg.degR)  # Thermal conductivity
+    P = P.to(unitReg.psi)   # Local exhaust gas pressure
+    v = v.to(unitReg.feet / unitReg.second) # Local exhaust gas velocity
+    T = T.to(unitReg.degR)  # Local exhaust gas temperature
+    A = A.to(unitReg.feet**2)   # Local effective nozzle area
+    x = x.to(unitReg.feet)  # Arc length along plug from throat
+    (_, mu, k, Pr) = Combustion.get_Exit_Transport(P.magnitude, DESIGN.OFratio, A/A_star, 0, 0)  # Exit viscosity, thermal conductivity, Prandtl number
+    (_, _, rho) = Combustion.get_Densities(P.magnitude, DESIGN.OFratio, A/A_star, 0, 0)  # Exit density
+    mu = Q_(mu, unitReg.millipoise).to(unitReg.pound / unitReg.foot / unitReg.second)   # Viscosity
+    k = Q_(k, unitReg.millicalorie / unitReg.centimeter / unitReg.degK / unitReg.second)  # Thermal conductivity
+    k = k.to(unitReg.BTU / unitReg.hour / unitReg.foot / unitReg.degR)
     x = x.to(unitReg.feet)  # Arc length along plug
-    rho = rho.to(unitReg.pound / unitReg.foot**3)   # Combustion gas density
+    rho = (P/(DESIGN.R_throat*T)).to(unitReg.pound / unitReg.foot**3)
     L = (4*DESIGN.chokeArea/(2*np.pi*(DESIGN.R_E + DESIGN.R_T)) + x).to(unitReg.feet)   # Throat hydraulic diameter + arc length
     Re_x = rho*v*L/mu   # Reynolds number
+    Re_x = Re_x.to(unitReg.dimensionless)
     C_f = 0.455/(np.log(0.06*Re_x))**2  # Friction coefficient
     h = k/L*C_f/2*Re_x*Pr/(1 + 12.7*(Pr**(2/3) - 1)*np.sqrt(C_f/2)) # Convection coefficient
-    return h.to(unitReg.BTU / (unitReg.foot**2) / unitReg.hour / unitReg.degR)
+    # T_ref = 
+    # rho_ref = 
+    # mu_ref = 
+    # h = 0.023*(rho_ref/rho)**0.8*(mu_ref/mu)**0.2*Re_x**(-0.2)/Pr**0.6/(Re_x*Pr)  # Stanton-Reynolds number relation for turbulent flow
+    h = h.to(unitReg.BTU / (unitReg.foot**2) / unitReg.hour / unitReg.degR)
+    return h
 
 def conduction_inco718(temperature):
     temp = temperature.m_as(unitReg.degR)
@@ -95,7 +108,7 @@ def conduction_inco718(temperature):
 
 def conduction_rp1(Temp):
     Temp = Q_(Temp.magnitude, unitReg.degR)
-    (_, _, _, thermal_conductivity, _,_, _, _, _) =get_fluid_properties(fuelname, Temp.to(unitReg.degR), pressure_stagnation.to(unitReg.psi))
+    (_, _, _, thermal_conductivity, _,_, _, _, _) = get_fluid_properties(fuelname, Temp.to(unitReg.degR), pressure_stagnation.to(unitReg.psi))
     return thermal_conductivity
 
 
@@ -209,6 +222,8 @@ def internal_flow_convection(Node_Temp, Node_Pressure, channelArea, channelHydro
         Nu_D = 0.027*Re_D**0.8*Pr**(1/3)*(mu/mu_s)**0.14    # Use Sieder-Tate anyway
     return (Nu_D*k_c/D_h).to((unitReg.BTU / unitReg.foot**2 / unitReg.hour / unitReg.degR))      # Convective heat transfer coefficient
 
+
+
 def free_convection(T_s, T_infinity, P_atm, D_outer):
     # Properties
     beta = 1/T_s.to(1 / unitReg.degR)
@@ -291,6 +306,9 @@ def film_cooling(m_dot_g, m_dot_c, A_c, P, u_g, u_c, P_cc, c_p_g, mu_g, Pr_g,
     # Q_dot_conv = h
 # coolMesh.mesh.z
 # Testing
+# (_, mu, k, Pr) = Combustion.get_Exit_Transport(100, 3, 3, 0, 0)
+# h = plug_convection_coefficient(Q_(6.759, unitReg.psi), Q_(3500, unitReg.feet/unitReg.second), Q_(4100, unitReg.degR), 7*DESIGN.chokeArea, Q_(0, unitReg.feet))
+# print(f"h: {h:.3f}")
 # """ temperature_R = 700 * unitReg.degR  # Temperature in Rankine (~80°F)
 # pressure_psi = 14.7 * unitReg.psi  # Pressure in psi (1 atmosphere)
 # properties = get_fluid_properties('n-Dodecane', temperature_R.magnitude, 

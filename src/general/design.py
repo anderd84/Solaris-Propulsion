@@ -5,14 +5,14 @@ from fluids.gas import Gas
 from general.units import Q_, unitReg
 from general.units import R_UNIVERSAL
 
-# eninge inputs
+# Engine inputs
 
-# props
+# Props
 oxName = "LOX"
 fuelName = "RP-1"
 OFratio = 2
 
-# geometry
+# Geometry
 chamberPressure = Q_(300, unitReg.psi)
 percentFilmCooling = 0.15 #Outer Film Cooling Percentage
 totalmdot = Q_(7.5, unitReg.pound / unitReg.sec)
@@ -25,6 +25,8 @@ plugThickness = Q_(0.25, unitReg.inch)
 maxRadius = chamberInternalRadius + wallThickness
 plugBaseRadius = Q_(2, unitReg.inch)
 chamberatInjectorRadius = Q_(6.25/2, unitReg.inch)
+R_E = Q_(3.5, unitReg.feet)
+R_T = Q_(3.0, unitReg.feet)
 
 # injector inputs
 Spacing = Q_(0.75, unitReg.inch)  #Spacing between centear of impingement Holes
