@@ -42,11 +42,14 @@ def main():
     # plt.show()
     # coolmesh.ShowCellPlot(fig)
     # print("speedrun to max diff 5%")
-    for i in [1,2,3,4]:
-        mmapmesh = domain_mmap.DomainMMAP(coolmesh)
-        tstart = time.time()
-        analysis.AnalyzeMC(mmapmesh, 6, 1e-5, False, 5, i) # why wont you workkkkk 😭
-        print(f"Time: {time.time() - tstart}")
+    for i in [3,4]:
+        try:
+            mmapmesh = domain_mmap.DomainMMAP(coolmesh)
+            tstart = time.time()
+            analysis.AnalyzeMC(mmapmesh, 6, 1e-5, False, 5, i) # why wont you workkkkk 😭
+            print(f"Time: {time.time() - tstart}")
+        except:
+            print(f"Failed on {i}")
 
     # mmapmesh.NodePlot(fig, "temperature", [material.DomainMaterial.CHAMBER, material.DomainMaterial.FREE])
     # plt.show()
