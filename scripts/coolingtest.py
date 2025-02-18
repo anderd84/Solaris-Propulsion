@@ -42,7 +42,7 @@ def main():
     # plt.show()
     # coolmesh.ShowCellPlot(fig)
     # print("speedrun to max diff 5%")
-    for i in [3,4]:
+    for i in [3]:
         try:
             mmapmesh = domain_mmap.DomainMMAP(coolmesh)
             tstart = time.time()
