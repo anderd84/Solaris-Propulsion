@@ -69,7 +69,9 @@ def plug_convection_coefficient(P, v, T, A, x):
     Args:
         P (_type_): pressure
         v (_type_): free stream velocity
-        x (_type_): length
+        T (_type_): Temperature
+        A (_type_): Area
+        x (_type_): Arc length along plug from throat
 
     Returns:
         _type_: _description_
@@ -86,7 +88,8 @@ def plug_convection_coefficient(P, v, T, A, x):
     k = k.to(unitReg.BTU / unitReg.hour / unitReg.foot / unitReg.degR)
     x = x.to(unitReg.feet)  # Arc length along plug
     rho = (P/(DESIGN.R_throat*T)).to(unitReg.pound / unitReg.foot**3)
-    L = (4*DESIGN.chokeArea/(2*np.pi*(DESIGN.R_E + DESIGN.R_T)) + x).to(unitReg.feet)   # Throat hydraulic diameter + arc length
+    # L = (4*DESIGN.chokeArea/(2*np.pi*(DESIGN.R_E + DESIGN.R_T)) + x).to(unitReg.feet)   # Throat hydraulic diameter + arc length
+    L = x.to(unitReg.feet)
     Re_x = rho*v*L/mu   # Reynolds number
     Re_x = Re_x.to(unitReg.dimensionless)
     C_f = 0.455/(np.log(0.06*Re_x))**2  # Friction coefficient
