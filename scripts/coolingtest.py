@@ -45,7 +45,7 @@ def main():
     for i in [1,2,3,4]:
         mmapmesh = domain_mmap.DomainMMAP(coolmesh)
         tstart = time.time()
-        analysis.AnalyzeMC(mmapmesh, 10, 1e-5, False, 5, i) # why wont you workkkkk 😭
+        analysis.AnalyzeMC(mmapmesh, 6, 1e-5, False, 5, i) # why wont you workkkkk 😭
         print(f"Time: {time.time() - tstart}")
 
     # mmapmesh.NodePlot(fig, "temperature", [material.DomainMaterial.CHAMBER, material.DomainMaterial.FREE])

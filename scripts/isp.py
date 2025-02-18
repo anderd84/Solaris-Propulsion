@@ -79,6 +79,7 @@ def main():
     plt.xlabel("Altitude (ft)")
     plt.ylabel("ISP (s)")
     plt.legend(["Aerospike", "Janus 4.2"])
+    ic(np.mean(ispSpike), np.mean(ispJanus))
     plt.show()
 
 
