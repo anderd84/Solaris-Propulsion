@@ -2,6 +2,7 @@ import datetime
 import tkinter as tk
 from tkinter import ttk
 import os
+from datetime import datetime
 import yaml
 import git
 from glob import glob
@@ -25,9 +26,16 @@ def main():
     frame = ttk.Frame(win)
     frame.pack()
 
-    label = ttk.Label(frame, text="ECO Form").pack()
-    ttk.Label(frame, text="Name").pack()
-    nameTextBox = ttk.Entry(frame).pack()
+    ttk.Label(frame, text="ECO Form").grid(row=0, column=0, columnspan=2)
+    ttk.Label(frame, text="Name").grid(row=1, column=0)
+    nameTextBox = ttk.Entry(frame)
+    nameTextBox.grid(row=1, column=1)
+    ttk.Label(frame, text="Date").grid(row=2, column=0)
+    dateTextBox = ttk.Entry(frame)
+    dateTextBox.grid(row=2, column=1)
+    dateTextBox.insert(0, datetime.now().strftime("%m/%d/%Y"))
+
+    
 
     
 
