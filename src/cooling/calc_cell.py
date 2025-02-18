@@ -208,10 +208,16 @@ def CalculateCoolantPrimaryWall(domain: domain_mmap.DomainMMAP, row: int, col: i
                     Tnew2 = ((-num + mdotChannels*cp*Tout) / (mdotChannels*cp)).to(unitReg.degR)
                     Tnew = (Tnew + Tnew2) / 2
         else:
-            num = sum([(res.T - domain.temperature[row,col]) / res.R for res in resistorSet])
+            Tnew = ((num + mdotChannels*cp*domain.temperature[prevFlow])/(den + mdotChannels*cp)).to(unitReg.degR)
+            print(f"1: {Tnew}")
+            q = sum([(res.T - domain.temperature[row,col]) / res.R for res in resistorSet])
             Tin = domain.temperature[prevFlow]
-            Tnew = ((num + mdotChannels*cp*Tin) / (mdotChannels*cp)).to(unitReg.degR)
-            print("default")    
+            Tnew = ((q + mdotChannels*cp*Tin) / (mdotChannels*cp)).to(unitReg.degR)
+            # print("default")
+            print(f"3: {Tnew}")
+            
+
+
         
         wallCellUpdate.temperature = Tnew.to(domain.units["temperature"])
 

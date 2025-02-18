@@ -32,7 +32,7 @@ def main():
 
     # to run the saved one use this line:
     # coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("coolmesh")
-    coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("highmesh2")
+    coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save3")
 
     # print(coolmesh.coolingLoops)
 
@@ -42,7 +42,7 @@ def main():
     # plt.show()
     # coolmesh.ShowCellPlot(fig)
     # print("speedrun to max diff 5%")
-    for i in [3]:
+    for i in [1,3,4]:
         try:
             mmapmesh = domain_mmap.DomainMMAP(coolmesh)
             tstart = time.time()
