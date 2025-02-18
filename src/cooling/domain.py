@@ -628,7 +628,11 @@ class DomainMC:
                     continue
 
                 self.array[nearestChamber].hydraulicDiameter = distSumSegment + throatHydroD.m_as("in")
-                self.array[nearestChamber].flowHeight = cooling2d.plug_convection_coefficient(self.array[nearestChamber].pressure, self.array[nearestChamber].velocity, distSumSegment + throatHydroD.m_as("in"))
+                press = self.array[nearestChamber].pressure
+                vel = self.array[nearestChamber].velocity
+                temp = self.array[nearestChamber].temperature
+                area = self.array[nearestChamber].area
+                self.array[nearestChamber].flowHeight = cooling2d.plug_convection_coefficient(press, vel, temp, area, Q_(distSumSegment, unitReg.inch) + throatHydroD)
 
             distSum += dist
             
