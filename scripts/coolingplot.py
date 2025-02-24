@@ -57,7 +57,7 @@ for i in range(mesh.vpoints):
 
 # print(shitOnes)
 
-mesh.NodePlot(fig2, "temperature", [DomainMaterial.CHAMBER, DomainMaterial.FREE])
+mesh.NodePlot(fig2, "temperature", [DomainMaterial.CHAMBER, DomainMaterial.FREE, DomainMaterial.PLUG, DomainMaterial.COWL])
 # mesh.RelationPlot(fig2)
 # mesh.RelationPlot(fig2)
 
