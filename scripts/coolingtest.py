@@ -31,8 +31,8 @@ def main():
     # fig.axes[0].plot([p.x for p in plugCoolU], [p.r for p in plugCoolU], '-k', linewidth=1)
 
     # to run the saved one use this line:
-    # coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("coolmesh")
-    coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("highmesh2")
+    coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("coolmesh")
+    # coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("highmesh2")
 
     # print(coolmesh.coolingLoops)
 
@@ -42,14 +42,14 @@ def main():
     # plt.show()
     # coolmesh.ShowCellPlot(fig)
     # print("speedrun to max diff 5%")
-    for i in [1,3,4]:
-        try:
-            mmapmesh = domain_mmap.DomainMMAP(coolmesh)
-            tstart = time.time()
-            analysis.AnalyzeMC(mmapmesh, 6, 1e-5, False, 5, i) # why wont you workkkkk 😭
-            print(f"Time: {time.time() - tstart}")
-        except:
-            print(f"Failed on {i}")
+    # for i in [3]:
+    #     try:
+    mmapmesh = domain_mmap.DomainMMAP(coolmesh)
+    tstart = time.time()
+    analysis.AnalyzeMC(mmapmesh, 10, 1e-5, False, 1) # why wont you workkkkk 😭
+    print(f"Time: {time.time() - tstart}")
+        # except:
+            # print(f"Failed on {i}")
 
     # mmapmesh.NodePlot(fig, "temperature", [material.DomainMaterial.CHAMBER, material.DomainMaterial.FREE])
     # plt.show()

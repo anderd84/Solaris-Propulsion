@@ -543,6 +543,7 @@ class DomainMC:
         print(f"Time to assign chamber temps: {toc - tic}")
 
     def AssignExternalTemps(self, gridField: np.ndarray[CharacteristicPoint], contour, exhaust: Gas, Astar: pint.Quantity, throatHydroD: pint.Quantity):
+        print("assigning external temps")
         points = []
         values = []
         minc = (2e15, 2e15)
@@ -573,24 +574,26 @@ class DomainMC:
         x = np.array([[p.x for p in row] for row in self.array[rows, cols]])
         r = np.array([[p.r for p in row] for row in self.array[rows, cols]])
 
+        print("interpolating")
         machs = griddata(points, values, (x,r))
 
-        for i in range(np.size(machs, 0)):
-            for j in range(np.size(machs, 1)):
-                if np.isnan(machs[i,j]):
-                    continue
-                mach = machs[i,j]
-                rowDomain = rows[i,j]
-                colDomain = cols[i,j]
-                self.array[rowDomain, colDomain].material = DomainMaterial.EXHAUST
-                self.array[rowDomain, colDomain].temperature = gas.StagTempRatio(mach, exhaust) * exhaust.stagTemp
-                self.array[rowDomain, colDomain].pressure = gas.StagPressRatio(mach, exhaust) * exhaust.stagPress
-                self.array[rowDomain, colDomain].velocity = mach * np.sqrt(exhaust.getVariableGamma(mach) * exhaust.Rgas * self.array[rowDomain, colDomain].temperature)
-                self.array[rowDomain, colDomain].area = gas.Isentropic1DExpansion(mach, exhaust.gammaTyp) * Astar
-                
+        with alive_bar(np.size(machs, 0) * np.size(machs, 1), title="Assigning flow state") as bar:
+            for i in range(np.size(machs, 0)):
+                for j in range(np.size(machs, 1)):
+                    if np.isnan(machs[i,j]):
+                        continue
+                    mach = machs[i,j]
+                    rowDomain = rows[i,j]
+                    colDomain = cols[i,j]
+                    self.array[rowDomain, colDomain].material = DomainMaterial.EXHAUST
+                    self.array[rowDomain, colDomain].temperature = gas.StagTempRatio(mach, exhaust) * exhaust.stagTemp.to(unitReg.degR)
+                    self.array[rowDomain, colDomain].pressure = gas.StagPressRatio(mach, exhaust) * exhaust.stagPress.to(unitReg.psi)
+                    self.array[rowDomain, colDomain].velocity = (mach * np.sqrt(exhaust.getVariableGamma(mach) * exhaust.Rgas * self.array[rowDomain, colDomain].temperature)).to(unitReg.ft/unitReg.sec)
+                    self.array[rowDomain, colDomain].area = gas.Isentropic1DExpansion(mach, exhaust.gammaTyp) * Astar.to(unitReg.inch**2)
+                    bar()
         #contour based stuff
         distSum = 0
-        for i in alive_it(range(len(contour) - 1)):
+        for i in alive_it(range(len(contour) - 1), title="Assigning convection"):
             dist = np.sqrt((contour[i].x - contour[i+1].x)**2 + (contour[i].r - contour[i+1].r)**2)
             steps = max(int(dist/min(self.xstep, self.rstep) * 1.5), 5)
             xc = np.linspace(contour[i].x, contour[i+1].x, steps)[:-1]
@@ -627,12 +630,13 @@ class DomainMC:
                 if nearestChamber == (-1,-1):
                     continue
 
-                self.array[nearestChamber].hydraulicDiameter = distSumSegment + throatHydroD.m_as("in")
+                self.array[nearestChamber].hydraulicDiameter = Q_(distSumSegment, unitReg.inch) + throatHydroD
                 press = self.array[nearestChamber].pressure
                 vel = self.array[nearestChamber].velocity
                 temp = self.array[nearestChamber].temperature
                 area = self.array[nearestChamber].area
                 self.array[nearestChamber].flowHeight = cooling2d.plug_convection_coefficient(press, vel, temp, area, Q_(distSumSegment, unitReg.inch) + throatHydroD)
+                self.array[nearestChamber].flowHeight = Q_(self.array[nearestChamber].flowHeight.m_as(unitReg.BTU / (unitReg.foot**2) / unitReg.hour / unitReg.degR), "in")
 
             distSum += dist
             

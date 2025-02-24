@@ -76,7 +76,7 @@ def ConvectionHalfResistor(domain: domain_mmap.DomainMMAP, sink: tuple[int, int]
         convectionCoeff = cooling2d.combustion_convection(domain.temperature[convectionCell].to(unitReg.degR), domain.velocity[convectionCell].to(unitReg.foot/unitReg.second))
         area = CombustionConvectionArea(domain, convectionCell[0], convectionCell[1], isHoriz, sinkTop, sinkSide)
     elif domain.material[convectionCell] == DomainMaterial.EXHAUST:
-        convectionCoeff = Q_(domain.flowHeight[convectionCell].m, unitReg.BTU / (unitReg.foot**2) / unitReg.hour / unitReg.degR)
+        convectionCoeff = Q_(domain.flowHeight[convectionCell].m_as(unitReg.inch), unitReg.BTU / (unitReg.foot**2) / unitReg.hour / unitReg.degR)
         area = CombustionConvectionArea(domain, convectionCell[0], convectionCell[1], isHoriz, sinkTop, sinkSide)
     else:
         raise ValueError("Material not recognized")

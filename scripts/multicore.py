@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from cooling import domain
+from cooling import domain, material
 import general.design as DESIGN
 from general.units import Q_, unitReg
 from nozzle import plug
@@ -63,7 +63,7 @@ def main():
     # cooling2.ShowMaterialPlot(fig, False)
 
     # cooling2.ShowMaterialPlot(fig)
-    cooling2.NodePlot(fig, "flowHeight")
+    cooling2.NodePlot(fig, "velocity", [material.DomainMaterial.FREE])
 
     # fig2 = plots.CreateNonDimPlot()
     # analysis.PlotFieldData(fig, fieldGrid, 1, 1)

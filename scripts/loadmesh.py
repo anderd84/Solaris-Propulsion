@@ -20,6 +20,7 @@ Rt = outputData["radiusThroat"]
 Tt = outputData["thetaThroat"]
 Re = outputData["radiusLip"]
 
+throatHyroD = 2*(Re - Rt)/np.cos(Tt)
 # fig = plots.CreateNonDimPlot()
 # plots.PlotContour(fig, cont, Rt, Tt, Re)
 # plots.PlotField(fig, field, Re)
@@ -47,15 +48,15 @@ startingpoint = (-6.75, 2.6) # TODO use real point
 
 # highmesh = domain.DomainMC.LoadFile("highmesh")
 
-highmesh = domain.DomainMC(-7.3, 4.1, 7.9, 3, .01)
-# p = Q_(6.75, unitReg.psi)
-# rlines, llines, streams = analysis.CalculateComplexField(cont, p, exhaust, 1, Tt, Rt, Re.magnitude, 75, 0, 2)
-# fieldGrid = analysis.GridifyComplexField(rlines, llines)
+highmesh = domain.DomainMC(-7.3, 4.1, 13.5, 3.75, .01)
+p = Q_(6.75, unitReg.psi)
+rlines, llines, streams = analysis.CalculateComplexField(cont, p, exhaust, 1, Tt, Rt, Re.magnitude, 75, 5, 2)
+fieldGrid = analysis.GridifyComplexField(rlines, llines)
 # analysis.PlotFieldData(fig, fieldGrid, 1, 1)
 
 highmesh.DefineMaterials(cowlC, chamberC, plugC, 10)
 highmesh.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius, DESIGN.plugBaseRadius, DESIGN.chokeArea)
-# # highmesh.AssignExternalTemps(fieldGrid, exhaust, DESIGN.chokeArea)
+highmesh.AssignExternalTemps(fieldGrid, cont, exhaust, DESIGN.chokeArea, throatHyroD)
 
 coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save")
 highmesh.ApplyStateMap(coolmesh, {"temperature", "pressure"})
@@ -63,9 +64,9 @@ highmesh.ApplyStateMap(coolmesh, {"temperature", "pressure"})
 highmesh.DumpFile("highmesh")
 fig2 = plots.CreateNonDimPlot()
 
-outerloop = highmesh.NewCoolantLoop(Q_(.025, 'inch'), 90, DESIGN.Fuel_Total, CoolantType.RP1)
+outerloop = highmesh.NewCoolantLoop(Q_(.03, 'inch'), 120, DESIGN.Fuel_Total, CoolantType.RP1)
 highmesh.AssignCoolantFlow(domain.CoolingChannel(cowlCoolU, cowlCoolL), False, Q_(360, unitReg.psi), outerloop)
-innerloop = highmesh.NewCoolantLoop(Q_(.025, 'inch'), 60, Q_(2, unitReg.pound/unitReg.sec), CoolantType.RP1)
+innerloop = highmesh.NewCoolantLoop(Q_(.03, 'inch'), 90, Q_(2, unitReg.pound/unitReg.sec), CoolantType.RP1)
 highmesh.AssignCoolantFlow(domain.CoolingChannel(plugCoolU, plugCoolL), True, Q_(100, unitReg.psi), innerloop)
 
 # print(highmesh.array[0,0])

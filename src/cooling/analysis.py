@@ -186,16 +186,16 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
                 convergePlot.canvas.draw()
                 convergePlot.canvas.flush_events()
 
-            if i % 50 == 0:
+            if i % 10 == 0:
                 print("saving progress")
                 mesh = domain.toDomain()
                 mesh.DumpFile("save")
         
-            # if maxT > 1000:
-            #     print("max temp too high, stopping")
-            #     mesh = domain.toDomain()
-            #     mesh.DumpFile("save")
-            #     break
+            if maxT > 1000:
+                print("max temp too high, stopping")
+                mesh = domain.toDomain()
+                mesh.DumpFile("save")
+                break
 
             if i == 500:
                 break
@@ -218,9 +218,9 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
     #     mv.view(resistorMap.h)
     #     mv.show_with_pyplot()
 
-    print("saving progress")
-    mesh = domain.toDomain()
-    mesh.DumpFile("save" + str(mathmode))
+    # print("saving progress")
+    # mesh = domain.toDomain()
+    # mesh.DumpFile("save" + str(mathmode))
     print("-------------------------")
     print(f" Done! in {i} iterations ")
     print("-------------------------")
