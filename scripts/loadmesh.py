@@ -58,8 +58,8 @@ highmesh.DefineMaterials(cowlC, chamberC, plugC, 10)
 highmesh.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius, DESIGN.plugBaseRadius, DESIGN.chokeArea)
 highmesh.AssignExternalTemps(fieldGrid, cont, exhaust, DESIGN.chokeArea, throatHyroD)
 
-coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save")
-highmesh.ApplyStateMap(coolmesh, {"temperature", "pressure"})
+# coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save")
+# highmesh.ApplyStateMap(coolmesh, {"temperature", "pressure"})
 
 highmesh.DumpFile("highmesh")
 fig2 = plots.CreateNonDimPlot()

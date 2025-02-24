@@ -580,6 +580,7 @@ class DomainMC:
         with alive_bar(np.size(machs, 0) * np.size(machs, 1), title="Assigning flow state") as bar:
             for i in range(np.size(machs, 0)):
                 for j in range(np.size(machs, 1)):
+                    bar()
                     if np.isnan(machs[i,j]):
                         continue
                     mach = machs[i,j]
@@ -590,7 +591,6 @@ class DomainMC:
                     self.array[rowDomain, colDomain].pressure = gas.StagPressRatio(mach, exhaust) * exhaust.stagPress.to(unitReg.psi)
                     self.array[rowDomain, colDomain].velocity = (mach * np.sqrt(exhaust.getVariableGamma(mach) * exhaust.Rgas * self.array[rowDomain, colDomain].temperature)).to(unitReg.ft/unitReg.sec)
                     self.array[rowDomain, colDomain].area = gas.Isentropic1DExpansion(mach, exhaust.gammaTyp) * Astar.to(unitReg.inch**2)
-                    bar()
         #contour based stuff
         distSum = 0
         for i in alive_it(range(len(contour) - 1), title="Assigning convection"):
