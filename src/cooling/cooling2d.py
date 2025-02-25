@@ -32,31 +32,6 @@ ChannelShape =  np.array([.25, .25]) #inches Width,Height
 mdotperchannel = Fuel_Total / NumberofChannels
 
 
-
-
-
-# @unitReg.wraps((unitReg.degR, unitReg.psi), (unitReg.degR, unitReg.degR, None, unitReg.psi, unitReg.psi, unitReg.inch**2, unitReg.inch, unitReg.inch))
-def heatcoolant(Tprev, Tcell, resSet, Pprev, Pcell, channelArea, channelHydroD, DeltaL):
-    TRsum, Rsum = resSet.getSums()
-    (mu, cp, _, _, rho, _, _, _, _) = get_fluid_properties(fuelname, Tcell, Pcell)
-    A_c = channelArea # Cooling channel cross-sectional area, height should be variable in the future
-    D_h = channelHydroD   # Hydraulic diameter
-    Re_D = mdotperchannel*D_h/mu/A_c    # Reynolds number
-    DeltaL = Q_(DeltaL, unitReg.inch)   # Step size
-
-    f_func = lambda f: -2*np.log10(epsilon/D_h/3.7 + 2.51/(Re_D*np.sqrt(f))) - 1/np.sqrt(f)
-    f = fsolve(f_func, 0.05)    # Darcy friction factor
-    DeltaP = (f*DeltaL/D_h*rho*(mdotperchannel/rho/A_c)**2/2).to(unitReg.psi)   # Pressure drop
-
-    Tprev = Tprev.to(unitReg.degR)
-    Pcell = Pcell.to(unitReg.psi)
-    Pprev = Pprev.to(unitReg.psi)
-
-    Tnew = ((TRsum + Tprev*mdotperchannel*cp)/(mdotperchannel*cp + Rsum)).to(unitReg.degR)
-    Pnew = Pprev - DeltaP
-
-    return Tnew, Pnew
-
 def plug_convection_coefficient(P, v, T, A, x):
     """_summary_
 
@@ -177,7 +152,7 @@ def combustion_convection(Node_Temp, Velocity):
 #Temp_test = Q_(5800, unitReg.degR)
 #ic(combustion_convection2(Temp_test,Velocity_test))
 
-def internal_flow_convection(Node_Temp, Node_Pressure, channelArea, channelHydroD):
+def internal_flow_convection(Node_Temp, Node_Pressure, channelArea, channelHydroD, mdotperchannel):
     # Gnielinski/Sieder & Tate for channel side
     # Inputs (Cooling channel)
     Temp = Q_(Node_Temp.magnitude, unitReg.degR)    # Not sure about this being the right temperature for properties
@@ -215,7 +190,7 @@ def internal_flow_convection(Node_Temp, Node_Pressure, channelArea, channelHydro
         print("Using Sieder-Tate, not ready yet")
         Nu_D = 0.027*Re_D**0.8*Pr**(1/3)*(mu/mu_s)**0.14    # Nusselt number of fully developed flow
     else:
-        print("Pr/Re is wack")
+        # print("Pr/Re is wack")
         Nu_D = 0.027*Re_D**0.8*Pr**(1/3)*(mu/mu_s)**0.14    # Use Sieder-Tate anyway
     return (Nu_D*k_c/D_h).to((unitReg.BTU / unitReg.foot**2 / unitReg.hour / unitReg.degR))      # Convective heat transfer coefficient
 
