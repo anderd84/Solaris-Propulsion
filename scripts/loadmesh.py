@@ -64,7 +64,7 @@ highmesh.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.c
 # highmesh.DumpFile("highmesh")
 fig2 = plots.CreateNonDimPlot()
 
-outerloop = highmesh.NewCoolantLoop(Q_(.075, 'inch'), 210, DESIGN.Fuel_Total, CoolantType.RP1)
+outerloop = highmesh.NewCoolantLoop(Q_(.025, 'inch'), 420, DESIGN.Fuel_Total, CoolantType.RP1)
 highmesh.AssignCoolantFlow(domain.CoolingChannel(cowlCoolU, cowlCoolL), False, Q_(360, unitReg.psi), outerloop)
 # innerloop = highmesh.NewCoolantLoop(Q_(.03, 'inch'), 90, Q_(2, unitReg.pound/unitReg.sec), CoolantType.RP1)
 # highmesh.AssignCoolantFlow(domain.CoolingChannel(plugCoolU, plugCoolL), True, Q_(100, unitReg.psi), innerloop)

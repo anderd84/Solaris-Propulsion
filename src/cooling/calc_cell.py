@@ -70,7 +70,8 @@ def ConvectionHalfResistor(domain: domain_mmap.DomainMMAP, sink: tuple[int, int]
     mat = domain.material[convectionCell]
 
     if domain.material[convectionCell] in MaterialType.COOLANT:
-        convectionCoeff = cooling2d.internal_flow_convection((domain.temperature[convectionCell]).to(unitReg.degR),(domain.pressure[convectionCell]).to(unitReg.psi), domain.area[convectionCell], domain.hydraulicDiameter[convectionCell])
+        mdotPerChannel = domain.coolingLoops[int(domain.id[convectionCell])].mdot / domain.coolingLoops[int(domain.id[convectionCell])].numChannels
+        convectionCoeff = cooling2d.internal_flow_convection((domain.temperature[convectionCell]).to(unitReg.degR),(domain.pressure[convectionCell]).to(unitReg.psi), domain.area[convectionCell], domain.hydraulicDiameter[convectionCell], mdotPerChannel)
         area = CoolantConvectionArea(domain, convectionCell[0], convectionCell[1], isHoriz, sinkTop, sinkSide)
     elif domain.material[convectionCell] == DomainMaterial.CHAMBER:
         convectionCoeff = cooling2d.combustion_convection(domain.temperature[convectionCell].to(unitReg.degR), domain.velocity[convectionCell].to(unitReg.foot/unitReg.second))
