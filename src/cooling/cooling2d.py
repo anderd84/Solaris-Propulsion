@@ -2,7 +2,7 @@ import numpy as np
 from scipy.optimize import fsolve
 import icecream as ic
 
-from fluids.fluid import get_fluid_properties
+from fluids.fluid import get_fluid_properties, get_film_properties
 from general.units import Q_, unitReg
 import general.design as DESIGN
 from general.design import exhaustGas
@@ -244,7 +244,7 @@ def free_convection(T_s, T_infinity, P_atm, D_outer):
     return Nu_D*k_f/D_outer
 
 def get_film_length(m_dot_c, A_c, P, u_g, u_c, rho_g, mu_c, c_c_l, h_fg,
-                    T_g, T_c_1, T_c_sat, rho_c_l, sigma_g, h_g, D_c):
+                    T_g, T_c_1, T_c_sat, rho_c_l, sigma_c, h_g, D_c):
     # Inputs
     m_dot_c = m_dot_c.to(unitReg.pound / unitReg.second)    # Combustion gas mass flow rate
     A_c = A_c.to (unitReg.feet**2)  # Chamber cross-sectional area
@@ -254,12 +254,12 @@ def get_film_length(m_dot_c, A_c, P, u_g, u_c, rho_g, mu_c, c_c_l, h_fg,
     rho_g = rho_g.to(unitReg.pound/ unitReg.foot**3)    # Combustion gas density
     mu_c = mu_c.to(unitReg.pound / unitReg.foot / unitReg.second)   # Film coolant dynamic viscosity
     c_c_l = c_c_l.to(unitReg.BTU / unitReg.pound / unitReg.degR)    # Film coolant specific heat as liquid
-    h_fg = h_fg.to(unitReg.BTU / unitReg.pound / unitReg.degR)  # Film coolant enthalpy of vaporization
+    h_fg = h_fg.to(unitReg.BTU / unitReg.pound)  # Film coolant enthalpy of vaporization
     T_g = T_g.to(unitReg.degR)  # Combustion gas temperature
     T_c_1 = T_c_1.to(unitReg.degR)  # Film coolant initial temperature
     T_c_sat = T_c_sat.to(unitReg.degR)  # Film coolant saturation temperature
     rho_c_l = rho_c_l.to(unitReg.pound/ unitReg.foot**3)    # Film coolant liquid density
-    sigma_g = sigma_g.to(unitReg.pound / unitReg.foot)  # Combustion gas surface tension
+    sigma_c = sigma_c.to(unitReg.pound_force / unitReg.foot)  # Combustion gas surface tension
     h_g = h_g.to((unitReg.BTU / unitReg.foot**2 / unitReg.hour / unitReg.degR)) # Combustion gas convection coefficient
     D_c = D_c.to(unitReg.foot)  # Film cooling channel diameter
 
@@ -275,10 +275,10 @@ def get_film_length(m_dot_c, A_c, P, u_g, u_c, rho_g, mu_c, c_c_l, h_fg,
     a = 2.31*10**-4*Re_c**-0.35
     Re_cfilm = 250*np.log(Re_c) - 1265
     E_m = 1- Re_cfilm/Re_c
-    We = rho_g*u_g**2*D_h/sigma_g   # Weber number TO DO: Check for correct variables, especially D and sigma
+    We = rho_g*u_g**2*D_h/sigma_c   # Weber number TO DO: Check for correct variables, especially D and sigma
     E = E_m*np.tanh(a*We**1.25)
     Gamma_c = m_dot_c*(1-E)/(np.pi*2*DESIGN.chamberInternalRadius)    # TO DO: Check that this is right
-    L_c = Gamma_c/m_dot_v
+    L_c = (Gamma_c/m_dot_v).to(unitReg.foot)
     return L_c
 
 def film_cooling(m_dot_g, A_c, P, u_g, u_c, mu_g, Pr_g, 
@@ -313,6 +313,26 @@ def film_cooling(m_dot_g, A_c, P, u_g, u_c, mu_g, Pr_g,
     return h
 # coolMesh.mesh.z
 # Testing
+h_g = combustion_convection(Q_(3000, unitReg.degR), Q_(1000, unitReg.foot/unitReg.second))
+A_c = np.pi*(DESIGN.chamberInternalRadius**2 - DESIGN.plugBaseRadius**2)
+P = 2*np.pi*(DESIGN.chamberInternalRadius + DESIGN.plugBaseRadius)
+u_g = Q_(300, unitReg.feet/unitReg.second)
+u_c = Q_(1000, unitReg.feet/unitReg.second)
+rho_g = Q_(Combustion.get_Chamber_Density(DESIGN.chamberPressure.magnitude, DESIGN.OFratio, A_c/A_star), unitReg.pound / unitReg.foot**3)
+(mu_c, c_c_l, _, _, rho_c_l, _, _, _, sigma_c) = get_fluid_properties(DESIGN.fuelName, Q_(300 + 460, unitReg.degR), DESIGN.chamberPressure)
+(h_fg, Psat, Tsat) = get_film_properties(DESIGN.fuelName, Q_(70 + 460, unitReg.degR))
+mu_c = mu_c.to(unitReg.pound / unitReg.foot / unitReg.second)   # Film coolant dynamic viscosity
+c_c_l = c_c_l.to(unitReg.BTU / unitReg.pound / unitReg.degR)    # Film coolant specific heat as liquid
+h_fg = h_fg.to(unitReg.BTU / unitReg.pound)  # Film coolant enthalpy of vaporization
+T_g = DESIGN.chamberTemp  # Combustion gas temperature
+T_c_1 = Q_(300 + 460, unitReg.degR)  # Film coolant initial temperature
+T_c_sat = Tsat.to(unitReg.degR)  # Film coolant saturation temperature
+rho_c_l = rho_c_l.to(unitReg.pound/ unitReg.foot**3)    # Film coolant liquid density
+sigma_c = sigma_c.to(unitReg.pound_force / unitReg.foot)  # Combustion gas surface tension
+h_g = combustion_convection(DESIGN.chamberTemp, Q_(300, unitReg.feet/unitReg.second))
+D_c = Q_(0.018, unitReg.inch)  # Film cooling channel diameter
+L = get_film_length(DESIGN.Fuel_Total/420, A_c, P, u_g, u_c, rho_g, mu_c, c_c_l, h_fg,
+                    T_g, T_c_1, T_c_sat, rho_c_l, sigma_c, h_g, D_c)
 # (_, mu, k, Pr) = Combustion.get_Exit_Transport(100, 3, 3, 0, 0)
 # h = plug_convection_coefficient(Q_(6.759, unitReg.psi), Q_(3500, unitReg.feet/unitReg.second), Q_(4100, unitReg.degR), 7*DESIGN.chokeArea, Q_(0, unitReg.feet))
 # print(f"h: {h:.3f}")
