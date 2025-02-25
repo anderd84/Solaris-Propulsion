@@ -48,30 +48,30 @@ startingpoint = (-6.75, 2.6) # TODO use real point
 
 # highmesh = domain.DomainMC.LoadFile("highmesh")
 
-highmesh = domain.DomainMC(-7.3, 4.1, 13.5, 3.75, .01)
+highmesh = domain.DomainMC(-7.3, 4.1, 8, 3.25, .01)
 p = Q_(6.75, unitReg.psi)
 rlines, llines, streams = analysis.CalculateComplexField(cont, p, exhaust, 1, Tt, Rt, Re.magnitude, 75, 5, 2)
 fieldGrid = analysis.GridifyComplexField(rlines, llines)
 # analysis.PlotFieldData(fig, fieldGrid, 1, 1)
 
-highmesh.DefineMaterials(cowlC, chamberC, plugC, 10)
+highmesh.DefineMaterials(cowlC, chamberC, [], 10)
 highmesh.AssignChamberTemps(chamberC, exhaust, startingpoint, aimpoint, DESIGN.chamberInternalRadius, DESIGN.plugBaseRadius, DESIGN.chokeArea)
-highmesh.AssignExternalTemps(fieldGrid, cont, exhaust, DESIGN.chokeArea, throatHyroD)
+# highmesh.AssignExternalTemps(fieldGrid, cont, exhaust, DESIGN.chokeArea, throatHyroD)
 
 # coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save")
 # highmesh.ApplyStateMap(coolmesh, {"temperature", "pressure"})
 
-highmesh.DumpFile("highmesh")
+# highmesh.DumpFile("highmesh")
 fig2 = plots.CreateNonDimPlot()
 
-outerloop = highmesh.NewCoolantLoop(Q_(.03, 'inch'), 120, DESIGN.Fuel_Total, CoolantType.RP1)
+outerloop = highmesh.NewCoolantLoop(Q_(.075, 'inch'), 210, DESIGN.Fuel_Total, CoolantType.RP1)
 highmesh.AssignCoolantFlow(domain.CoolingChannel(cowlCoolU, cowlCoolL), False, Q_(360, unitReg.psi), outerloop)
-innerloop = highmesh.NewCoolantLoop(Q_(.03, 'inch'), 90, Q_(2, unitReg.pound/unitReg.sec), CoolantType.RP1)
-highmesh.AssignCoolantFlow(domain.CoolingChannel(plugCoolU, plugCoolL), True, Q_(100, unitReg.psi), innerloop)
+# innerloop = highmesh.NewCoolantLoop(Q_(.03, 'inch'), 90, Q_(2, unitReg.pound/unitReg.sec), CoolantType.RP1)
+# highmesh.AssignCoolantFlow(domain.CoolingChannel(plugCoolU, plugCoolL), True, Q_(100, unitReg.psi), innerloop)
 
 # print(highmesh.array[0,0])
-highmesh.GuessChannelState(outerloop, Q_(650, unitReg.degR))
-highmesh.GuessChannelState(innerloop, Q_(650, unitReg.degR))
+# highmesh.GuessChannelState(outerloop, Q_(650, unitReg.degR))
+# highmesh.GuessChannelState(innerloop, Q_(650, unitReg.degR))
 print(highmesh.coolingLoops)
 highmesh.DumpFile("highmesh2")
 plots.PlotPlug(fig2, plugC)
@@ -101,7 +101,7 @@ plotr = [highmesh.array[pnt].r for pnt in calcPoints]
 
 # plt.plot(plotx, plotr, 'go')
 
-highmesh.NodePlot(fig2, "temperature", [DomainMaterial.CHAMBER, DomainMaterial.FREE])#, DomainMaterial.PLUG, DomainMaterial.COWL, DomainMaterial.COOLANT_INLET, DomainMaterial.COOLANT_OUTLET])
+highmesh.NodePlot(fig2, "material")#, DomainMaterial.PLUG, DomainMaterial.COWL, DomainMaterial.COOLANT_INLET, DomainMaterial.COOLANT_OUTLET])
 # highmesh.RelationPlot(fig2)
 # highmesh.ShowCellPlot(fig2)
 

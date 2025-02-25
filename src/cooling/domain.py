@@ -240,6 +240,8 @@ class DomainMC:
 
         pointMap = {}
 
+        minChannelSize = 0.025
+
         for i in alive_it(range(inputPoints - 1)):
             dist1 = np.sqrt((coolant.lowerContour[i].x - coolant.lowerContour[i+1].x)**2 + (coolant.lowerContour[i].r - coolant.lowerContour[i+1].r)**2)
             dist2 = np.sqrt((coolant.upperContour[i].x - coolant.upperContour[i+1].x)**2 + (coolant.upperContour[i].r - coolant.upperContour[i+1].r)**2)
@@ -281,6 +283,10 @@ class DomainMC:
                 channelArea = totalArea*channelSectorAngle/(2*np.pi)
                 perim = (Q_(rl[j], unitReg.inch) + Q_(ru[j], unitReg.inch))*channelSectorAngle + 2*h
                 hydroD = 4*channelArea/perim
+                if rl[j]*channelSectorAngle < minChannelSize or ru[j]*channelSectorAngle < minChannelSize:
+                    print("small channel width!!!")
+                    minChannelSize = min(rl[j]*channelSectorAngle, ru[j]*channelSectorAngle)
+                    print(f"new min channel size: {minChannelSize}")
 
                 for cellPos in cells:
                     if (i==0 and j==0):
@@ -589,7 +595,7 @@ class DomainMC:
                     self.array[rowDomain, colDomain].material = DomainMaterial.EXHAUST
                     self.array[rowDomain, colDomain].temperature = gas.StagTempRatio(mach, exhaust) * exhaust.stagTemp.to(unitReg.degR)
                     self.array[rowDomain, colDomain].pressure = gas.StagPressRatio(mach, exhaust) * exhaust.stagPress.to(unitReg.psi)
-                    self.array[rowDomain, colDomain].velocity = (mach * np.sqrt(exhaust.getVariableGamma(mach) * exhaust.Rgas * self.array[rowDomain, colDomain].temperature)).to(unitReg.ft/unitReg.sec)
+                    self.array[rowDomain, colDomain].velocity = (mach * np.sqrt(exhaust.gammaTyp * exhaust.Rgas * self.array[rowDomain, colDomain].temperature)).to(unitReg.ft/unitReg.sec)
                     self.array[rowDomain, colDomain].area = gas.Isentropic1DExpansion(mach, exhaust.gammaTyp) * Astar.to(unitReg.inch**2)
         #contour based stuff
         distSum = 0
@@ -768,12 +774,12 @@ def EvalMaterialProcess2(i, hsteps, pn, gridData, size, cowl, chamber, plug):
     return res
 
 def AssignMaterial(point, size, coolant, cowl, chamber, plug):
-    if material.isIntersect(point, coolant, size):
+    if len(coolant) > 0 and material.isIntersect(point, coolant, size):
         return DomainMaterial.COOLANT
-    if material.isIntersect(point, cowl, size):
+    if len(cowl) > 0 and material.isIntersect(point, cowl, size):
         return DomainMaterial.COWL
-    if material.isIntersect(point, chamber, size):
+    if len(chamber) > 0 and material.isIntersect(point, chamber, size):
         return DomainMaterial.CHAMBER
-    if material.isIntersect(point, plug, size):
+    if len(plug) > 0 and material.isIntersect(point, plug, size):
         return DomainMaterial.PLUG
     return DomainMaterial.FREE

@@ -155,16 +155,16 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
                 convergePlot.canvas.draw()
                 convergePlot.canvas.flush_events()
 
-            if i % 10 == 0:
+            if i % 20 == 0:
                 print("saving progress")
                 mesh = domain.toDomain()
                 mesh.DumpFile("save")
         
-            if maxT > 2000:
-                print("max temp too high, stopping")
-                mesh = domain.toDomain()
-                mesh.DumpFile("save")
-                break
+            # if maxT > 4000:
+            #     print("max temp too high, stopping")
+            #     mesh = domain.toDomain()
+            #     mesh.DumpFile("save")
+            #     break
 
     # if precompute:
     #     print("plotting relations")
