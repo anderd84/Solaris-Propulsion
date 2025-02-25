@@ -1,5 +1,6 @@
 import numpy as np
 import pyromat as pm
+import rocketprops 
 from rocketprops.rocket_prop import get_prop
 from scipy.optimize import fsolve
 
@@ -181,6 +182,21 @@ def get_fluid_properties(name, temperature_R, pressure_psi):
     
     # Return all properties in English Engineering units
     return (viscosity, specific_heat_p, gamma, thermal_conductivity, density, prandtl, alpha, thermal_diffusivity, SurfaceTens)
+
+def get_film_properties(name, temperature_R):
+    # Ensure inputs are in the correct units for RocketProps methods
+    temperature = Q_(temperature_R.magnitude, unitReg.degR)
+    
+    # Create an fluid object
+    fluid = get_prop(name)
+
+    # Latent heat of vaporization
+    h_fg = Q_(fluid.HvapAtTdegR(temperature.magnitude), unitReg.BTU / unitReg.pound)
+    
+    # Saturation Properties
+    Psat = Q_(fluid.PvapAtTdegR(temperature.magnitude), unitReg.psi)
+    Tsat = Q_(fluid.TdegRAtPsat(Psat.magnitude), unitReg.degR)
+    return (h_fg, Psat, Tsat)
 
 def DarcyFrictionFactor(reynoldsNum, surfaceRoughness, hydroDiameter):
     if reynoldsNum < 2000: # laminar

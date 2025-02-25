@@ -46,7 +46,7 @@ def main():
     #     try:
     mmapmesh = domain_mmap.DomainMMAP(coolmesh)
     tstart = time.time()
-    analysis.AnalyzeMC(mmapmesh, 10, 1e-5, False, 10, 4) # why wont you workkkkk 😭
+    analysis.AnalyzeMC(mmapmesh, 10, 1e-5, False, 10) # why wont you workkkkk 😭
     print(f"Time: {time.time() - tstart}")
         # except:
             # print(f"Failed on {i}")
