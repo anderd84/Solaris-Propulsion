@@ -48,7 +48,7 @@ startingpoint = (-6.75, 2.6) # TODO use real point
 
 # highmesh = domain.DomainMC.LoadFile("highmesh")
 
-highmesh = domain.DomainMC(-7.3, 4.1, 8, 3.25, .01)
+highmesh = domain.DomainMC(-7.3, 4.1, 8, 3.25, .005)
 p = Q_(6.75, unitReg.psi)
 rlines, llines, streams = analysis.CalculateComplexField(cont, p, exhaust, 1, Tt, Rt, Re.magnitude, 75, 5, 2)
 fieldGrid = analysis.GridifyComplexField(rlines, llines)
