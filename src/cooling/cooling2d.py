@@ -19,7 +19,6 @@ cstar = DESIGN.c_star
 R_gas = DESIGN.R_throat #TODO gotta make this better so it's not constant R assumption
 gamma_throat = DESIGN.gamma #TODO gotta make this better so it's not constant R assumption
 A_star = DESIGN.chokeArea
-NumberofChannels = DESIGN.NumberofChannels
 mdot_tot = DESIGN.totalmdot
 Fuel_Total = DESIGN.Fuel_Total
 

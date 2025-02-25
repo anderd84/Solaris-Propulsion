@@ -10,7 +10,7 @@ from general.units import R_UNIVERSAL
 # Props
 oxName = "LOX"
 fuelName = "RP-1"
-OFratio = 2
+OFratio = 1.8
 
 # Geometry
 chamberPressure = Q_(300, unitReg.psi)
@@ -88,6 +88,6 @@ coolingChannelHeightConverge = Q_(0.025, unitReg.inch)
 coolingChannelHeightPlug = Q_(0.025, unitReg.inch)
 coolingChannelShrinkDist = Q_(0.25, unitReg.inch)
 coolingChannelWallDist = Q_(0.025, unitReg.inch)
-NumberofChannels = 60
-landWidth = Q_(0.025, unitReg.inch)    # Width of individual land
+# NumberofChannels = 60
+# landWidth = Q_(0.025, unitReg.inch)    # Width of individual land
 # coolingChannelAngleSweep = Q_((1 - landWidth*NumberofChannels)/chamberInternalRadius, unitReg.radians)   # Angle occupied by all cooling channels
