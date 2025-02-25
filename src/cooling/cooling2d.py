@@ -29,9 +29,6 @@ Fuel_Total = DESIGN.Fuel_Total
 
 ChannelShape =  np.array([.25, .25]) #inches Width,Height
 
-mdotperchannel = Fuel_Total / NumberofChannels
-
-
 def plug_convection_coefficient(P, v, T, A, x):
     """_summary_
 
