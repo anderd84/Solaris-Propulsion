@@ -6,6 +6,7 @@ import pint
 from fluids import gas
 import general.design as DESIGN
 from general.units import Q_, unitReg
+from general import units
 from nozzle import plug
 from nozzle import plots
 from nozzle import analysis
@@ -38,6 +39,7 @@ Re = outputData["radiusLip"]
 ic(outputData["areaRatio"])
 ic(np.rad2deg(Tt))
 ic(Re)
+ic(Rt)
 phi = np.pi/2 + Tt
 Astar = np.pi/np.sin(phi) * (Re**2 - Rt**2)
 ic(Astar)
@@ -73,8 +75,8 @@ fig.axes[0].plot([p.x for p in cowlCoolU], [p.r for p in cowlCoolU], '-k', linew
 fig.axes[0].plot([p.x for p in plugCoolL], [p.r for p in plugCoolL], '-k', linewidth=1)
 fig.axes[0].plot([p.x for p in plugCoolU], [p.r for p in plugCoolU], '-k', linewidth=1)
 # print(units.PRESCOTT_PRESSURE)
-p = Q_(6.75, unitReg.psi)
-# p = units.PRESCOTT_PRESSURE
+# p = Q_(6.75, unitReg.psi)
+p = units.PRESCOTT_PRESSURE
 ic(p.to(unitReg.psi))
 rlines, llines, streams = analysis.CalculateComplexField(cont, p, exhaust, 1, Tt, Rt, Re.magnitude, 75, 0, 2)
 istream = streams[0]

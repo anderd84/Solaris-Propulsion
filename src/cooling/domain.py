@@ -240,7 +240,7 @@ class DomainMC:
 
         pointMap = {}
 
-        minChannelSize = 0.025
+        minChannelSize = 0.03
 
         for i in alive_it(range(inputPoints - 1)):
             dist1 = np.sqrt((coolant.lowerContour[i].x - coolant.lowerContour[i+1].x)**2 + (coolant.lowerContour[i].r - coolant.lowerContour[i+1].r)**2)

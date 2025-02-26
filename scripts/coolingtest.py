@@ -32,7 +32,7 @@ def main():
 
     # to run the saved one use this line:
     # coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("coolmesh")
-    coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save")
+    coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("highmesh2")
 
     # print(coolmesh.coolingLoops)
 

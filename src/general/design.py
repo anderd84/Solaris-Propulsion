@@ -10,7 +10,7 @@ from general.units import R_UNIVERSAL
 # Props
 oxName = "LOX"
 fuelName = "RP-1"
-OFratio = 1.8
+OFratio = 1.2
 
 # Geometry
 chamberPressure = Q_(300, unitReg.psi)
@@ -19,8 +19,8 @@ totalmdot = Q_(7.5, unitReg.pound / unitReg.sec)
 Fuel_Total = totalmdot /(1+percentFilmCooling + OFratio)
 Oxidizer_Total = totalmdot - Fuel_Total
 
-chamberInternalRadius = Q_(3.8, unitReg.inch)
-wallThickness = Q_(0.20, unitReg.inch)
+chamberInternalRadius = Q_(3.05, unitReg.inch)
+wallThickness = Q_(0.25, unitReg.inch)
 plugThickness = Q_(0.25, unitReg.inch)
 maxRadius = chamberInternalRadius + wallThickness
 plugBaseRadius = Q_(2, unitReg.inch)
@@ -79,15 +79,15 @@ chokeArea = exhaustGas.getChokedArea(totalmdot).to(unitReg.inch**2)
 
 # nozzle design table
 # plugDesignTable = {"throatArcRadFactor": .1, "convergeAngle": 25, "turnArcRadFactor": 2, "straightAngle": 10, "lipAngle":15, "manifoldDistanceFactor": .1}
-plugDesignTable = {"throatArcRadFactor": .1, "convergeAngle": 45, "turnArcRadFactor": 1.75, "straightAngle": 9, "lipAngle":15, "manifoldDistanceFactor": .05}
+plugDesignTable = {"throatArcRadFactor": .1, "convergeAngle": 35, "turnArcRadFactor": 1.75, "straightAngle": 9, "lipAngle":15, "manifoldDistanceFactor": .05}
 
 
 # cooling channels
-coolingChannelHeightChamber = Q_(0.05, unitReg.inch)
-coolingChannelHeightConverge = Q_(0.025, unitReg.inch)
-coolingChannelHeightPlug = Q_(0.025, unitReg.inch)
-coolingChannelShrinkDist = Q_(0.25, unitReg.inch)
-coolingChannelWallDist = Q_(0.025, unitReg.inch)
+coolingChannelHeightChamber = Q_(0.075, unitReg.inch)
+coolingChannelHeightConverge = Q_(0.03, unitReg.inch)
+coolingChannelHeightPlug = Q_(0.03, unitReg.inch)
+coolingChannelShrinkDist = Q_(0.75, unitReg.inch)
+coolingChannelWallDist = Q_(0.040, unitReg.inch)
 # NumberofChannels = 60
 # landWidth = Q_(0.025, unitReg.inch)    # Width of individual land
 # coolingChannelAngleSweep = Q_((1 - landWidth*NumberofChannels)/chamberInternalRadius, unitReg.radians)   # Angle occupied by all cooling channels
