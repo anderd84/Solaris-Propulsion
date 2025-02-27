@@ -220,7 +220,8 @@ def GenerateDimCowl(throatRadius: Q_, throatTheta: Q_, Re: Q_, straightLength: Q
 
     # cooling
 
-    arcArr = np.linspace(0, -np.pi/2 + thetaL, circRes)
+    # arcArr = np.linspace(0, -np.pi/2 + thetaL, circRes)
+    arcArr = np.array([-np.pi/2 + thetaL])
     manifold = np.array([nozzle.ContourPoint(xm + (rm - coolingFloor)*np.cos(a), ym + (rm - coolingFloor)*np.sin(a)) for a in arcArr])
 
     upperManifold = np.array([nozzle.ContourPoint(xm + (rm - coolingFloor - coolingHeight1)*np.cos(a), ym + (rm - coolingFloor - coolingHeight1)*np.sin(a)) for a in arcArr])

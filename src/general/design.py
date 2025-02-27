@@ -84,9 +84,9 @@ plugDesignTable = {"throatArcRadFactor": .1, "convergeAngle": 35, "turnArcRadFac
 
 # cooling channels
 coolingChannelHeightChamber = Q_(0.075, unitReg.inch)
-coolingChannelHeightConverge = Q_(0.03, unitReg.inch)
-coolingChannelHeightPlug = Q_(0.03, unitReg.inch)
-coolingChannelShrinkDist = Q_(0.75, unitReg.inch)
+coolingChannelHeightConverge = Q_(0.035, unitReg.inch)
+coolingChannelHeightPlug = Q_(0.035, unitReg.inch)
+coolingChannelShrinkDist = Q_(0.25, unitReg.inch)
 coolingChannelWallDist = Q_(0.040, unitReg.inch)
 # NumberofChannels = 60
 # landWidth = Q_(0.025, unitReg.inch)    # Width of individual land

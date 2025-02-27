@@ -119,6 +119,10 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
                 if changeOrder.temperature is not None:
                     currentTemp = domain.temperature[row, col]
                     newTemp = changeOrder.temperature
+                    if np.isnan(newTemp):
+                        print("NAN value detected")
+                        plt.plot(domain.x[row, col], domain.r[row, col], 'ro')
+                        continue
                     diff_ = newTemp.m - currentTemp.m
                     # maxChange = currentTemp.m / 100
                     maxChange = 2 * np.sign(diff_)
@@ -155,7 +159,7 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
                 convergePlot.canvas.draw()
                 convergePlot.canvas.flush_events()
 
-            if i % 20 == 0:
+            if i % 50 == 0:
                 print("saving progress")
                 mesh = domain.toDomain()
                 mesh.DumpFile("save")

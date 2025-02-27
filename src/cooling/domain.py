@@ -179,12 +179,9 @@ class DomainMC:
         self.coolingLoops[loopID] = CoolingLoop(landWidth, numChannels, mdot, fluid)
         return loopID
 
-    def AssignCoolantFlow(self, coolant: CoolingChannel, upperWall: bool, initialPressure: pint.Quantity, loopID: int):
+    def AssignCoolantFlow(self, coolant: CoolingChannel, upperWall: bool, initialPressure: pint.Quantity, primaryLoopID: int, altLoopRadius = None, altLoopID = None):
         # first assign wall
-        if loopID not in self.coolingLoops:
-            raise ValueError(f"Loop ID {loopID} not defined")
-        landWidth = self.coolingLoops[loopID].landWidth
-        numChannels = self.coolingLoops[loopID].numChannels
+
 
         inputPoints = len(coolant.upperContour)
         previousWall = (-1,-1)
@@ -192,7 +189,7 @@ class DomainMC:
         # areas type
         # initial wall assignment
         wallContour = coolant.upperContour if upperWall else coolant.lowerContour
-        previousMat = self.array[self.CoordsToCell(wallContour[0].x, wallContour[0].r)].material
+        previousMat = self.array[self.CoordsToCell(wallContour[1].x, wallContour[1].r)].material
         inlet = (-1,-1)
         for i in alive_it(range(inputPoints - 1)):
             dist = np.sqrt((wallContour[i].x - wallContour[i+1].x)**2 + (wallContour[i].r - wallContour[i+1].r)**2)
@@ -240,12 +237,17 @@ class DomainMC:
 
         pointMap = {}
 
-        minChannelSize = 0.03
+        minChannelSize = 0.04
+
+        if primaryLoopID not in self.coolingLoops:
+            raise ValueError(f"Loop ID {primaryLoopID} not defined")
+   
 
         for i in alive_it(range(inputPoints - 1)):
-            dist1 = np.sqrt((coolant.lowerContour[i].x - coolant.lowerContour[i+1].x)**2 + (coolant.lowerContour[i].r - coolant.lowerContour[i+1].r)**2)
-            dist2 = np.sqrt((coolant.upperContour[i].x - coolant.upperContour[i+1].x)**2 + (coolant.upperContour[i].r - coolant.upperContour[i+1].r)**2)
-            dist = max(dist1, dist2)
+            # dist1 = np.sqrt((coolant.lowerContour[i].x - coolant.lowerContour[i+1].x)**2 + (coolant.lowerContour[i].r - coolant.lowerContour[i+1].r)**2)
+            # dist2 = np.sqrt((coolant.upperContour[i].x - coolant.upperContour[i+1].x)**2 + (coolant.upperContour[i].r - coolant.upperContour[i+1].r)**2)
+            # dist = max(dist1, dist2)
+            dist = np.sqrt((wallContour[i].x - wallContour[i+1].x)**2 + (wallContour[i].r - wallContour[i+1].r)**2)
 
             steps = max(int(dist/min(self.xstep, self.rstep) * 1.5), 5)
 
@@ -276,6 +278,14 @@ class DomainMC:
 
                 # plt.plot([xl[j], xu[j]], [rl[j], ru[j]], '-b', linewidth=.25)
 
+                if altLoopRadius is not None and rl[j] > altLoopRadius:
+                    loopID = altLoopID if altLoopID is not None else primaryLoopID
+                else:
+                    loopID = primaryLoopID
+                    
+                landWidth = self.coolingLoops[loopID].landWidth
+                numChannels = self.coolingLoops[loopID].numChannels
+
                 landSectorAngle = landWidth/Q_(rl[j], unitReg.inch)
                 channelSectorAngle = (2*np.pi/numChannels) - landSectorAngle
                 h = Q_(np.sqrt((xl[j] - xu[j])**2 + (rl[j] - ru[j])**2), unitReg.inch)
@@ -300,10 +310,14 @@ class DomainMC:
                         self.array[cellPos].material = DomainMaterial.COOLANT_OUTLET
 
                     if self.array[cellPos].material not in MaterialType.COOLANT | {DomainMaterial.COOLANT_INLET, DomainMaterial.COOLANT_OUTLET}:
+                        offset = 1 if upperWall else -1
+                        if self.array[cellPos[0] + offset, cellPos[1]].material == DomainMaterial.COOLANT_WALL:
+                            self.array[cellPos].material = previousMat
+                            continue
+                    
                         self.array[cellPos].material = DomainMaterial.COOLANT_BULK
                         self.array[cellPos].previousFlow = wallPoint
                         pointMap.setdefault(wallPoint, set()).add(cellPos)
-
 
                     self.array[cellPos].pressure = initialPressure
                     self.array[cellPos].flowHeight = h
@@ -593,10 +607,8 @@ class DomainMC:
                     rowDomain = rows[i,j]
                     colDomain = cols[i,j]
                     self.array[rowDomain, colDomain].material = DomainMaterial.EXHAUST
-                    self.array[rowDomain, colDomain].temperature = gas.StagTempRatio(mach, exhaust) * exhaust.stagTemp.to(unitReg.degR)
-                    self.array[rowDomain, colDomain].pressure = gas.StagPressRatio(mach, exhaust) * exhaust.stagPress.to(unitReg.psi)
-                    self.array[rowDomain, colDomain].velocity = (mach * np.sqrt(exhaust.gammaTyp * exhaust.Rgas * self.array[rowDomain, colDomain].temperature)).to(unitReg.ft/unitReg.sec)
-                    self.array[rowDomain, colDomain].area = gas.Isentropic1DExpansion(mach, exhaust.gammaTyp) * Astar.to(unitReg.inch**2)
+                    self.array[rowDomain, colDomain].velocity = Q_(mach, unitReg.feet/unitReg.second)
+
         #contour based stuff
         distSum = 0
         for i in alive_it(range(len(contour) - 1), title="Assigning convection"):
@@ -635,6 +647,13 @@ class DomainMC:
                 
                 if nearestChamber == (-1,-1):
                     continue
+
+
+                mach = self.array[nearestChamber].velocity.m_as(unitReg.feet/unitReg.second)
+                self.array[nearestChamber].temperature = gas.StagTempRatio(mach, exhaust) * exhaust.stagTemp.to(unitReg.degR)
+                self.array[nearestChamber].pressure = gas.StagPressRatio(mach, exhaust) * exhaust.stagPress.to(unitReg.psi)
+                self.array[nearestChamber].velocity = (mach * np.sqrt(exhaust.gammaTyp * exhaust.Rgas * self.array[nearestChamber].temperature)).to(unitReg.ft/unitReg.sec)
+                self.array[nearestChamber].area = gas.Isentropic1DExpansion(mach, exhaust.gammaTyp) * Astar.to(unitReg.inch**2)
 
                 self.array[nearestChamber].hydraulicDiameter = Q_(distSumSegment, unitReg.inch) + throatHydroD
                 press = self.array[nearestChamber].pressure

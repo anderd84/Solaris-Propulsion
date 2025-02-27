@@ -31,7 +31,7 @@ def main():
     # fig.axes[0].plot([p.x for p in plugCoolU], [p.r for p in plugCoolU], '-k', linewidth=1)
 
     # to run the saved one use this line:
-    # coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("coolmesh")
+    # coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save")
     coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("highmesh2")
 
     # print(coolmesh.coolingLoops)
@@ -51,8 +51,9 @@ def main():
         # except:
             # print(f"Failed on {i}")
 
-    # mmapmesh.NodePlot(fig, "temperature", [material.DomainMaterial.CHAMBER, material.DomainMaterial.FREE])
-    # plt.show()
+    mmapmesh.NodePlot(fig, "material", [])#, [material.DomainMaterial.CHAMBER, material.DomainMaterial.FREE, material.DomainMaterial.EXHAUST])
+    coolmesh.RelationPlot(fig)
+    plt.show()
     # analysis.AnalyzeMCSparse(coolmesh, 10, 1e-5, False)
 
 if __name__ == "__main__":
