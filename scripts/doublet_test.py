@@ -20,6 +20,7 @@ overchoke = plug.getOverchokeDist(Re, Rt, Tt, DESIGN.chokePercent)
 
 plugC, straightLength, plugCoolL, plugCoolU = plug.GenerateDimPlug(cont, Rt, Tt, Re, Q_(6.3, unitReg.inch), Q_(1.5, unitReg.inch))
 cowlC, cowlCoolL, cowlCoolU = plug.GenerateDimCowl(Rt, Tt, Re, straightLength, DESIGN.chamberInternalRadius, DESIGN.wallThickness, overchoke)
+chamberC, aimpoint = plug.GenerateDimChamber(Rt, Tt, Re, Q_(6.3, unitReg.inch), DESIGN.chamberInternalRadius, DESIGN.wallThickness, overchoke, Q_(1.5, unitReg.inch))
 
 plugx = np.array([p.x for p in plugC])
 plugr = np.array([p.r for p in plugC])
@@ -42,8 +43,8 @@ AirTemperature = DESIGN.prescottAmbientTemp
 AirPressure = DESIGN.prescottAmbientPressure
 FuelName = DESIGN.fuelName
 Points = 1000 #also used in other plots if this section ends up getting deleted
-AimX = straightLength.magnitude
-AimY = 3.66
+AimX = aimpoint[0]
+AimY = aimpoint[1]
 chamberatInjectorRadius = DESIGN.chamberatInjectorRadius
 OX_CORE,FUEL_CORE,OUT_FILM_C,viscosity_f, specific_heat_p_f, thermal_conductivity_f, SurfaceTens_f = doublet.initialize_prop_flows(
     Film_Cooling, oxImpingeAngle, fuelInitalImpingeAngle, filmImpingeAngle,Lox_Dewar_Pressure, CD_drill, Pressure_Drop_Lox,  Pressure_Drop_Fuel, AirTemperature, AirPressure, FuelName, Pressure_Chamber)
