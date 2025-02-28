@@ -243,6 +243,11 @@ def CalculateCoolantPrimaryWall(domain: domain_mmap.DomainMMAP, row: int, col: i
         f = fluid.DarcyFrictionFactor(Re, Q_(.05, unitReg.inch), domain.hydraulicDiameter[row, col])
         vel = (mdotperchannel / rho / domain.area[row, col]).to(unitReg.foot/unitReg.second)
         dp = fluid.FrictionPressureLoss(f, deltaL, domain.hydraulicDiameter[row, col], rho, vel)
+        if dp < 0:
+            print("whahhhhahah")
+            print(f)
+            print(vel)
+            print(deltaL)
         wallCellUpdate.pressure = (futurePress + dp).to(unitReg.psi)
 
 

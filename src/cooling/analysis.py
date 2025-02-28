@@ -48,7 +48,10 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
                 bar()
     
     for pair in blacklist:
-        calcPoints.remove(pair)
+        try:
+            calcPoints.remove(pair)
+        except KeyError:
+            pass
 
     if convPlot:
         plt.ion()
