@@ -53,7 +53,7 @@ startingpoint = (-6.75, 2.6) # TODO use real point
 
 highmesh = domain.DomainMC.LoadFile("highmesh")
 
-# highmesh = domain.DomainMC(-7.5, 4.1, 10.75, 3.75, .01)
+# highmesh = domain.DomainMC(-7.5, 3.15, 10.75, 3.25, .01)
 p = Q_(6.75, unitReg.psi)
 rlines, llines, streams = analysis.CalculateComplexField(cont, p, exhaust, 1, Tt, Rt, Re.magnitude, 75, 25, 2)
 fieldGrid = analysis.GridifyComplexField(rlines, llines)
@@ -68,11 +68,11 @@ fieldGrid = analysis.GridifyComplexField(rlines, llines)
 
 # highmesh.DumpFile("highmesh")
 
-outerloop = highmesh.NewCoolantLoop(Q_(.025, 'inch'), 300, DESIGN.Fuel_Total, CoolantType.RP1)
-highmesh.AssignCoolantFlow(domain.CoolingChannel(cowlCoolU, cowlCoolL), False, Q_(360, unitReg.psi), outerloop)
+# outerloop = highmesh.NewCoolantLoop(Q_(.025, 'inch'), 300, DESIGN.Fuel_Total, CoolantType.RP1)
+# highmesh.AssignCoolantFlow(domain.CoolingChannel(cowlCoolU, cowlCoolL), False, Q_(360, unitReg.psi), outerloop)
 print("next")
 innerloop = highmesh.NewCoolantLoop(Q_(.025, 'inch'), 70, Q_(2, unitReg.pound/unitReg.sec), CoolantType.RP1)
-loop2 = highmesh.NewCoolantLoop(Q_(.025, 'inch'), 210, Q_(2, unitReg.pound/unitReg.sec), CoolantType.RP1)
+loop2 = highmesh.NewCoolantLoop(Q_(.025, 'inch'), 210, Q_(2.5, unitReg.pound/unitReg.sec), CoolantType.RP1)
 highmesh.AssignCoolantFlow(domain.CoolingChannel(plugCoolU, plugCoolL), True, Q_(100, unitReg.psi), innerloop, 2, loop2)
 
 # print(highmesh.array[0,0])

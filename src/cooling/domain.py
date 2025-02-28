@@ -295,8 +295,8 @@ class DomainMC:
                 hydroD = 4*channelArea/perim
                 if rl[j]*channelSectorAngle < minChannelSize or ru[j]*channelSectorAngle < minChannelSize:
                     print("small channel width!!!")
-                    minChannelSize_ = min(rl[j]*channelSectorAngle, ru[j]*channelSectorAngle)
-                    print(f"new min channel size: {minChannelSize_}")
+                    minChannelSize = min(rl[j]*channelSectorAngle, ru[j]*channelSectorAngle)
+                    print(f"new min channel size: {minChannelSize}")
 
                 for cellPos in cells:
                     if (i==0 and j==0):
@@ -321,7 +321,7 @@ class DomainMC:
 
                     self.array[cellPos].pressure = initialPressure
                     self.array[cellPos].flowHeight = h
-                    self.array[cellPos].hydraulicDiameter = min(rl[j]*channelSectorAngle, ru[j]*channelSectorAngle) #hydroD
+                    self.array[cellPos].hydraulicDiameter = hydroD #min(rl[j]*channelSectorAngle, ru[j]*channelSectorAngle) #hydroD
                     self.array[cellPos].area = channelArea
                     self.array[cellPos].id = loopID
                 
