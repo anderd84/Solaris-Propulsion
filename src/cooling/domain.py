@@ -179,7 +179,7 @@ class DomainMC:
         self.coolingLoops[loopID] = CoolingLoop(landWidth, numChannels, mdot, fluid)
         return loopID
 
-    def AssignCoolantFlow(self, coolant: CoolingChannel, upperWall: bool, initialPressure: pint.Quantity, primaryLoopID: int, altLoopRadius = None, altLoopID = None):
+    def AssignCoolantFlow(self, coolant: CoolingChannel, upperWall: bool, initialPressure: pint.Quantity, usedLoopIDs: int | dict[int, float]):
         # first assign wall
 
 
@@ -239,10 +239,6 @@ class DomainMC:
 
         minChannelSize = 0.04
 
-        if primaryLoopID not in self.coolingLoops:
-            raise ValueError(f"Loop ID {primaryLoopID} not defined")
-   
-
         for i in alive_it(range(inputPoints - 1)):
             # dist1 = np.sqrt((coolant.lowerContour[i].x - coolant.lowerContour[i+1].x)**2 + (coolant.lowerContour[i].r - coolant.lowerContour[i+1].r)**2)
             # dist2 = np.sqrt((coolant.upperContour[i].x - coolant.upperContour[i+1].x)**2 + (coolant.upperContour[i].r - coolant.upperContour[i+1].r)**2)
@@ -278,10 +274,15 @@ class DomainMC:
 
                 # plt.plot([xl[j], xu[j]], [rl[j], ru[j]], '-b', linewidth=.25)
 
-                if altLoopRadius is not None and rl[j] > altLoopRadius:
-                    loopID = altLoopID if altLoopID is not None else primaryLoopID
+                if isinstance(usedLoopIDs, int):
+                    loopID = usedLoopIDs
+                elif isinstance(usedLoopIDs, dict):
+                    validIds = {id: usedLoopIDs[id] for id in usedLoopIDs if usedLoopIDs[id] < rl[j]}
+                    if len(validIds) == 0:
+                        raise("no valid loop ids")
+                    loopID = max(validIds, key=validIds.get)
                 else:
-                    loopID = primaryLoopID
+                    raise ValueError("invalid loop id type")
                     
                 landWidth = self.coolingLoops[loopID].landWidth
                 numChannels = self.coolingLoops[loopID].numChannels
