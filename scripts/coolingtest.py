@@ -31,8 +31,8 @@ def main():
     # fig.axes[0].plot([p.x for p in plugCoolU], [p.r for p in plugCoolU], '-k', linewidth=1)
 
     # to run the saved one use this line:
-    coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save")
-    # coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("highmesh2")
+    # coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save")
+    coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("highestmesh2")
 
     # print(coolmesh.coolingLoops)
 
