@@ -1,1 +1,0 @@
-MIN_MOC_MACH = 1.15

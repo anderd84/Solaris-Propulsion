@@ -1,4 +1,0 @@
-*.pyc
-.vscode/*
-logs/*
-src/*.egg-info/*
