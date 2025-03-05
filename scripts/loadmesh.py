@@ -53,7 +53,7 @@ startingpoint = (-6.75, 2.6) # TODO use real point
 
 # highmesh = domain.DomainMC.LoadFile("highmesh")
 
-highmesh = domain.DomainMC(-7.5, 3.3, 10.75, 3.25, .005)
+highmesh = domain.DomainMC(-7.5, 3.3, 10.75, 3.25, .01)
 p = Q_(6.75, unitReg.psi)
 rlines, llines, streams = analysis.CalculateComplexField(cont, p, exhaust, 1, Tt, Rt, Re.magnitude, 75, 75, 2)
 fieldGrid = analysis.GridifyComplexField(rlines, llines)
@@ -66,7 +66,7 @@ highmesh.AssignExternalTemps(fieldGrid, cont, exhaust, DESIGN.chokeArea, throatH
 # coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save")
 # highmesh.ApplyStateMap(coolmesh, {"temperature", "pressure"})
 
-highmesh.DumpFile("highestmesh")
+highmesh.DumpFile("highmesh")
 
 outerloop = highmesh.NewCoolantLoop(Q_(.025, 'inch'), 300, DESIGN.Fuel_Total, CoolantType.RP1)
 highmesh.AssignCoolantFlow(domain.CoolingChannel(cowlCoolU, cowlCoolL), False, Q_(360, unitReg.psi), outerloop)
@@ -80,7 +80,7 @@ highmesh.AssignCoolantFlow(domain.CoolingChannel(plugCoolU, plugCoolL), True, Q_
 # highmesh.GuessChannelState(outerloop, Q_(650, unitReg.degR))
 # highmesh.GuessChannelState(innerloop, Q_(650, unitReg.degR))
 print(highmesh.coolingLoops)
-highmesh.DumpFile("highestmesh2")
+highmesh.DumpFile("highmesh2")
 plots.PlotPlug(fig2, plugC)
 plots.PlotPlug(fig2, cowlC)
 plots.PlotPlug(fig2, chamberC)

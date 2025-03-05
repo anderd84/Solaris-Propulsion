@@ -31,8 +31,8 @@ def main():
     # fig.axes[0].plot([p.x for p in plugCoolU], [p.r for p in plugCoolU], '-k', linewidth=1)
 
     # to run the saved one use this line:
-    # coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save")
-    coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("highestmesh2")
+    coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("save")
+    # coolmesh: domain.DomainMC = domain.DomainMC.LoadFile("highmesh2")
 
     # print(coolmesh.coolingLoops)
 
@@ -46,7 +46,7 @@ def main():
     #     try:
     mmapmesh = domain_mmap.DomainMMAP(coolmesh)
     tstart = time.time()
-    analysis.AnalyzeMC(mmapmesh, 10, 1e-5, False, 10) # why wont you workkkkk 😭
+    analysis.AnalyzeMC(mmapmesh, 14, 1e-5, False, 10) # why wont you workkkkk 😭
     print(f"Time: {time.time() - tstart}")
         # except:
             # print(f"Failed on {i}")
