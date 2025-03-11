@@ -109,8 +109,8 @@ def GenerateDimPlug(contour: np.ndarray[nozzle.ContourPoint], throatRadius: Q_, 
     fullPlugContour = np.insert(fullPlugContour, 0, nozzle.ContourPoint(spiketipx, spiketipr-thickness), axis=0)
 
     # cooling channels
-    baseOuter = np.array([nozzle.ContourPoint(x2CL - chamberLength, convergeArc[-1].r - coolingFloor)])
-    baseInner = np.array([nozzle.ContourPoint(x2CL - chamberLength, convergeArc[-1].r - coolingFloor - coolingHeight)])
+    baseOuter = np.array([nozzle.ContourPoint(x2CL - chamberLength + 3.57, convergeArc[-1].r - coolingFloor)])
+    baseInner = np.array([nozzle.ContourPoint(x2CL - chamberLength + 3.57, convergeArc[-1].r - coolingFloor - coolingHeight)])
 
     arcArr = np.linspace(0, np.deg2rad(designTable["convergeAngle"]), circRes)
     convergeArcOuter = np.array([nozzle.ContourPoint(xcCA + (designTable["turnArcRad"] + coolingFloor)*np.sin(a), ycCA - (designTable["turnArcRad"] + coolingFloor)*np.cos(a)) for a in arcArr])

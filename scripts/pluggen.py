@@ -78,7 +78,7 @@ fig.axes[0].plot([p.x for p in plugCoolU], [p.r for p in plugCoolU], '-k', linew
 # p = Q_(6.75, unitReg.psi)
 p = units.PRESCOTT_PRESSURE
 ic(p.to(unitReg.psi))
-rlines, llines, streams = analysis.CalculateComplexField(cont, p, exhaust, 1, Tt, Rt, Re.magnitude, 75, 0, 2)
+rlines, llines, streams = analysis.CalculateComplexField(cont, p, exhaust, 1, Tt, Rt, Re.magnitude, 75, 0, 3)
 istream = streams[0]
 fig.axes[0].plot([p.x for p in istream], [p.r for p in istream], '--b', linewidth=1.5)
 ostream = streams[1]

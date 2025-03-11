@@ -284,7 +284,43 @@ def film_cooling(m_dot_g, A_c, P, u_g, u_c, mu_g, Pr_g,
     return h
 # coolMesh.mesh.z
 # Testing
-h_g = combustion_convection(Q_(3000, unitReg.degR), Q_(1000, unitReg.foot/unitReg.second))
+# throat temp, throat radius
+
+# Area calculation for internal external nozzle
+T_throat = Q_(700, unitReg.degR)
+P = Q_(120, unitReg.psi)
+(_, Psat, _) = get_film_properties(DESIGN.fuelName, T_throat)
+(_, _, gamma, _, rho, _, _, _, _) = get_fluid_properties(DESIGN.fuelName, P, T_throat)
+q = Q_(2, unitReg.pound/unitReg.second)/rho
+A = Q_(np.pi/4*(0.8**2 - 0.76**2), unitReg.inch**2)
+P_1 = P
+P_2 = Psat
+A_star = (A*q*np.sqrt(rho/(2*A**2*P_1 - 2*A**2*P_2 + q**2*rho))).to(unitReg.inch**2)
+r_star = np.sqrt(A_star/np.pi).to(unitReg.inch)
+
+m_dot = Q_(2, unitReg.pound/unitReg.second)
+A_star = np.sqrt((1/A**2 - 2*(P_2-P_1)*rho/m_dot**2)**-1).to(unitReg.inch**2)
+r_star = np.sqrt(A_star/np.pi).to(unitReg.inch)
+
+# Quick transient math using lumped capacitance at throat
+a = np.sqrt(DESIGN.gamma*DESIGN.R_throat*Q_(2400, unitReg.degR)).to(unitReg.ft / unitReg.second)
+h_g = combustion_convection(Q_(2200, unitReg.degR), Q_(3000, unitReg.foot/unitReg.second))
+k = conduction_inco718(Q_(2200, unitReg.degR))
+r_throat = Q_(2.7164, unitReg.inch)
+V = np.pi*((r_throat + Q_(0.01, unitReg.inch))**2 - r_throat**2)
+A = 2*np.pi*r_throat
+L = V/A
+Bi = (h_g*L/k).to(unitReg.dimensionless)
+
+rho = Q_(0.296, unitReg.pound/unitReg.inch**3)
+c = Q_(0.104, unitReg.BTU/unitReg.pound/unitReg.degR)
+RC = rho*c*L/h_g
+T_ss = Q_(2400, unitReg.degR)
+# T_infinity = DESIGN.chamberTemp/(1 + (gamma_throat - 1)/2 * 1**2)
+theta = Q_(2000, unitReg.degR) - T_ss
+theta_i = Q_(70 + 460, unitReg.degR) - T_ss
+t = (RC*np.log(theta_i/theta)).to(unitReg.second)
+
 A_c = np.pi*(DESIGN.chamberInternalRadius**2 - DESIGN.plugBaseRadius**2)
 P = 2*np.pi*(DESIGN.chamberInternalRadius + DESIGN.plugBaseRadius)
 u_g = Q_(300, unitReg.feet/unitReg.second)
