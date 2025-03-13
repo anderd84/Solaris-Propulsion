@@ -4,7 +4,8 @@ dependencies = [
 "numpy",
 "matplotlib",
 "alive-progress",
-"gitpython"
+"gitpython",
+"pyyaml"
 ]
 version = "0.1.0"
 description = "A package for automating the ECO process"
