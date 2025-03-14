@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import ttk
 import os
 from datetime import datetime
+from tkinter import messagebox
 import yaml
 import git
 from glob import glob
@@ -113,7 +114,7 @@ def main():
     notesTextBox = tk.Text(frame, height=10, width=50)
     notesTextBox.grid(row=10, column=0, columnspan=10)
 
-    ttk.Button(frame, text="Submit", command=lambda: makeECO(nameTextBox, dateTextBox, notesTextBox, changeTable)).grid(row=1, column=3, columnspan=2, rowspan=2)
+    ttk.Button(frame, text="Submit", command=lambda: makeECO(nameTextBox, dateTextBox, notesTextBox, changeTable, win)).grid(row=1, column=3, columnspan=2, rowspan=2)
 
     win.mainloop()
 
@@ -169,7 +170,7 @@ def getChangedFiles() -> set[str]:
 def getModifiedDate(file: str) -> str:
     return datetime.fromtimestamp(os.stat(file).st_mtime).date().strftime("%m/%d/%Y")
 
-def makeECO(nameTextBox: ttk.Entry, dateTextBox: ttk.Entry, NotesTextBox: tk.Text, changeTable: ChangeTable) -> None:
+def makeECO(nameTextBox: ttk.Entry, dateTextBox: ttk.Entry, NotesTextBox: tk.Text, changeTable: ChangeTable, window: tk.Tk) -> None:
     name = nameTextBox.get()
     date = dateTextBox.get()
     notes = NotesTextBox.get("1.0", tk.END)
@@ -186,11 +187,13 @@ def makeECO(nameTextBox: ttk.Entry, dateTextBox: ttk.Entry, NotesTextBox: tk.Tex
     with open(os.path.join(topLevelDir, "CAD", "pending-eco", f"ECO-{getPrevECOnumber() + 1:03d}.md"), 'w') as f:
         f.write(eco)
 
+    messagebox.showinfo("ECO Created", f"ECO-{getPrevECOnumber():03d}.md has been created")
+    window.destroy()
+
 def generateECO(name: str, date: str, notes: str, changes: dict[str, dict[str, str]]) -> str:
     print(changes)
     with open(os.path.join(os.path.dirname(__file__), 'ECO-000.md'), 'r') as f:
         template = f.read()
-    print(template)
     template = template.replace("[reqName]", name)
     template = template.replace("[reqDate]", date)
     template = template.replace("[desc]", notes)
