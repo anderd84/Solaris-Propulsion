@@ -75,7 +75,7 @@ def main():
     win = tk.Tk()
     win.title("ECO Form")
 
-    win.geometry("800x600")
+    # win.geometry("800x600")
 
     winStyle = ttk.Style(win)
     win.tk.call('source', os.path.join(os.path.dirname(__file__),'theme/arc.tcl'))
@@ -105,8 +105,15 @@ def main():
 
     changeTable = ChangeTable(frame)
     changeTable.grid(row=7, column=0, columnspan=10)
-    
-    print(getDocumentRevisions())
+
+    ttk.Separator(frame, orient="horizontal").grid(row=8, column=0, columnspan=10, sticky='ew')
+
+    ttk.Label(frame, text="Notes").grid(row=9, column=0, columnspan=10)
+
+    notesTextBox = tk.Text(frame, height=10, width=50)
+    notesTextBox.grid(row=10, column=0, columnspan=10)
+
+    ttk.Button(frame, text="Submit", command=lambda: makeECO(nameTextBox, dateTextBox, notesTextBox, changeTable)).grid(row=1, column=3, columnspan=2, rowspan=2)
 
     win.mainloop()
 
@@ -161,6 +168,48 @@ def getChangedFiles() -> set[str]:
 
 def getModifiedDate(file: str) -> str:
     return datetime.fromtimestamp(os.stat(file).st_mtime).date().strftime("%m/%d/%Y")
+
+def makeECO(nameTextBox: ttk.Entry, dateTextBox: ttk.Entry, NotesTextBox: tk.Text, changeTable: ChangeTable) -> None:
+    name = nameTextBox.get()
+    date = dateTextBox.get()
+    notes = NotesTextBox.get("1.0", tk.END)
+    changes = {}
+    for i in range(len(changeTable.data["names"])):
+        changes[changeTable.data["names"][i]] = {
+            "oldRev": changeTable.data["oldRev"][i],
+            "newRev": changeTable.data["newRev"][i],
+            "effect": changeTable.data["effect"][i].get(),
+            "use": changeTable.data["use"][i].get(),
+            "date": changeTable.data["date"][i]
+        }
+    eco = generateECO(name, date, notes, changes)
+    with open(os.path.join(topLevelDir, "CAD", "pending-eco", f"ECO-{getPrevECOnumber() + 1:03d}.md"), 'w') as f:
+        f.write(eco)
+
+def generateECO(name: str, date: str, notes: str, changes: dict[str, dict[str, str]]) -> str:
+    print(changes)
+    with open(os.path.join(os.path.dirname(__file__), 'ECO-000.md'), 'r') as f:
+        template = f.read()
+    print(template)
+    template = template.replace("[reqName]", name)
+    template = template.replace("[reqDate]", date)
+    template = template.replace("[desc]", notes)
+    template = template.replace("[num]", str(getPrevECOnumber() + 1))
+
+    changeTable = ""
+    for file in changes.keys():
+        tableTemplate = '| [name] | [oldRev] | [newRev] | [effect] | [date] |'
+        if not changes[file]["use"]:
+            continue
+        tableTemplate = tableTemplate.replace("[name]", os.path.splitext(os.path.basename(file))[0])
+        tableTemplate = tableTemplate.replace("[oldRev]", str(changes[file]["oldRev"]))
+        tableTemplate = tableTemplate.replace("[newRev]", str(changes[file]["newRev"]))
+        tableTemplate = tableTemplate.replace("[effect]", changes[file]["effect"])
+        tableTemplate = tableTemplate.replace("[date]", changes[file]["date"])
+        changeTable += tableTemplate + '\n'
+    template = template.replace("[docs]", changeTable)
+
+    return template
 
 if __name__ == '__main__':
     main()
