@@ -72,7 +72,9 @@ viscosity_chamber = Q_(viscosity, unitReg.millipoise)  # Viscosity in millipoise
 Prandtl_chamber = Q_(Prandtl)  # Dimensionless, so no conversion needed
 c_star = Combustion.get_Cstar(Pc=chamberPressure.magnitude, MR=OFratio)
 c_star = Q_(c_star, unitReg.foot/unitReg.second)
-
+#TODO make this section use the actual R_e and R_t
+R_E = Q_(3.5, unitReg.inch).to(unitReg.ft)  # Convert to feet
+R_T = Q_(3.0, unitReg.inch).to(unitReg.ft)  # Convert to feet
 
 
 

@@ -9,6 +9,7 @@ from general.design import exhaustGas
 
 epsilon = DESIGN.epsilon
 fuelname = DESIGN.fuelName
+Combustion = DESIGN.Combustion
 pressure_stagnation = DESIGN.chamberPressure
 temperature_stagnation = DESIGN.chamberTemp
 specific_heat_stagnation = DESIGN.heat_capacity_chamber
@@ -115,9 +116,7 @@ def combustion_convection(Node_Temp, Velocity):
     A_star = DESIGN.chokeArea.to(unitReg.ft**2)  # Convert throat area to ft²
 
     #TODO make this section use the actual R_e and R_t
-    R_E = Q_(3.5, unitReg.inch).to(unitReg.ft)  # Convert to feet
-    R_T = Q_(3.0, unitReg.inch).to(unitReg.ft)  # Convert to feet
-    P_T = 2 * np.pi * (R_T + R_E)  # Perimeter in feet
+    P_T = 2 * np.pi * (design.R_T + design.R_E)  # Perimeter in feet
     D_star = (4 * A_star / P_T).to(unitReg.ft)  # Throat diameter as hydraulic diameter in feet
 
     # Calculate the nozzle area at the location of interest and convert to ft²
