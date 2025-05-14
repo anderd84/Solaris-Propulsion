@@ -32,14 +32,14 @@ wallThickness = Q_(0.25, unitReg.inch)
 plugThickness = Q_(0.25, unitReg.inch)
 maxRadius = chamberInternalRadius + wallThickness
 plugBaseRadius = Q_(2, unitReg.inch)
-chamberatInjectorRadius = Q_(6.25/2, unitReg.inch)
+chamberatInjectorRadius = Q_(6.5/2, unitReg.inch)
 R_E = Q_(3.5, unitReg.feet)
 R_T = Q_(3.0, unitReg.feet)
 
 # injector inputs
-Spacing = Q_(0.75, unitReg.inch)  #Spacing between centear of impingement Holes
-oxHoleRadius = Q_(2, unitReg.inch)  #Radial distance between centerline and LOX hole
-filmCoolingSpacing = Q_(0.45, unitReg.inch) #inches Outer
+Spacing = Q_(0.55, unitReg.inch)  #Spacing between centear of impingement Holes
+oxHoleRadius = Q_(1.75, unitReg.inch)  #Radial distance between centerline and LOX hole
+filmCoolingSpacing = Q_(0.55, unitReg.inch) #inches Outer
 oxDoubletDiameter = Q_(0.0625, unitReg.inch)  #Design choise for DOublet Diameter size (Need to look more properly into it as 1/4 holes might make vaporization time too long)\
 oxImpingeAngle = Q_(25, unitReg.degrees)
 filmImpingeAngle = Q_(35, unitReg.degrees)

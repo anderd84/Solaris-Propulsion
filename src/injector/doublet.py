@@ -273,7 +273,10 @@ def plot_results(OX_CORE, FUEL_CORE,OUT_FILM_C,Spacing,Rgamma_lox, ri, FilmCooli
     yprime = AimY
     xprime = AimX
     plt.plot(xprime, yprime, "o")
-
+    ic(x)
+    ic(y)
+    ic(xprime)
+    ic(yprime)
 
     # -------------- Creating all linspaces needed for the following plots -------------- #
     x_graph = np.linspace(0, max(x_profile), Points)
