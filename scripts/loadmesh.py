@@ -71,9 +71,9 @@ highmesh.DumpFile("highmesh")
 outerloop = highmesh.NewCoolantLoop(Q_(.025, 'inch'), 300, DESIGN.Fuel_Total, CoolantType.RP1)
 highmesh.AssignCoolantFlow(domain.CoolingChannel(cowlCoolU, cowlCoolL), False, Q_(360, unitReg.psi), outerloop)
 print("next")
-innerloop = highmesh.NewCoolantLoop(Q_(.025, 'inch'), 68, Q_(2, unitReg.pound/unitReg.sec), CoolantType.RP1)
-loop2 = highmesh.NewCoolantLoop(Q_(.025, 'inch'), 136, Q_(2, unitReg.pound/unitReg.sec), CoolantType.RP1)
-loop3 = highmesh.NewCoolantLoop(Q_(.025, 'inch'), 272, Q_(2, unitReg.pound/unitReg.sec), CoolantType.RP1)
+innerloop = highmesh.NewCoolantLoop(Q_(.025, 'inch'), 68, Q_(2.1, unitReg.pound/unitReg.sec), CoolantType.RP1)
+loop2 = highmesh.NewCoolantLoop(Q_(.025, 'inch'), 136, Q_(2.1, unitReg.pound/unitReg.sec), CoolantType.RP1)
+loop3 = highmesh.NewCoolantLoop(Q_(.025, 'inch'), 272, Q_(2.1, unitReg.pound/unitReg.sec), CoolantType.RP1)
 highmesh.AssignCoolantFlow(domain.CoolingChannel(plugCoolU, plugCoolL), True, Q_(100, unitReg.psi), {innerloop: 0, loop2: 2, loop3: 2.55})
 
 # print(highmesh.array[0,0])
@@ -111,7 +111,7 @@ plotr = [highmesh.array[pnt].r for pnt in calcPoints]
 
 # plt.plot(plotx, plotr, 'go')
 
-highmesh.NodePlot(fig2, "hydraulicDiameter", [DomainMaterial.CHAMBER, DomainMaterial.EXHAUST])#, DomainMaterial.PLUG, DomainMaterial.COWL, DomainMaterial.COOLANT_INLET, DomainMaterial.COOLANT_OUTLET])
+highmesh.NodePlot(fig2, "material", [DomainMaterial.CHAMBER, DomainMaterial.EXHAUST])#, DomainMaterial.PLUG, DomainMaterial.COWL, DomainMaterial.COOLANT_INLET, DomainMaterial.COOLANT_OUTLET])
 
 for i in range(highmesh.vpoints):
     for j in range(highmesh.hpoints):

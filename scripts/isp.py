@@ -26,7 +26,7 @@ def getIsp(i, pamb, cont, exhaust, Tt, Rt, Re, mdot):
     mdot = Q_(mdot, LBM/S)
 
     pamb = Q_(pamb, PSI)
-    rlines, llines, streams = analysis.CalculateComplexField(cont, pamb, exhaust, 1, Tt, Rt, Re.magnitude, 75, 0, 3 if pamb.magnitude > 6.75 else 1)
+    rlines, llines, streams = analysis.CalculateComplexField(cont, pamb, exhaust, 1, Tt, Rt, Re.magnitude, 50, 0, 3 if pamb.magnitude > 6.75 else 1)
     T = analysis.CalculateThrust(exhaust, pamb, Tt, Rt, Re, streams[0], cont[-1].r)
     print(f"Spike {i}: {T.to(LBF)}")
     print(f"Janus {i}: {(janusVacThrust - pamb*janusAe).to(LBF)}")

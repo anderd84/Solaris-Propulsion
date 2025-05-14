@@ -72,7 +72,7 @@ def conduction_inco718(temperature):
     temp = min(temp, 1200)
 
     return Q_(0.006382979*temp + 6.617021277, unitReg.BTU / unitReg.foot / unitReg.hour / unitReg.degR)
-
+    # return Q_(80.94, unitReg.BTU / unitReg.foot / unitReg.hour / unitReg.degR)
 
 def conduction_rp1(Temp):
     Temp = Q_(Temp.magnitude, unitReg.degR)

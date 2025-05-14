@@ -16,8 +16,16 @@ OFratio = 1.2
 chamberPressure = Q_(300, unitReg.psi)
 percentFilmCooling = 0.15 #Outer Film Cooling Percentage
 totalmdot = Q_(7.5, unitReg.pound / unitReg.sec)
-Fuel_Total = totalmdot /(1+percentFilmCooling + OFratio)
+# Fuel_Total = totalmdot /(OFratio - OFratio*percentFilmCooling + 1 - percentFilmCooling)
+# Oxidizer_Total = totalmdot - Fuel_Total
+Fuel_Total = Q_(3.65, unitReg.pound / unitReg.sec)  # Fuel mass flow rate in lbm/s
 Oxidizer_Total = totalmdot - Fuel_Total
+
+Farea = 47*.055**2
+filmArea = 14*.04**2
+
+percentFilmCooling = filmArea / (Farea + filmArea)
+OFratio = Oxidizer_Total / (Fuel_Total* (1 - percentFilmCooling))
 
 chamberInternalRadius = Q_(3.05, unitReg.inch)
 wallThickness = Q_(0.25, unitReg.inch)

@@ -2,10 +2,12 @@ from dataclasses import dataclass
 import tempfile
 import time
 from types import NoneType
+from matplotlib.pylab import exponential
 import matplotlib.pyplot as plt
 import joblib
 import multiprocessing as mp
 from alive_progress import alive_bar, alive_it
+from scipy.optimize import curve_fit
 
 from cooling.domain_mmap import DomainMMAP
 from cooling import material, calc_cell
@@ -62,6 +64,7 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
         ax.grid(True)
 
     diffArr = []
+    tempArr = []
 
     with joblib.Parallel(n_jobs=MAX_CORES, return_as='generator') as parallel:
         diff = tol + 1
@@ -143,7 +146,17 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
 
             print(f"Max diff: {diff*100}%")
             print(f"Max temp: {maxT}R")
+            tempArr.append(maxT)
             diffArr.append(diff*100)
+
+            
+            if len(tempArr) > 3:
+                try:
+                    params, _ = curve_fit(ExponentialFit, list(range(len(tempArr))), tempArr, p0=[-1, -.1, 1500])
+                    fit = ExponentialFit(1000, *params)
+                    print(f"Future Guess Temp: {fit}R")
+                except RuntimeError:
+                    print("Curve fit failed, not enough data points yet")
 
             # imobj = domain.updateNodePlot(imobj, "temperature", [material.DomainMaterial.CHAMBER, material.DomainMaterial.FREE])
             # fig.canvas.draw()
@@ -197,3 +210,6 @@ def AnalyzeMC(domain: DomainMMAP, MAX_CORES: int = mp.cpu_count() - 1, tol: floa
     print("-------------------------")
     print(f" Done! in {i} iterations ")
     print("-------------------------")
+
+def ExponentialFit(x, a, b, c):
+    return a * np.exp(b * x) + c

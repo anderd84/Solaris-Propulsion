@@ -419,7 +419,7 @@ def PlotCharacteristicLines(fig: plt.Figure, field: np.ndarray) -> plt.Figure:
 def PlotFieldData(fig: plt.Figure, fieldGrid: np.ndarray[CharacteristicPoint], lines: int = 2, stations: int = 5):
     x = np.array([[p.x if p is not None else 0 for p in row] for row in fieldGrid])
     r = np.array([[p.r if p is not None else 0 for p in row] for row in fieldGrid])
-    mach = np.array([[gas.StagTempRatio(p.mach, DESIGN.exhaustGas)*DESIGN.exhaustGas.stagTemp.m if p is not None else np.nan for p in row] for row in fieldGrid])
+    mach = np.array([[p.mach if p is not None else np.nan for p in row] for row in fieldGrid])
     theta = np.array([[p.theta if p is not None else np.nan for p in row] for row in fieldGrid])
 
     ax = fig.axes[0]
@@ -431,7 +431,7 @@ def PlotFieldData(fig: plt.Figure, fieldGrid: np.ndarray[CharacteristicPoint], l
     thetaVy = np.sin(theta[::(fieldGrid.shape[0]//stations + 1), ::(fieldGrid.shape[1]//lines + 1)])
 
     machContours = ax.contourf(x, r, mach, levels=100, cmap='jet')
-    # fig.colorbar(machContours, orientation='vertical')
+    fig.colorbar(machContours, orientation='horizontal', label='Mach Number')
 
     ax.quiver(qx, qy, thetaVx, thetaVy, scale=10, scale_units='xy', angles='xy', headwidth=3, headlength=5, width=.002, color='black')
 

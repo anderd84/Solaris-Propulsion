@@ -146,7 +146,7 @@ class DomainMC:
         ax = fig.axes[0]
         im = ax.imshow(matarr, extent=extent, origin='upper', cmap='jet')
         units = str(self.array[0,0].__getattribute__(attr).units) if isinstance(self.array[0,0].__getattribute__(attr), pint.Quantity) else "unitless"
-        fig.colorbar(im, ax=ax).set_label(f"{attr} ({units})")
+        fig.colorbar(im, ax=ax, orientation='horizontal').set_label(f"{attr} ({units})")
 
     def RelationPlot(self, fig: plt.Figure):
         ax = fig.axes[0]
@@ -181,8 +181,6 @@ class DomainMC:
 
     def AssignCoolantFlow(self, coolant: CoolingChannel, upperWall: bool, initialPressure: pint.Quantity, usedLoopIDs: int | dict[int, float]):
         # first assign wall
-
-
         inputPoints = len(coolant.upperContour)
         previousWall = (-1,-1)
         previousFlow = (-1,-1)
@@ -392,10 +390,10 @@ class DomainMC:
         # should now have a total score and each point contributes to that
         # the deltaT of each point will be directly proportional to its scores percentage
 
-        runningDt = self.array[startPoint].temperature
-        for point, score in pointData:
-            runningDt += score/totalScore * deltaT
-            self.array[point].temperature = runningDt
+        # runningDt = self.array[startPoint].temperature
+        # for point, score in pointData:
+        #     runningDt += score/totalScore * deltaT
+        #     self.array[point].temperature = runningDt
 
         longLength = 0
         shortLength = 0
@@ -412,7 +410,7 @@ class DomainMC:
             mdotperchannel = coolingLoopData.mdot / coolingLoopData.numChannels
             Re = mdotperchannel*self.array[futureFlow].hydraulicDiameter/mu/self.array[futureFlow].area   # Reynolds number
             Re = Re.to(unitReg.dimensionless)
-            f = fluid.DarcyFrictionFactor(Re, Q_(.05, unitReg.inch), self.array[futureFlow].hydraulicDiameter)
+            f = fluid.DarcyFrictionFactor(Re, design.epsilon, self.array[futureFlow].hydraulicDiameter)
             vel = (mdotperchannel / rho / self.array[futureFlow].area).to(unitReg.ft/unitReg.sec)
             dp = fluid.FrictionPressureLoss(f, deltaL, self.array[futureFlow].hydraulicDiameter, rho, vel).to(unitReg.psi)
             self.array[point].pressure = futurePress + dp
@@ -435,6 +433,59 @@ class DomainMC:
 
 
         print("done????")
+
+    def ChannelPressureDrop(self, surfaceRoughness: pint.Quantity, loopID: int):
+        # start at the left side, scroll down and right until notice a channel wall material
+        # follow the previous flow chain until channel inlet material
+        startPoint = (-1,-1)
+        for j in range(self.hpoints):
+            for i in range(self.vpoints):
+                if self.array[i,j].id == loopID and self.array[i,j].material == DomainMaterial.COOLANT_WALL:
+                    startPoint = (i,j)
+                    break
+            if startPoint != (-1,-1):
+                break
+        
+        if self.array[startPoint].material != DomainMaterial.COOLANT_WALL:
+            raise ValueError(f"No coolant found for id {loopID}")
+        
+        while self.array[startPoint].material != DomainMaterial.COOLANT_INLET:
+            startPoint = self.array[startPoint].previousFlow
+            if startPoint == (-1,-1):
+                raise ValueError(f"No coolant inlet found for id {loopID}")
+        
+        # now we have the inlet point, future flow can be used to traverse the entire coolant loop
+
+        currentPoint = startPoint
+        channelPoints = []
+        while self.array[currentPoint].futureFlow != currentPoint: # go until terminates
+            channelPoints.append(currentPoint)
+            currentPoint = self.array[currentPoint].futureFlow
+
+        for point in alive_it(channelPoints[::-1]): # start pressure at outlet
+            if self.array[point].material == DomainMaterial.COOLANT_OUTLET:
+                continue
+
+            futureFlow = self.array[point].futureFlow
+            coolingLoopData = self.coolingLoops[self.array[point].id]
+            futurePress = self.array[futureFlow].pressure
+            deltaL = Q_(np.sqrt((self.array[point].x - self.array[futureFlow].x)**2 + (self.array[point].r - self.array[futureFlow].r)**2), unitReg.inch).to(unitReg.ft)
+            (mu, cp, _, _, rho, _, _, _, _) = fluid.get_fluid_properties(coolingLoopData.fluid, self.array[futureFlow].temperature, self.array[futureFlow].pressure)
+            mdotperchannel = coolingLoopData.mdot / coolingLoopData.numChannels
+            Re = mdotperchannel*self.array[futureFlow].hydraulicDiameter/mu/self.array[futureFlow].area   # Reynolds number
+            Re = Re.to(unitReg.dimensionless)
+            f = fluid.DarcyFrictionFactor(Re, surfaceRoughness, self.array[futureFlow].hydraulicDiameter)
+            vel = (mdotperchannel / rho / self.array[futureFlow].area).to(unitReg.ft/unitReg.sec)
+            dp = fluid.FrictionPressureLoss(f, deltaL, self.array[futureFlow].hydraulicDiameter, rho, vel).to(unitReg.psi)
+            self.array[point].pressure = futurePress + dp
+            self.array[point].velocity = vel.to(unitReg.ft/unitReg.sec)
+
+        print(f"Inlet Pressure: {self.array[startPoint].pressure.to(unitReg.psi)}")
+        print(f"Outlet Pressure: {self.array[channelPoints[-2]].pressure.to(unitReg.psi)}")
+        print(f"Pressure Drop: {(self.array[startPoint].pressure - self.array[channelPoints[-2]].pressure).to(unitReg.psi)}")
+    
+        return (self.array[startPoint].pressure - self.array[channelPoints[-2]].pressure).to(unitReg.psi)
+
 
     def AssignChamberTemps(self, chamber: np.ndarray, exhaust: Gas, startPoint: tuple, endPoint: tuple, chamberWallRadius: pint.Quantity, plugBase: pint.Quantity, Astar: pint.Quantity):
         tic = time.perf_counter()
